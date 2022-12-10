@@ -13,6 +13,15 @@ auto ExprGenVisitor::visit(const FloatingExpr *expr) -> void {
   assert(false && "todo");
 }
 
+auto ExprGenVisitor::visit(const UnaryExpr *expr) -> void {
+  expr->operand->visit(this);
+  switch (expr->kind) {
+  case UnaryKind::negative:
+    printf("  neg a0, a0\n");
+    break;
+  }
+}
+
 auto ExprGenVisitor::visit(const BinaryExpr *expr) -> void {
   expr->rhs->visit(this);
   push();

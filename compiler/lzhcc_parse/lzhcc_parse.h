@@ -12,6 +12,7 @@ public:
 
 private:
   auto primary() -> Expression *;
+  auto unary() -> Expression *;
   auto multiplicative() -> Expression *;
   auto additive() -> Expression *;
   auto expression() -> Expression *;

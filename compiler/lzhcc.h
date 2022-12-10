@@ -116,6 +116,19 @@ struct FloatingExpr : Expression {
   const double value;
 };
 
+enum class UnaryKind {
+  negative,
+};
+
+struct UnaryExpr : Expression {
+  UnaryExpr(UnaryKind kind, Type *type, Expression *operand)
+      : kind(kind), type(type), operand(operand) {}
+  void visit(ExprVisitor *visitor) const override;
+  const UnaryKind kind;
+  const Type *type;
+  const Expression *operand;
+};
+
 enum class BinaryKind {
   add,
   subtract,
@@ -136,6 +149,7 @@ struct BinaryExpr : Expression {
 struct ExprVisitor {
   virtual void visit(const IntegerExpr *) = 0;
   virtual void visit(const FloatingExpr *) = 0;
+  virtual void visit(const UnaryExpr *) = 0;
   virtual void visit(const BinaryExpr *) = 0;
 };
 

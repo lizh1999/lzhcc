@@ -24,20 +24,36 @@ auto Parser::primary() -> Expression * {
   }
 }
 
+auto Parser::unary() -> Expression * {
+  switch (next_kind()) {
+  case TokenKind::plus:
+    consume();
+    return unary();
+  case TokenKind::minus: {
+    consume();
+    auto operand = unary();
+    auto type = context_->int64();
+    return context_->create<UnaryExpr>(UnaryKind::negative, type, operand);
+  }
+  default:
+    return primary();
+  }
+}
+
 auto Parser::multiplicative() -> Expression * {
-  auto lhs = primary();
+  auto lhs = unary();
 loop:
   switch (next_kind()) {
   case TokenKind::star: {
     consume();
-    auto rhs = primary();
+    auto rhs = unary();
     auto type = context_->int64();
     lhs = context_->create<BinaryExpr>(BinaryKind::multiply, type, lhs, rhs);
     goto loop;
   }
   case TokenKind::slash: {
     consume();
-    auto rhs = primary();
+    auto rhs = unary();
     auto type = context_->int64();
     lhs = context_->create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
     goto loop;

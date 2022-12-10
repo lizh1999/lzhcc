@@ -12,8 +12,13 @@ public:
 
 private:
   auto primary() -> Expression *;
+  auto multiplicative() -> Expression *;
   auto additive() -> Expression *;
   auto expression() -> Expression *;
+
+  auto next_kind() const -> TokenKind;
+  auto consume() -> Token;
+  auto consume(TokenKind kind) -> Token;
 
   const Token *position_;
   Context *context_;

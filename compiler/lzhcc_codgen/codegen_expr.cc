@@ -19,11 +19,17 @@ auto ExprGenVisitor::visit(const BinaryExpr *expr) -> void {
   expr->lhs->visit(this);
   pop("a1");
   switch (expr->kind) {
-  case BinaryKind::Add:
+  case BinaryKind::add:
     printf("  add a0, a0, a1\n");
     break;
-  case BinaryKind::Subtract:
+  case BinaryKind::subtract:
     printf("  sub a0, a0, a1\n");
+    break;
+  case BinaryKind::multiply:
+    printf("  mul a0, a0, a1\n");
+    break;
+  case BinaryKind::divide:
+    printf(" div a0, a0, a1\n");
     break;
   }
 }

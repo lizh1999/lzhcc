@@ -27,10 +27,14 @@ struct Diagnostic {
 class Context;
 
 enum class TokenKind : uint8_t {
-  minus,   // "-"
-  plus,    // "+"
-  numeric, // numeric value
-  eof,     // eof
+  minus,       // "-"
+  plus,        // "+"
+  slash,       // "/"
+  star,        // "*"
+  open_paren,  // "("
+  close_paren, // ")"
+  numeric,     // numeric value
+  eof,         // eof
 };
 
 struct Token {
@@ -112,7 +116,12 @@ struct FloatingExpr : Expression {
   const double value;
 };
 
-enum class BinaryKind { Add, Subtract };
+enum class BinaryKind {
+  add,
+  subtract,
+  multiply,
+  divide,
+};
 
 struct BinaryExpr : Expression {
   BinaryExpr(BinaryKind kind, Type *type, Expression *lhs, Expression *rhs)

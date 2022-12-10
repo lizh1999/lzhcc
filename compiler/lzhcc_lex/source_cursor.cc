@@ -62,10 +62,22 @@ auto SourceCursor::punctuator() -> Token {
   switch (current_) {
   case '+':
     advance_current();
-    return token(TokenKind::plus, location_);
+    return token(TokenKind::plus, location);
   case '-':
     advance_current();
-    return token(TokenKind::minus, location_);
+    return token(TokenKind::minus, location);
+  case '*':
+    advance_current();
+    return token(TokenKind::star, location);
+  case '/':
+    advance_current();
+    return token(TokenKind::slash, location);
+  case '(':
+    advance_current();
+    return token(TokenKind::open_paren, location);
+  case ')':
+    advance_current();
+    return token(TokenKind::close_paren, location);
   }
   context_->fatal(location, "error token");
 }

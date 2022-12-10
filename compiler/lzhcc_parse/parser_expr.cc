@@ -11,7 +11,7 @@ auto Parser::primary() -> Expression * {
     auto text = context_->literal(token.inner);
     int64_t value;
     std::from_chars(text.begin(), text.end(), value);
-    return context_->create<IntegerExpr>(context_->int64(), value);
+    return create<IntegerExpr>(context_->int64(), value);
   }
   case TokenKind::open_paren: {
     consume();
@@ -33,7 +33,7 @@ auto Parser::unary() -> Expression * {
     consume();
     auto operand = unary();
     auto type = context_->int64();
-    return context_->create<UnaryExpr>(UnaryKind::negative, type, operand);
+    return create<UnaryExpr>(UnaryKind::negative, type, operand);
   }
   default:
     return primary();
@@ -48,14 +48,14 @@ loop:
     consume();
     auto rhs = unary();
     auto type = context_->int64();
-    lhs = context_->create<BinaryExpr>(BinaryKind::multiply, type, lhs, rhs);
+    lhs = create<BinaryExpr>(BinaryKind::multiply, type, lhs, rhs);
     goto loop;
   }
   case TokenKind::slash: {
     consume();
     auto rhs = unary();
     auto type = context_->int64();
-    lhs = context_->create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
+    lhs = create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
     goto loop;
   }
   default:
@@ -72,14 +72,14 @@ loop:
     consume();
     auto rhs = multiplicative();
     auto type = context_->int64();
-    lhs = context_->create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
+    lhs = create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
     goto loop;
   }
   case TokenKind::minus: {
     consume();
     auto rhs = multiplicative();
     auto type = context_->int64();
-    lhs = context_->create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
+    lhs = create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
     goto loop;
   }
   default:
@@ -88,6 +88,68 @@ loop:
   return lhs;
 }
 
-auto Parser::expression() -> Expression * { return additive(); }
+auto Parser::relational() -> Expression * {
+  auto lhs = additive();
+loop:
+  switch (next_kind()) {
+  case TokenKind::less: {
+    consume();
+    auto rhs = additive();
+    auto type = context_->int64();
+    lhs = create<BinaryExpr>(BinaryKind::less_than, type, lhs, rhs);
+    goto loop;
+  }
+  case TokenKind::less_equal: {
+    consume();
+    auto rhs = additive();
+    auto type = context_->int64();
+    lhs = create<BinaryExpr>(BinaryKind::less_equal, type, lhs, rhs);
+    goto loop;
+  }
+  case TokenKind::greater: {
+    consume();
+    auto rhs = additive();
+    auto type = context_->int64();
+    lhs = create<BinaryExpr>(BinaryKind::less_than, type, rhs, lhs);
+    goto loop;
+  }
+  case TokenKind::greater_equal: {
+    consume();
+    auto rhs = additive();
+    auto type = context_->int64();
+    lhs = create<BinaryExpr>(BinaryKind::less_equal, type, rhs, lhs);
+    goto loop;
+  }
+  default:
+    break;
+  }
+  return lhs;
+}
+
+auto Parser::equality() -> Expression * {
+  auto lhs = relational();
+loop:
+  switch (next_kind()) {
+  case TokenKind::equal_equal: {
+    consume();
+    auto rhs = relational();
+    auto type = context_->int64();
+    lhs = create<BinaryExpr>(BinaryKind::equal, type, lhs, rhs);
+    goto loop;
+  }
+  case TokenKind::exclaim_equal: {
+    consume();
+    auto rhs = relational();
+    auto type = context_->int64();
+    lhs = create<BinaryExpr>(BinaryKind::not_equal, type, lhs, rhs);
+    goto loop;
+  }
+  default:
+    break;
+  }
+  return lhs;
+}
+
+auto Parser::expression() -> Expression * { return equality(); }
 
 } // namespace lzhcc

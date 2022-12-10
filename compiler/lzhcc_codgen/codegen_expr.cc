@@ -38,7 +38,23 @@ auto ExprGenVisitor::visit(const BinaryExpr *expr) -> void {
     printf("  mul a0, a0, a1\n");
     break;
   case BinaryKind::divide:
-    printf(" div a0, a0, a1\n");
+    printf("  div a0, a0, a1\n");
+    break;
+  case BinaryKind::less_than:
+    printf("  slt a0, a0, a1\n");
+    break;
+  case BinaryKind::less_equal:
+    printf("  slt a0, a1, a0\n");
+    printf("  xori a0, a0, 1\n");
+    break;
+  case BinaryKind::equal:
+    printf("  xor a0, a0, a1\n");
+    printf("  seqz a0, a0\n");
+    break;
+  case BinaryKind::not_equal:
+    printf("  xor a0, a0, a1\n");
+    printf("  snez a0, a0\n");
+    break;
     break;
   }
 }

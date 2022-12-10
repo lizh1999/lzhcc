@@ -27,14 +27,22 @@ struct Diagnostic {
 class Context;
 
 enum class TokenKind : uint8_t {
-  minus,       // "-"
-  plus,        // "+"
-  slash,       // "/"
-  star,        // "*"
-  open_paren,  // "("
-  close_paren, // ")"
-  numeric,     // numeric value
-  eof,         // eof
+  equal,         // "="
+  equal_equal,   // "=="
+  exclaim,       // "!"
+  exclaim_equal, // "!="
+  greater,       // ">"
+  greater_equal, // ">="
+  less,          // "<"
+  less_equal,    // "<="
+  minus,         // "-"
+  plus,          // "+"
+  slash,         // "/"
+  star,          // "*"
+  open_paren,    // "("
+  close_paren,   // ")"
+  numeric,       // numeric value
+  eof,           // eof
 };
 
 struct Token {
@@ -134,6 +142,10 @@ enum class BinaryKind {
   subtract,
   multiply,
   divide,
+  less_than,
+  less_equal,
+  equal,
+  not_equal,
 };
 
 struct BinaryExpr : Expression {

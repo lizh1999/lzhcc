@@ -1,7 +1,7 @@
 #include "lzhcc.h"
 #include "lzhcc_lex.h"
-#include <cctype>
 #include <cassert>
+#include <cctype>
 
 namespace lzhcc {
 
@@ -78,18 +78,54 @@ auto SourceCursor::punctuator() -> Token {
   case ')':
     advance_current();
     return token(TokenKind::close_paren, location);
+  case '=':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::equal_equal, location);
+    default:
+      return token(TokenKind::equal, location);
+    }
+  case '<':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::less_equal, location);
+    default:
+      return token(TokenKind::less, location);
+    }
+  case '>':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::greater_equal, location);
+    default:
+      return token(TokenKind::greater, location);
+    }
+  case '!':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::exclaim_equal, location);
+    default:
+      return token(TokenKind::exclaim, location);
+    }
   }
   context_->fatal(location, "error token");
 }
 
 auto SourceCursor::token(TokenKind kind, int location, int inner) -> Token {
-  auto token = Token {
-    .kind = kind,
-    .leading_space = leading_space_,
-    .start_of_line = start_of_line_,
-    .expand_disable = true,
-    .location = location,
-    .inner = inner,
+  auto token = Token{
+      .kind = kind,
+      .leading_space = leading_space_,
+      .start_of_line = start_of_line_,
+      .expand_disable = true,
+      .location = location,
+      .inner = inner,
   };
   leading_space_ = false;
   start_of_line_ = false;
@@ -105,6 +141,5 @@ template <class Pred> auto SourceCursor::eat_while(Pred &&pred) -> void {
     advance_current();
   }
 }
-
 
 } // namespace lzhcc

@@ -60,6 +60,15 @@ auto Parser::return_stmt() -> Statement * {
   return create<ReturnStmt>(expr);
 }
 
+auto Parser::while_stmt() -> Statement * {
+  consume(TokenKind::kw_while);
+  consume(TokenKind::open_paren);
+  auto cond = expression();
+  consume(TokenKind::close_paren);
+  auto then = statement();
+  return create<ForStmt>(nullptr, cond, nullptr, then);
+}
+
 auto Parser::statement() -> Statement * {
   switch (next_kind()) {
   case TokenKind::kw_for:
@@ -68,6 +77,8 @@ auto Parser::statement() -> Statement * {
     return if_stmt();
   case TokenKind::kw_return:
     return return_stmt();
+  case TokenKind::kw_while:
+    return while_stmt();
   case TokenKind::open_brace:
     return block_stmt();
   default:

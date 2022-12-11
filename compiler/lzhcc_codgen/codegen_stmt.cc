@@ -9,7 +9,9 @@ auto StmtGenVisitor::visit(const ExpressionStmt *stmt) -> void {
 }
 
 auto StmtGenVisitor::visit(const ForStmt *stmt) -> void {
-  stmt->init->visit(this);
+  if (stmt->init) {
+    stmt->init->visit(this);
+  }
   int label = counter++;
   printf(".L.begin.%d:", label);
   RValueVisitor visitor;

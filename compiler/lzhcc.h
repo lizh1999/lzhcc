@@ -51,6 +51,7 @@ enum class TokenKind : uint8_t {
   kw_for,        // "for"
   kw_if,         // "if"
   kw_return,     // "return"
+  kw_while,      // "while"
 };
 
 struct Token {

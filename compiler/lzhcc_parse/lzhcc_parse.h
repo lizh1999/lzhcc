@@ -26,6 +26,7 @@ private:
   auto for_stmt() -> Statement *;
   auto if_stmt() -> Statement *;
   auto return_stmt() -> Statement *;
+  auto while_stmt() -> Statement *;
   auto statement() -> Statement *;
 
   auto next_kind() const -> TokenKind;

@@ -37,6 +37,7 @@ enum class TokenKind : uint8_t {
   less_equal,    // "<="
   minus,         // "-"
   plus,          // "+"
+  semi,          // ";"
   slash,         // "/"
   star,          // "*"
   open_paren,    // "("
@@ -91,23 +92,12 @@ struct TypeVisitor {
   virtual void visit(const FloatingType *type) = 0;
 };
 
-struct AstVisitor;
-
-struct AstNode {
-  virtual void visit(AstVisitor *visitor) const = 0;
-  virtual ~AstNode() = default;
-};
 
 struct ExprVisitor;
 
-struct Expression : AstNode {
-  void visit(AstVisitor *visitor) const override;
+struct Expression {
   virtual void visit(ExprVisitor *visitor) const = 0;
   ~Expression() = default;
-};
-
-struct AstVisitor {
-  virtual void visit(const Expression *) = 0;
 };
 
 struct IntegerExpr : Expression {
@@ -159,23 +149,39 @@ struct BinaryExpr : Expression {
 };
 
 struct ExprVisitor {
-  virtual void visit(const IntegerExpr *) = 0;
-  virtual void visit(const FloatingExpr *) = 0;
-  virtual void visit(const UnaryExpr *) = 0;
-  virtual void visit(const BinaryExpr *) = 0;
+  virtual void visit(const IntegerExpr *expr) = 0;
+  virtual void visit(const FloatingExpr *expr) = 0;
+  virtual void visit(const UnaryExpr *expr) = 0;
+  virtual void visit(const BinaryExpr *expr) = 0;
+};
+
+struct StmtVisitor;
+
+struct Statement {
+  virtual void visit(StmtVisitor *visitor) const = 0;
+};
+
+struct ExpressionStmt : Statement {
+  ExpressionStmt(const Expression *expr) : expr(expr) {}
+  void visit(StmtVisitor *visitor) const override;
+  const Expression *expr;
+};
+
+struct StmtVisitor {
+  virtual void visit(const ExpressionStmt *stmt) = 0;
 };
 
 //
 // lzhcc_parse/lzhcc_parse.cc
 //
 
-auto parse(std::span<const Token> tokens, Context &context) -> Expression *;
+auto parse(std::span<const Token> tokens, Context &context) -> Statement *;
 
 //
 // lzhcc_codgen/lzhcc_codgen.cc
 //
 
-auto codegen(Expression *expression, Context &context) -> void;
+auto codegen(Statement *stmt, Context &context) -> void;
 
 //
 // lzhcc_context.cc

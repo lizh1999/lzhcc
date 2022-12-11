@@ -4,9 +4,11 @@
 
 namespace lzhcc {
 
-auto Parser::operator()() -> Expression * {
-  auto ret = expression();
-  assert(position_->kind == TokenKind::eof);
+auto Parser::operator()() -> Statement * {
+  auto ret = statement();
+  while (next_kind() != TokenKind::eof) {
+    ret = statement();
+  }
   return ret;
 }
 

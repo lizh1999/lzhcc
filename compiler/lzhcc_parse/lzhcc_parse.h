@@ -8,7 +8,7 @@ class Parser {
 public:
   Parser(const Token *position, Context *context)
       : position_(position), context_(context) {}
-  auto operator()() -> Expression *;
+  auto operator()() -> Statement *;
 
 private:
   auto primary() -> Expression *;
@@ -18,6 +18,8 @@ private:
   auto relational() -> Expression *;
   auto equality() -> Expression *;
   auto expression() -> Expression *;
+
+  auto statement() -> Statement *;
 
   auto next_kind() const -> TokenKind;
   auto consume() -> Token;

@@ -3,11 +3,11 @@
 
 namespace lzhcc {
 
-auto codegen(Expression *expression, Context &context) -> void {
+auto codegen(Statement *stmt, Context &context) -> void {
   printf("  .globl main\n");
   printf("main:\n");
-  ExprGenVisitor gen;
-  expression->visit(&gen);
+  StmtGenVisitor gen;
+  stmt->visit(&gen);
   printf("  ret\n");
 }
 

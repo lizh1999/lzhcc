@@ -78,6 +78,9 @@ auto SourceCursor::punctuator() -> Token {
   case ')':
     advance_current();
     return token(TokenKind::close_paren, location);
+  case ';':
+    advance_current();
+    return token(TokenKind::semi, location);
   case '=':
     advance_current();
     switch (current_) {

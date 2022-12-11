@@ -11,4 +11,9 @@ struct ExprGenVisitor : ExprVisitor {
   void pop(const char *reg);
 };
 
+struct StmtGenVisitor : StmtVisitor {
+  void visit(const ExpressionStmt* stmt) override;
+  ExprGenVisitor expr_visitor;
+};
+
 }

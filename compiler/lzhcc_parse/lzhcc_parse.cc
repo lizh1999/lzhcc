@@ -3,7 +3,7 @@
 
 namespace lzhcc {
 
-auto parse(std::span<const Token> tokens, Context &context) -> Expression * {
+auto parse(std::span<const Token> tokens, Context &context) -> Statement * {
   Parser parser(tokens.data(), &context);
   return parser();
 }

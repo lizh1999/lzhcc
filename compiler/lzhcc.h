@@ -45,6 +45,7 @@ enum class TokenKind : uint8_t {
   numeric,       // numeric value
   identifier,    // identifier
   eof,           // eof
+  kw_return,     // "return"
 };
 
 struct Token {
@@ -179,6 +180,12 @@ struct ExpressionStmt : Statement {
   const Expression *expr;
 };
 
+struct ReturnStmt : Statement {
+  ReturnStmt(const Expression *expr) : expr(expr) {}
+  void visit(StmtVisitor *visitor) const override;
+  const Expression *expr;
+};
+
 struct BlockStmt : Statement {
   BlockStmt(std::vector<Statement *> stmts) : stmts(std::move(stmts)) {}
   void visit(StmtVisitor *visitor) const override;
@@ -187,6 +194,7 @@ struct BlockStmt : Statement {
 
 struct StmtVisitor {
   virtual void visit(const ExpressionStmt *stmt) = 0;
+  virtual void visit(const ReturnStmt *stmt) = 0;
   virtual void visit(const BlockStmt *stmt) = 0;
 };
 
@@ -210,11 +218,13 @@ struct Token;
 
 class Context {
 public:
+  Context();
   auto append_text(std::string text) -> CharCursorFn;
   auto push_literal(std::string literal) -> int;
   auto literal(int index) const -> std::string_view;
   auto push_identifier(std::string literal) -> int;
   auto identifier(int index) const -> std::string_view;
+  auto into_keyword(int index) const -> TokenKind;
 
   auto int8() -> IntegerType *;
   auto int16() -> IntegerType *;
@@ -253,6 +263,7 @@ private:
   std::deque<std::string> text_;
   std::vector<std::unique_ptr<ArenaEntry>> arena_;
   std::unordered_map<std::string_view, int> identifier_map_;
+  std::vector<TokenKind> keyword_map_;
 };
 
 //

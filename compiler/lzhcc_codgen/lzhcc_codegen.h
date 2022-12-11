@@ -23,6 +23,7 @@ struct LValueVisitor : ExprVisitor {
 
 struct StmtGenVisitor : StmtVisitor {
   void visit(const ExpressionStmt *stmt) override;
+  void visit(const ReturnStmt *stmt) override;
   void visit(const BlockStmt *stmt) override;
 };
 

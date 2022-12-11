@@ -1,4 +1,5 @@
 #include "lzhcc_lex.h"
+#include "lzhcc.h"
 
 namespace lzhcc {
 
@@ -6,7 +7,11 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token> {
   std::vector<Token> tokens;
   SourceCursor source(std::move(chars), &context);
   do {
-    tokens.push_back(source());
+    auto token = source();
+    if (token.kind == TokenKind::identifier) {
+      token.kind = context.into_keyword(token.inner);
+    }
+    tokens.push_back(token);
   } while (tokens.back().kind != TokenKind::eof);
   return tokens;
 }

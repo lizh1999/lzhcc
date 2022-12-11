@@ -22,6 +22,7 @@ private:
   auto expression() -> Expression *;
 
   auto block_stmt() -> Statement *;
+  auto return_stmt() -> Statement *;
   auto statement() -> Statement *;
 
   auto next_kind() const -> TokenKind;

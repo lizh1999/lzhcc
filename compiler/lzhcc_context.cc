@@ -31,6 +31,11 @@ private:
   int position_;
 };
 
+Context::Context() {
+  push_identifier("return");
+  keyword_map_.push_back(TokenKind::kw_return);
+}
+
 auto Context::append_text(std::string text) -> CharCursorFn {
   int location = 0;
   for (int i = 0; i < text_.size(); i++) {
@@ -63,6 +68,14 @@ auto Context::push_identifier(std::string literal) -> int {
 
 auto Context::identifier(int index) const -> std::string_view {
   return storage_[index];
+}
+
+auto Context::into_keyword(int index) const -> TokenKind {
+  if (index < keyword_map_.size()) {
+    return keyword_map_[index];
+  } else {
+    return TokenKind::identifier;
+  }
 }
 
 auto Context::int8() -> IntegerType * { return create<IntegerType>(1, true); }

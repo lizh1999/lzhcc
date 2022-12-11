@@ -47,6 +47,8 @@ enum class TokenKind : uint8_t {
   numeric,       // numeric value
   identifier,    // identifier
   eof,           // eof
+  kw_else,       // "else"
+  kw_if,         // "if"
   kw_return,     // "return"
 };
 
@@ -186,6 +188,15 @@ struct ExpressionStmt : Statement {
   const Expression *expr;
 };
 
+struct IfStmt : Statement {
+  IfStmt(const Expression *cond, const Statement *than, const Statement *else_)
+      : cond(cond), than(than), else_(else_) {}
+  void visit(StmtVisitor *visitor) const override;
+  const Expression *cond;
+  const Statement *than;
+  const Statement *else_;
+};
+
 struct ReturnStmt : Statement {
   ReturnStmt(const Expression *expr) : expr(expr) {}
   void visit(StmtVisitor *visitor) const override;
@@ -201,6 +212,7 @@ struct BlockStmt : Statement {
 struct StmtVisitor {
   virtual void visit(const EmptyStmt *stmt) = 0;
   virtual void visit(const ExpressionStmt *stmt) = 0;
+  virtual void visit(const IfStmt *stmt) = 0;
   virtual void visit(const ReturnStmt *stmt) = 0;
   virtual void visit(const BlockStmt *stmt) = 0;
 };

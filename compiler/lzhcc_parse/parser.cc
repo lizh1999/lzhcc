@@ -26,6 +26,14 @@ auto Parser::consume(TokenKind kind) -> const Token * {
   return position_++;
 }
 
+auto Parser::consume_if(TokenKind kind) -> const Token * {
+  if (position_->kind != kind) {
+    return nullptr;
+  } else {
+    return position_++;
+  }
+}
+
 auto Parser::get_or_allocate(int identifier) -> Variable * {
   if (auto it = var_map_.find(identifier); it != var_map_.end()) {
     return it->second;

@@ -32,7 +32,11 @@ private:
 };
 
 Context::Context() {
+  push_identifier("else");
+  push_identifier("if");
   push_identifier("return");
+  keyword_map_.push_back(TokenKind::kw_else);
+  keyword_map_.push_back(TokenKind::kw_if);
   keyword_map_.push_back(TokenKind::kw_return);
 }
 

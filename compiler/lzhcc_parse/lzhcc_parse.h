@@ -22,12 +22,14 @@ private:
   auto expression() -> Expression *;
 
   auto block_stmt() -> Statement *;
+  auto if_stmt() -> Statement *;
   auto return_stmt() -> Statement *;
   auto statement() -> Statement *;
 
   auto next_kind() const -> TokenKind;
   auto consume() -> const Token*;
   auto consume(TokenKind kind) -> const Token*;
+  auto consume_if(TokenKind kind) -> const Token*;
 
   template <class T, class... Args> auto create(Args &&...args) {
     return context_->create<T>(std::forward<Args>(args)...);

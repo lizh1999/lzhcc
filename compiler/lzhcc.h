@@ -42,6 +42,8 @@ enum class TokenKind : uint8_t {
   star,          // "*"
   open_paren,    // "("
   close_paren,   // ")"
+  open_brace,    // "{"
+  close_brace,   // "}"
   numeric,       // numeric value
   identifier,    // identifier
   eof,           // eof

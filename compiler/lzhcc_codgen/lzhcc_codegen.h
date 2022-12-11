@@ -2,7 +2,8 @@
 
 namespace lzhcc {
 
-struct ExprGenVisitor : ExprVisitor {
+struct RValueVisitor : ExprVisitor {
+  void visit(const VarRefExpr *expr) override;
   void visit(const IntegerExpr *expr) override;
   void visit(const FloatingExpr *expr) override;
   void visit(const UnaryExpr *expr) override;
@@ -11,9 +12,18 @@ struct ExprGenVisitor : ExprVisitor {
   void pop(const char *reg);
 };
 
-struct StmtGenVisitor : StmtVisitor {
-  void visit(const ExpressionStmt* stmt) override;
-  ExprGenVisitor expr_visitor;
+struct LValueVisitor : ExprVisitor {
+  void visit(const VarRefExpr *expr) override;
+  void visit(const IntegerExpr *expr) override { expect_lvalue(); }
+  void visit(const FloatingExpr *expr) override { expect_lvalue(); }
+  void visit(const UnaryExpr *expr) override { expect_lvalue(); }
+  void visit(const BinaryExpr *expr) override { expect_lvalue(); }
+  void expect_lvalue() { std::abort(); }
 };
 
-}
+struct StmtGenVisitor : StmtVisitor {
+  void visit(const ExpressionStmt *stmt) override;
+  void visit(const BlockStmt *stmt) override;
+};
+
+} // namespace lzhcc

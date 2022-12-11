@@ -5,15 +5,23 @@
 
 namespace lzhcc {
 
-auto ExprGenVisitor::visit(const IntegerExpr *expr) -> void {
+auto LValueVisitor::visit(const VarRefExpr *expr) -> void {
+  printf("  add a0, fp, %d\n", expr->var->offset);
+}
+
+auto RValueVisitor::visit(const IntegerExpr *expr) -> void {
   printf("  li a0, %ld\n", expr->value);
 }
 
-auto ExprGenVisitor::visit(const FloatingExpr *expr) -> void {
+auto RValueVisitor::visit(const FloatingExpr *expr) -> void {
   assert(false && "todo");
 }
 
-auto ExprGenVisitor::visit(const UnaryExpr *expr) -> void {
+auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
+  printf("  ld a0, %d(fp)\n", expr->var->offset);
+}
+
+auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
   expr->operand->visit(this);
   switch (expr->kind) {
   case UnaryKind::negative:
@@ -22,10 +30,15 @@ auto ExprGenVisitor::visit(const UnaryExpr *expr) -> void {
   }
 }
 
-auto ExprGenVisitor::visit(const BinaryExpr *expr) -> void {
+auto RValueVisitor::visit(const BinaryExpr *expr) -> void {
   expr->rhs->visit(this);
   push();
-  expr->lhs->visit(this);
+  if (expr->kind != BinaryKind::assign) {
+    expr->lhs->visit(this);
+  } else {
+    LValueVisitor visitor;
+    expr->lhs->visit(&visitor);
+  }
   pop("a1");
   switch (expr->kind) {
   case BinaryKind::add:
@@ -55,16 +68,19 @@ auto ExprGenVisitor::visit(const BinaryExpr *expr) -> void {
     printf("  xor a0, a0, a1\n");
     printf("  snez a0, a0\n");
     break;
+  case BinaryKind::assign:
+    printf("  sd a1, 0(a0)\n");
+    printf("  mv a0, a1\n");
     break;
   }
 }
 
-auto ExprGenVisitor::push() -> void {
+auto RValueVisitor::push() -> void {
   printf("  addi sp, sp, -8\n");
   printf("  sd a0, 0(sp)\n");
 }
 
-auto ExprGenVisitor::pop(const char *reg) -> void {
+auto RValueVisitor::pop(const char *reg) -> void {
   printf("  ld %s, 0(sp)\n", reg);
   printf("  addi sp, sp, 8\n");
 }

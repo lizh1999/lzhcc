@@ -15,6 +15,7 @@ private:
   auto white_space() -> void;
   auto numeric() -> Token;
   auto punctuator() -> Token;
+  auto identifier() -> Token;
 
   auto token(TokenKind kind, int location, int inner = -1) -> Token;
 

@@ -43,6 +43,7 @@ enum class TokenKind : uint8_t {
   open_paren,    // "("
   close_paren,   // ")"
   numeric,       // numeric value
+  identifier,    // identifier
   eof,           // eof
 };
 
@@ -92,12 +93,21 @@ struct TypeVisitor {
   virtual void visit(const FloatingType *type) = 0;
 };
 
+struct Variable {
+  const int offset;
+};
 
 struct ExprVisitor;
 
 struct Expression {
   virtual void visit(ExprVisitor *visitor) const = 0;
   ~Expression() = default;
+};
+
+struct VarRefExpr : Expression {
+  VarRefExpr(Variable *var) : var(var) {}
+  virtual void visit(ExprVisitor *visitor) const override;
+  const Variable *var;
 };
 
 struct IntegerExpr : Expression {
@@ -136,6 +146,7 @@ enum class BinaryKind {
   less_equal,
   equal,
   not_equal,
+  assign,
 };
 
 struct BinaryExpr : Expression {
@@ -149,6 +160,7 @@ struct BinaryExpr : Expression {
 };
 
 struct ExprVisitor {
+  virtual void visit(const VarRefExpr *expr) = 0;
   virtual void visit(const IntegerExpr *expr) = 0;
   virtual void visit(const FloatingExpr *expr) = 0;
   virtual void visit(const UnaryExpr *expr) = 0;
@@ -167,8 +179,15 @@ struct ExpressionStmt : Statement {
   const Expression *expr;
 };
 
+struct BlockStmt : Statement {
+  BlockStmt(std::vector<Statement *> stmts) : stmts(std::move(stmts)) {}
+  void visit(StmtVisitor *visitor) const override;
+  const std::vector<Statement *> stmts;
+};
+
 struct StmtVisitor {
   virtual void visit(const ExpressionStmt *stmt) = 0;
+  virtual void visit(const BlockStmt *stmt) = 0;
 };
 
 //
@@ -194,6 +213,8 @@ public:
   auto append_text(std::string text) -> CharCursorFn;
   auto push_literal(std::string literal) -> int;
   auto literal(int index) const -> std::string_view;
+  auto push_identifier(std::string literal) -> int;
+  auto identifier(int index) const -> std::string_view;
 
   auto int8() -> IntegerType *;
   auto int16() -> IntegerType *;
@@ -231,6 +252,7 @@ private:
   std::deque<std::string> storage_;
   std::deque<std::string> text_;
   std::vector<std::unique_ptr<ArenaEntry>> arena_;
+  std::unordered_map<std::string_view, int> identifier_map_;
 };
 
 //

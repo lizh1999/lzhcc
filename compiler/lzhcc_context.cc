@@ -50,6 +50,21 @@ auto Context::literal(int index) const -> std::string_view {
   return storage_[index];
 }
 
+auto Context::push_identifier(std::string literal) -> int {
+  if (auto it = identifier_map_.find(literal); it != identifier_map_.end()) {
+    return it->second;
+  } else {
+    int index = storage_.size();
+    storage_.push_back(std::move(literal));
+    identifier_map_.emplace(storage_.back(), index);
+    return index;
+  }
+}
+
+auto Context::identifier(int index) const -> std::string_view {
+  return storage_[index];
+}
+
 auto Context::int8() -> IntegerType * { return create<IntegerType>(1, true); }
 
 auto Context::int16() -> IntegerType * { return create<IntegerType>(2, true); }

@@ -19,14 +19,18 @@ auto SourceCursor::operator()() -> Token {
       break;
     }
   }
-  if (current_ == 0) {
+  switch (current_) {
+  case '\0':
     start_of_line_ = true;
     return token(TokenKind::eof, location_);
-  }
-  if (std::isdigit(current_)) {
+  case '0' ... '9':
     return numeric();
-  } else {
-    return punctuator();
+  case '_':
+  case 'a' ... 'z':
+  case 'A' ... 'Z':
+    return identifier();
+  default:
+    return current_ < 0 ? identifier() : punctuator();
   }
 }
 
@@ -54,7 +58,22 @@ auto SourceCursor::numeric() -> Token {
     }
   });
   int literal = context_->push_literal(std::move(text));
-  return token(TokenKind::numeric, location_, literal);
+  return token(TokenKind::numeric, location, literal);
+}
+
+auto SourceCursor::identifier() -> Token {
+  std::string text = "";
+  int location = location_;
+  eat_while([&](char ch) {
+    if (ch < 0 || ch == '_' || std::isalnum(ch)) {
+      text.push_back(ch);
+      return true;
+    } else {
+      return false;
+    }
+  });
+  int literal = context_->push_identifier(std::move(text));
+  return token(TokenKind::identifier, location, literal);
 }
 
 auto SourceCursor::punctuator() -> Token {

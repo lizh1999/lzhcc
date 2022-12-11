@@ -10,6 +10,10 @@ auto FloatingType::visit(TypeVisitor *visitor) const -> void {
   visitor->visit(this);
 }
 
+auto VarRefExpr::visit(ExprVisitor *visitor) const -> void {
+  visitor->visit(this);
+}
+
 auto IntegerExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
@@ -29,5 +33,10 @@ auto BinaryExpr::visit(ExprVisitor *visitor) const -> void {
 auto ExpressionStmt::visit(StmtVisitor *visitor) const -> void {
   visitor->visit(this);
 }
+
+auto BlockStmt::visit(StmtVisitor *visitor) const -> void {
+  visitor->visit(this);
+}
+
 
 } // namespace lzhcc

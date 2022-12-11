@@ -1,9 +1,17 @@
+#include "lzhcc.h"
 #include "lzhcc_codegen.h"
 
 namespace lzhcc {
 
 auto StmtGenVisitor::visit(const ExpressionStmt *stmt) -> void {
-  stmt->expr->visit(&expr_visitor);
+  RValueVisitor visitor;
+  stmt->expr->visit(&visitor);
+}
+
+auto StmtGenVisitor::visit(const BlockStmt *stmt) -> void {
+  for (auto *stmt : stmt->stmts) {
+    stmt->visit(this);
+  }
 }
 
 }

@@ -14,16 +14,26 @@ auto Parser::operator()() -> Statement * {
 
 auto Parser::next_kind() const -> TokenKind { return position_->kind; }
 
-auto Parser::consume() -> Token {
+auto Parser::consume() -> const Token * {
   assert(position_->kind != TokenKind::eof);
-  return *position_++;
+  return position_++;
 }
 
-auto Parser::consume(TokenKind kind) -> Token {
+auto Parser::consume(TokenKind kind) -> const Token * {
   if (position_->kind != kind) {
     context_->fatal(position_->location, "");
   }
-  return *position_++;
+  return position_++;
+}
+
+auto Parser::get_or_allocate(int identifier) -> Variable * {
+  if (auto it = var_map_.find(identifier); it != var_map_.end()) {
+    return it->second;
+  } else {
+    auto var = create<Variable>(Variable{(int)var_map_.size() * 8});
+    var_map_.emplace(identifier, var);
+    return var;
+  }
 }
 
 } // namespace lzhcc

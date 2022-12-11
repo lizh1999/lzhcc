@@ -8,7 +8,7 @@ auto Parser::primary() -> Expression * {
   switch (next_kind()) {
   case TokenKind::numeric: {
     auto token = consume();
-    auto text = context_->literal(token.inner);
+    auto text = context_->literal(token->inner);
     int64_t value;
     std::from_chars(text.begin(), text.end(), value);
     return create<IntegerExpr>(context_->int64(), value);
@@ -18,6 +18,11 @@ auto Parser::primary() -> Expression * {
     auto expr = expression();
     consume(TokenKind::close_paren);
     return expr;
+  }
+  case TokenKind::identifier: {
+    auto token = consume();
+    auto var = get_or_allocate(token->inner);
+    return create<VarRefExpr>(var);
   }
   default:
     context_->fatal(position_->location, "");
@@ -150,6 +155,23 @@ loop:
   return lhs;
 }
 
-auto Parser::expression() -> Expression * { return equality(); }
+auto Parser::assignment() -> Expression * {
+  auto lhs = equality();
+loop:
+ switch (next_kind()) {
+ case TokenKind::equal: {
+  consume();
+  auto rhs = assignment();
+  auto type = context_->int64();
+  lhs = create<BinaryExpr>(BinaryKind::assign, type, lhs, rhs);
+  goto loop;
+ }
+ default:
+  break;
+ }
+ return lhs;
+}
+
+auto Parser::expression() -> Expression * { return assignment(); }
 
 } // namespace lzhcc

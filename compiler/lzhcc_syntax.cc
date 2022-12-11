@@ -30,6 +30,10 @@ auto BinaryExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
 
+auto EmptyStmt::visit(StmtVisitor *visitor) const -> void {
+  visitor->visit(this);
+}
+
 auto ExpressionStmt::visit(StmtVisitor *visitor) const -> void {
   visitor->visit(this);
 }

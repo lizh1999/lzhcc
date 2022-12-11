@@ -176,6 +176,10 @@ struct Statement {
   virtual void visit(StmtVisitor *visitor) const = 0;
 };
 
+struct EmptyStmt : Statement {
+  void visit(StmtVisitor *visitor) const override;
+};
+
 struct ExpressionStmt : Statement {
   ExpressionStmt(const Expression *expr) : expr(expr) {}
   void visit(StmtVisitor *visitor) const override;
@@ -195,6 +199,7 @@ struct BlockStmt : Statement {
 };
 
 struct StmtVisitor {
+  virtual void visit(const EmptyStmt *stmt) = 0;
   virtual void visit(const ExpressionStmt *stmt) = 0;
   virtual void visit(const ReturnStmt *stmt) = 0;
   virtual void visit(const BlockStmt *stmt) = 0;

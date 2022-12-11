@@ -14,6 +14,10 @@ loop:
   case TokenKind::open_brace:
     stmts.push_back(block_stmt());
     goto loop;
+  case TokenKind::semi:
+    consume();
+    stmts.push_back(create<EmptyStmt>());
+    goto loop;
   case TokenKind::close_brace:
     consume();
     break;

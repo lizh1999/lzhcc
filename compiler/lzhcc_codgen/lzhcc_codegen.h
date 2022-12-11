@@ -24,6 +24,7 @@ struct LValueVisitor : ExprVisitor {
 struct StmtGenVisitor : StmtVisitor {
   void visit(const EmptyStmt *stmt) override {}
   void visit(const ExpressionStmt *stmt) override;
+  void visit(const ForStmt *stmt) override;
   void visit(const IfStmt *stmt) override;
   void visit(const ReturnStmt *stmt) override;
   void visit(const BlockStmt *stmt) override;

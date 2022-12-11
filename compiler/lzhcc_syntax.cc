@@ -38,6 +38,10 @@ auto ExpressionStmt::visit(StmtVisitor *visitor) const -> void {
   visitor->visit(this);
 }
 
+auto ForStmt::visit(StmtVisitor *visitor) const -> void {
+  visitor->visit(this);
+}
+
 auto IfStmt::visit(StmtVisitor *visitor) const -> void { visitor->visit(this); }
 
 auto ReturnStmt::visit(StmtVisitor *visitor) const -> void {

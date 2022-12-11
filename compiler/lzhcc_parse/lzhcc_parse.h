@@ -22,6 +22,8 @@ private:
   auto expression() -> Expression *;
 
   auto block_stmt() -> Statement *;
+  auto expr_stmt() -> Statement *;
+  auto for_stmt() -> Statement *;
   auto if_stmt() -> Statement *;
   auto return_stmt() -> Statement *;
   auto statement() -> Statement *;

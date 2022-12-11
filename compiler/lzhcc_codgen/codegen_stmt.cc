@@ -8,18 +8,35 @@ auto StmtGenVisitor::visit(const ExpressionStmt *stmt) -> void {
   stmt->expr->visit(&visitor);
 }
 
+auto StmtGenVisitor::visit(const ForStmt *stmt) -> void {
+  stmt->init->visit(this);
+  int label = counter++;
+  printf(".L.begin.%d:", label);
+  RValueVisitor visitor;
+  if (stmt->cond) {
+    stmt->cond->visit(&visitor);
+    printf("  beqz a0, .L.end.%d\n", label);
+  }
+  stmt->then->visit(this);
+  if (stmt->inc) {
+    stmt->inc->visit(&visitor);
+  }
+  printf("  j .L.begin.%d\n", label);
+  printf(".L.end.%d:", label);
+}
+
 auto StmtGenVisitor::visit(const IfStmt *stmt) -> void {
   RValueVisitor visitor;
   stmt->cond->visit(&visitor);
-  int lable = counter++;
-  printf("  beqz a0, .L.else.%d\n", lable);
-  stmt->than->visit(this);
-  printf("  j .L.end.%d\n", lable);
-  printf(".L.else.%d:\n", lable);
+  int label = counter++;
+  printf("  beqz a0, .L.else.%d\n", label);
+  stmt->then->visit(this);
+  printf("  j .L.end.%d\n", label);
+  printf(".L.else.%d:\n", label);
   if (stmt->else_) {
     stmt->else_->visit(this);
   }
-  printf(".L.end.%d:\n", lable);
+  printf(".L.end.%d:\n", label);
 }
 
 auto StmtGenVisitor::visit(const ReturnStmt *stmt) -> void {

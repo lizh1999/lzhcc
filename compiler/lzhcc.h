@@ -7,6 +7,7 @@
 #include <span>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace lzhcc {
@@ -27,6 +28,7 @@ struct Diagnostic {
 class Context;
 
 enum class TokenKind : uint8_t {
+  amp,           // "&"
   equal,         // "="
   equal_equal,   // "=="
   exclaim,       // "!"
@@ -74,73 +76,63 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 // lzhcc_syntax.cc
 //
 
-struct TypeVisitor;
+using Type =
+    std::variant<struct IntegerType, struct FloatingType, struct PointerType>;
 
-struct Type {
-  virtual void visit(TypeVisitor *visitor) const = 0;
-  ~Type() = default;
-};
-
-struct IntegerType : Type {
-  IntegerType(uint8_t size_bytes, bool is_signed)
-      : size_bytes(size_bytes), is_signed(is_signed) {}
-  void visit(TypeVisitor *visitor) const override;
+struct IntegerType {
   const int size_bytes;
   const bool is_signed;
 };
 
-struct FloatingType : Type {
-  FloatingType(uint8_t size_bytes) : size_bytes(size_bytes) {}
-  void visit(TypeVisitor *visitor) const override;
+struct FloatingType {
   const int size_bytes;
 };
 
-struct TypeVisitor {
-  virtual void visit(const IntegerType *type) = 0;
-  virtual void visit(const FloatingType *type) = 0;
+struct PointerType {
+  const Type *base;
 };
 
 struct Variable {
   const int offset;
+  const Type *type;
 };
 
 struct ExprVisitor;
 
 struct Expression {
   virtual void visit(ExprVisitor *visitor) const = 0;
+  virtual const Type *type() const = 0;
   ~Expression() = default;
 };
 
 struct VarRefExpr : Expression {
   VarRefExpr(Variable *var) : var(var) {}
   virtual void visit(ExprVisitor *visitor) const override;
-  const Variable *var;
+  const Type *type() const override;
+  Variable *var;
 };
 
 struct IntegerExpr : Expression {
-  IntegerExpr(Type *type, int64_t value) : type(type), value(value) {}
+  IntegerExpr(const Type *type, int64_t value) : type_(type), value(value) {}
   void visit(ExprVisitor *visitor) const override;
-  const Type *type;
+  const Type *type() const override;
+  const Type *type_;
   const int64_t value;
-};
-
-struct FloatingExpr : Expression {
-  FloatingExpr(Type *type, double value) : type(type), value(value) {}
-  void visit(ExprVisitor *visitor) const override;
-  const Type *type;
-  const double value;
 };
 
 enum class UnaryKind {
   negative,
+  refrence,
+  deref,
 };
 
 struct UnaryExpr : Expression {
-  UnaryExpr(UnaryKind kind, Type *type, Expression *operand)
-      : kind(kind), type(type), operand(operand) {}
+  UnaryExpr(UnaryKind kind, const Type *type, Expression *operand)
+      : kind(kind), type_(type), operand(operand) {}
   void visit(ExprVisitor *visitor) const override;
+  const Type *type() const override;
   const UnaryKind kind;
-  const Type *type;
+  const Type *type_;
   const Expression *operand;
 };
 
@@ -157,11 +149,12 @@ enum class BinaryKind {
 };
 
 struct BinaryExpr : Expression {
-  BinaryExpr(BinaryKind kind, Type *type, Expression *lhs, Expression *rhs)
-      : kind(kind), type(type), lhs(lhs), rhs(rhs) {}
+  BinaryExpr(BinaryKind kind, const Type *type, Expression *lhs, Expression *rhs)
+      : kind(kind), type_(type), lhs(lhs), rhs(rhs) {}
   void visit(ExprVisitor *visitor) const override;
+  const Type *type() const override;
   const BinaryKind kind;
-  const Type *type;
+  const Type *type_;
   const Expression *lhs;
   const Expression *rhs;
 };
@@ -169,7 +162,6 @@ struct BinaryExpr : Expression {
 struct ExprVisitor {
   virtual void visit(const VarRefExpr *expr) = 0;
   virtual void visit(const IntegerExpr *expr) = 0;
-  virtual void visit(const FloatingExpr *expr) = 0;
   virtual void visit(const UnaryExpr *expr) = 0;
   virtual void visit(const BinaryExpr *expr) = 0;
 };
@@ -258,15 +250,17 @@ public:
   auto identifier(int index) const -> std::string_view;
   auto into_keyword(int index) const -> TokenKind;
 
-  auto int8() -> IntegerType *;
-  auto int16() -> IntegerType *;
-  auto int32() -> IntegerType *;
-  auto int64() -> IntegerType *;
+  auto int8() -> Type *;
+  auto int16() -> Type *;
+  auto int32() -> Type *;
+  auto int64() -> Type *;
 
-  auto uint8() -> IntegerType *;
-  auto uint16() -> IntegerType *;
-  auto uint32() -> IntegerType *;
-  auto uint64() -> IntegerType *;
+  auto uint8() -> Type *;
+  auto uint16() -> Type *;
+  auto uint32() -> Type *;
+  auto uint64() -> Type *;
+
+  auto pointer_to(const Type *base) -> Type *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 

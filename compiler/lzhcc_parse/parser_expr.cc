@@ -1,6 +1,8 @@
 #include "lzhcc.h"
 #include "lzhcc_parse.h"
 #include <charconv>
+#include <type_traits>
+#include <variant>
 
 namespace lzhcc {
 
@@ -40,6 +42,26 @@ auto Parser::unary() -> Expression * {
     auto type = context_->int64();
     return create<UnaryExpr>(UnaryKind::negative, type, operand);
   }
+  case TokenKind::amp: {
+    consume();
+    auto operand = unary();
+    auto type = context_->pointer_to(operand->type());
+    return create<UnaryExpr>(UnaryKind::refrence, type, operand);
+  }
+  case TokenKind::star: {
+    auto token = consume();
+    auto operand = unary();
+    auto visitor = [&](auto &&arg) -> const Type * {
+      using T = std::decay_t<decltype(arg)>;
+      if constexpr (std::is_same_v<T, PointerType>) {
+        return arg.base;
+      } else {
+        context_->fatal(token->location, "");
+      }
+    };
+    auto type = std::visit(visitor, *operand->type());
+    return create<UnaryExpr>(UnaryKind::deref, type, operand);
+  }
   default:
     return primary();
   }
@@ -69,21 +91,50 @@ loop:
   return lhs;
 }
 
+// struct IntegerVisitor {
+//   auto operator()(IntegerVisitor )
+// };
+
 auto Parser::additive() -> Expression * {
   auto lhs = multiplicative();
 loop:
   switch (next_kind()) {
   case TokenKind::plus: {
-    consume();
+    auto token = consume();
     auto rhs = multiplicative();
-    auto type = context_->int64();
+    auto visitor = [&](auto &&l, auto &&r) -> const Type * {
+      using T = std::decay_t<decltype(l)>;
+      using U = std::decay_t<decltype(r)>;
+      if constexpr (std::is_same_v<IntegerType, IntegerType>) {
+        return lhs->type();
+      }
+      if constexpr (std::is_same_v<PointerType, IntegerType>) {
+        return lhs->type();
+      }
+      if constexpr (std::is_same_v<IntegerType, PointerType>) {
+        return rhs->type();
+      }
+      context_->fatal(token->location, "");
+    };
+    auto type = std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
     goto loop;
   }
   case TokenKind::minus: {
-    consume();
+    auto token = consume();
     auto rhs = multiplicative();
-    auto type = context_->int64();
+    auto visitor = [&](auto &&l, auto &&r) -> const Type * {
+      using T = std::decay_t<decltype(l)>;
+      using U = std::decay_t<decltype(r)>;
+      if constexpr (std::is_same_v<IntegerType, IntegerType>) {
+        return lhs->type();
+      }
+      if constexpr (std::is_same_v<PointerType, PointerType>) {
+        return context_->int64();
+      }
+      context_->fatal(token->location, "");
+    };
+    auto type = std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
     goto loop;
   }
@@ -158,18 +209,23 @@ loop:
 auto Parser::assignment() -> Expression * {
   auto lhs = equality();
 loop:
- switch (next_kind()) {
- case TokenKind::equal: {
-  consume();
-  auto rhs = assignment();
-  auto type = context_->int64();
-  lhs = create<BinaryExpr>(BinaryKind::assign, type, lhs, rhs);
-  goto loop;
- }
- default:
-  break;
- }
- return lhs;
+  switch (next_kind()) {
+  case TokenKind::equal: {
+    consume();
+    auto rhs = assignment();
+    auto type = rhs->type();
+
+    // lhs's type meight be modified, hack it.
+    if (auto hack = dynamic_cast<VarRefExpr *>(lhs)) {
+      hack->var->type = type;
+    }
+    lhs = create<BinaryExpr>(BinaryKind::assign, type, lhs, rhs);
+    goto loop;
+  }
+  default:
+    break;
+  }
+  return lhs;
 }
 
 auto Parser::expression() -> Expression * { return assignment(); }

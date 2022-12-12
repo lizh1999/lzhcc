@@ -79,6 +79,9 @@ auto SourceCursor::identifier() -> Token {
 auto SourceCursor::punctuator() -> Token {
   int location = location_;
   switch (current_) {
+  case '&':
+    advance_current();
+    return token(TokenKind::amp, location);
   case '+':
     advance_current();
     return token(TokenKind::plus, location);

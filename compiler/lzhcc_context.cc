@@ -86,26 +86,24 @@ auto Context::into_keyword(int index) const -> TokenKind {
   }
 }
 
-auto Context::int8() -> IntegerType * { return create<IntegerType>(1, true); }
+auto Context::int8() -> Type * { return create<Type>(IntegerType{1, true}); }
 
-auto Context::int16() -> IntegerType * { return create<IntegerType>(2, true); }
+auto Context::int16() -> Type * { return create<Type>(IntegerType{2, true}); }
 
-auto Context::int32() -> IntegerType * { return create<IntegerType>(4, true); }
+auto Context::int32() -> Type * { return create<Type>(IntegerType{4, true}); }
 
-auto Context::int64() -> IntegerType * { return create<IntegerType>(8, true); }
+auto Context::int64() -> Type * { return create<Type>(IntegerType{8, true}); }
 
-auto Context::uint8() -> IntegerType * { return create<IntegerType>(1, false); }
+auto Context::uint8() -> Type * { return create<Type>(IntegerType{1, false}); }
 
-auto Context::uint16() -> IntegerType * {
-  return create<IntegerType>(2, false);
-}
+auto Context::uint16() -> Type * { return create<Type>(IntegerType{2, false}); }
 
-auto Context::uint32() -> IntegerType * {
-  return create<IntegerType>(4, false);
-}
+auto Context::uint32() -> Type * { return create<Type>(IntegerType{4, false}); }
 
-auto Context::uint64() -> IntegerType * {
-  return create<IntegerType>(8, false);
+auto Context::uint64() -> Type * { return create<Type>(IntegerType{8, false}); }
+
+auto Context::pointer_to(const Type *base) -> Type * {
+  return create<Type>(PointerType{base});
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

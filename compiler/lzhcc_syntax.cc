@@ -2,33 +2,29 @@
 
 namespace lzhcc {
 
-auto IntegerType::visit(TypeVisitor *visitor) const -> void {
-  visitor->visit(this);
-}
-
-auto FloatingType::visit(TypeVisitor *visitor) const -> void {
-  visitor->visit(this);
-}
-
 auto VarRefExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
+
+auto VarRefExpr::type() const -> const Type * { return var->type; }
 
 auto IntegerExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
 
-auto FloatingExpr::visit(ExprVisitor *visitor) const -> void {
-  visitor->visit(this);
-}
+auto IntegerExpr::type() const -> const Type * { return type_; }
 
 auto UnaryExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
 
+auto UnaryExpr::type() const -> const Type * { return type_; }
+
 auto BinaryExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
+
+auto BinaryExpr::type() const -> const Type * { return type_; }
 
 auto EmptyStmt::visit(StmtVisitor *visitor) const -> void {
   visitor->visit(this);

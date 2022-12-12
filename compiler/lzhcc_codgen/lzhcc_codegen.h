@@ -5,7 +5,6 @@ namespace lzhcc {
 struct RValueVisitor : ExprVisitor {
   void visit(const VarRefExpr *expr) override;
   void visit(const IntegerExpr *expr) override;
-  void visit(const FloatingExpr *expr) override;
   void visit(const UnaryExpr *expr) override;
   void visit(const BinaryExpr *expr) override;
   void push();
@@ -15,10 +14,9 @@ struct RValueVisitor : ExprVisitor {
 struct LValueVisitor : ExprVisitor {
   void visit(const VarRefExpr *expr) override;
   void visit(const IntegerExpr *expr) override { expect_lvalue(); }
-  void visit(const FloatingExpr *expr) override { expect_lvalue(); }
-  void visit(const UnaryExpr *expr) override { expect_lvalue(); }
+  void visit(const UnaryExpr *expr) override;
   void visit(const BinaryExpr *expr) override { expect_lvalue(); }
-  void expect_lvalue() { std::abort(); }
+  [[noreturn]] void expect_lvalue() { std::abort(); }
 };
 
 struct StmtGenVisitor : StmtVisitor {

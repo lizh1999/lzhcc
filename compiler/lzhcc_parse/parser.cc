@@ -38,7 +38,7 @@ auto Parser::get_or_allocate(int identifier) -> Variable * {
   if (auto it = var_map_.find(identifier); it != var_map_.end()) {
     return it->second;
   } else {
-    auto var = create<Variable>(Variable{(int)var_map_.size() * 8});
+    auto var = create<Variable>(Variable{(int)var_map_.size() * 8, context_->int64()});
     var_map_.emplace(identifier, var);
     return var;
   }

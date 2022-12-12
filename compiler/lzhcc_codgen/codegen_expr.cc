@@ -9,12 +9,19 @@ auto LValueVisitor::visit(const VarRefExpr *expr) -> void {
   printf("  add a0, fp, %d\n", expr->var->offset);
 }
 
-auto RValueVisitor::visit(const IntegerExpr *expr) -> void {
-  printf("  li a0, %ld\n", expr->value);
+auto LValueVisitor::visit(const UnaryExpr *expr) -> void {
+  RValueVisitor visitor;
+  switch (expr->kind) {
+  case UnaryKind::deref:
+    expr->operand->visit(&visitor);
+    break;
+  default:
+    expect_lvalue();
+  }
 }
 
-auto RValueVisitor::visit(const FloatingExpr *expr) -> void {
-  assert(false && "todo");
+auto RValueVisitor::visit(const IntegerExpr *expr) -> void {
+  printf("  li a0, %ld\n", expr->value);
 }
 
 auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
@@ -22,10 +29,18 @@ auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
 }
 
 auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
-  expr->operand->visit(this);
+  LValueVisitor visitor;
   switch (expr->kind) {
   case UnaryKind::negative:
+    expr->operand->visit(this);
     printf("  neg a0, a0\n");
+    break;
+  case UnaryKind::deref:
+    expr->operand->visit(this);
+    printf("  ld a0, 0(a0)\n");
+    break;
+  case UnaryKind::refrence:
+    expr->operand->visit(&visitor);
     break;
   }
 }

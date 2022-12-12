@@ -6,6 +6,11 @@
 
 namespace lzhcc {
 
+template <class... Ts> struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 auto Parser::primary() -> Expression * {
   switch (next_kind()) {
   case TokenKind::numeric: {
@@ -91,48 +96,62 @@ loop:
   return lhs;
 }
 
-// struct IntegerVisitor {
-//   auto operator()(IntegerVisitor )
-// };
-
 auto Parser::additive() -> Expression * {
   auto lhs = multiplicative();
+
+  auto size_of = overloaded{
+      [&](const IntegerType &type) -> const int { return type.size_bytes; },
+      [&](const PointerType &) -> const int { return 8; },
+  };
+
 loop:
   switch (next_kind()) {
   case TokenKind::plus: {
-    auto token = consume();
+    auto loc = consume()->location;
     auto rhs = multiplicative();
-    auto visitor = [&](auto &&l, auto &&r) -> const Type * {
-      using T = std::decay_t<decltype(l)>;
-      using U = std::decay_t<decltype(r)>;
-      if constexpr (std::is_same_v<IntegerType, IntegerType>) {
-        return lhs->type();
-      }
-      if constexpr (std::is_same_v<PointerType, IntegerType>) {
-        return lhs->type();
-      }
-      if constexpr (std::is_same_v<IntegerType, PointerType>) {
-        return rhs->type();
-      }
-      context_->fatal(token->location, "");
+
+    auto visitor = overloaded{
+        [&](const IntegerType &, const IntegerType &) -> const Type * {
+          return lhs->type();
+        },
+        [&](const IntegerType &, const PointerType &ptr) -> const Type * {
+          int size_bytes = std::visit(size_of, *ptr.base);
+          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
+          lhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), lhs,
+                                   size);
+          return rhs->type();
+        },
+        [&](const PointerType &ptr, const IntegerType &) -> const Type * {
+          int size_bytes = std::visit(size_of, *ptr.base);
+          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
+          rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
+                                   size);
+          return lhs->type();
+        },
+        [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
     };
     auto type = std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
     goto loop;
   }
   case TokenKind::minus: {
-    auto token = consume();
+    auto loc = consume()->location;
     auto rhs = multiplicative();
-    auto visitor = [&](auto &&l, auto &&r) -> const Type * {
-      using T = std::decay_t<decltype(l)>;
-      using U = std::decay_t<decltype(r)>;
-      if constexpr (std::is_same_v<IntegerType, IntegerType>) {
-        return lhs->type();
-      }
-      if constexpr (std::is_same_v<PointerType, PointerType>) {
-        return context_->int64();
-      }
-      context_->fatal(token->location, "");
+    auto visitor = overloaded{
+        [&](const IntegerType &, const IntegerType &) -> const Type * {
+          return lhs->type();
+        },
+        [&](const PointerType &ptr, const IntegerType &) -> const Type * {
+          int size_bytes = std::visit(size_of, *ptr.base);
+          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
+          rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
+                                   size);
+          return lhs->type();
+        },
+        [&](const PointerType &, const PointerType &) -> const Type * {
+          return context_->int64();
+        },
+        [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
     };
     auto type = std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);

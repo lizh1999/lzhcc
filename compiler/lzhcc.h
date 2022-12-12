@@ -77,7 +77,7 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 //
 
 using Type =
-    std::variant<struct IntegerType, struct FloatingType, struct PointerType>;
+    std::variant<struct IntegerType, struct PointerType>;
 
 struct IntegerType {
   const int size_bytes;

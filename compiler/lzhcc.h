@@ -29,6 +29,7 @@ class Context;
 
 enum class TokenKind : uint8_t {
   amp,           // "&"
+  comma,         // ","
   equal,         // "="
   equal_equal,   // "=="
   exclaim,       // "!"
@@ -52,6 +53,7 @@ enum class TokenKind : uint8_t {
   kw_else,       // "else"
   kw_for,        // "for"
   kw_if,         // "if"
+  kw_int,        // "int"
   kw_return,     // "return"
   kw_while,      // "while"
 };
@@ -76,8 +78,7 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 // lzhcc_syntax.cc
 //
 
-using Type =
-    std::variant<struct IntegerType, struct PointerType>;
+using Type = std::variant<struct IntegerType, struct PointerType>;
 
 struct IntegerType {
   const int size_bytes;
@@ -95,6 +96,11 @@ struct PointerType {
 struct Variable {
   const int offset;
   const Type *type;
+};
+
+struct Function {
+  const int max_stack_size;
+  const struct Statement *stmt;
 };
 
 struct ExprVisitor;
@@ -149,7 +155,8 @@ enum class BinaryKind {
 };
 
 struct BinaryExpr : Expression {
-  BinaryExpr(BinaryKind kind, const Type *type, Expression *lhs, Expression *rhs)
+  BinaryExpr(BinaryKind kind, const Type *type, Expression *lhs,
+             Expression *rhs)
       : kind(kind), type_(type), lhs(lhs), rhs(rhs) {}
   void visit(ExprVisitor *visitor) const override;
   const Type *type() const override;
@@ -226,13 +233,13 @@ struct StmtVisitor {
 // lzhcc_parse/lzhcc_parse.cc
 //
 
-auto parse(std::span<const Token> tokens, Context &context) -> Statement *;
+auto parse(std::span<const Token> tokens, Context &context) -> Function *;
 
 //
 // lzhcc_codgen/lzhcc_codgen.cc
 //
 
-auto codegen(Statement *stmt, Context &context) -> void;
+auto codegen(Function *func, Context &context) -> void;
 
 //
 // lzhcc_context.cc

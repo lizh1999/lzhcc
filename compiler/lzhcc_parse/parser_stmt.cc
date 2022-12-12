@@ -4,11 +4,21 @@
 namespace lzhcc {
 
 auto Parser::block_stmt() -> Statement * {
+  entry_scope();
   consume(TokenKind::open_brace);
   std::vector<Statement *> stmts;
   while (!consume_if(TokenKind::close_brace)) {
-    stmts.push_back(statement());
+    switch (next_kind()) {
+    case TokenKind::kw_int: {
+      auto init = declaration();
+      stmts.insert(stmts.end(), init.begin(), init.end());
+      break;
+    }
+    default:
+      stmts.push_back(statement());
+    }
   }
+  leave_scope();
   return create<BlockStmt>(std::move(stmts));
 }
 

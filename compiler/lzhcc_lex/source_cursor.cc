@@ -82,6 +82,9 @@ auto SourceCursor::punctuator() -> Token {
   case '&':
     advance_current();
     return token(TokenKind::amp, location);
+  case ',':
+    advance_current();
+    return token(TokenKind::comma, location);
   case '+':
     advance_current();
     return token(TokenKind::plus, location);

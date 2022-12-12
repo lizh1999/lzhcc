@@ -6,11 +6,6 @@
 
 namespace lzhcc {
 
-template <class... Ts> struct overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
 auto Parser::primary() -> Expression * {
   switch (next_kind()) {
   case TokenKind::numeric: {
@@ -28,7 +23,7 @@ auto Parser::primary() -> Expression * {
   }
   case TokenKind::identifier: {
     auto token = consume();
-    auto var = get_or_allocate(token->inner);
+    auto var = find_var(token);
     return create<VarRefExpr>(var);
   }
   default:
@@ -98,12 +93,6 @@ loop:
 
 auto Parser::additive() -> Expression * {
   auto lhs = multiplicative();
-
-  auto size_of = overloaded{
-      [&](const IntegerType &type) -> const int { return type.size_bytes; },
-      [&](const PointerType &) -> const int { return 8; },
-  };
-
 loop:
   switch (next_kind()) {
   case TokenKind::plus: {
@@ -137,6 +126,7 @@ loop:
   case TokenKind::minus: {
     auto loc = consume()->location;
     auto rhs = multiplicative();
+    int divide = 1;
     auto visitor = overloaded{
         [&](const IntegerType &, const IntegerType &) -> const Type * {
           return lhs->type();
@@ -148,13 +138,18 @@ loop:
                                    size);
           return lhs->type();
         },
-        [&](const PointerType &, const PointerType &) -> const Type * {
+        [&](const PointerType &ptr, const PointerType &) -> const Type * {
+          divide = std::visit(size_of, *ptr.base);
           return context_->int64();
         },
         [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
     };
     auto type = std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
+    if (divide != 1) {
+      auto size = create<IntegerExpr>(context_->int64(), divide);
+      lhs = create<BinaryExpr>(BinaryKind::divide, type, lhs, size);
+    }
     goto loop;
   }
   default:
@@ -230,14 +225,18 @@ auto Parser::assignment() -> Expression * {
 loop:
   switch (next_kind()) {
   case TokenKind::equal: {
-    consume();
+    int loc = consume()->location;
     auto rhs = assignment();
     auto type = rhs->type();
 
-    // lhs's type meight be modified, hack it.
-    if (auto hack = dynamic_cast<VarRefExpr *>(lhs)) {
-      hack->var->type = type;
-    }
+    auto visitor = [&](auto &&l, auto &&r) {
+      using T = std::decay_t<decltype(l)>;
+      using U = std::decay_t<decltype(r)>;
+      if constexpr (!std::is_same_v<T, U>) {
+        context_->fatal(loc, "");
+      }
+    };
+    std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::assign, type, lhs, rhs);
     goto loop;
   }

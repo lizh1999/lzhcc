@@ -4,12 +4,13 @@
 
 namespace lzhcc {
 
-auto Parser::operator()() -> Statement * {
-  auto ret = statement();
-  while (next_kind() != TokenKind::eof) {
-    ret = statement();
-  }
-  return ret;
+auto Parser::operator()() -> Function * {
+  stack_size = 0;
+  max_stack_size = 0;
+  scope_ = nullptr;
+  auto stmt = block_stmt();
+  assert(next_kind() == TokenKind::eof);
+  return context_->create<Function>(Function{max_stack_size, stmt});
 }
 
 auto Parser::next_kind() const -> TokenKind { return position_->kind; }
@@ -34,14 +35,37 @@ auto Parser::consume_if(TokenKind kind) -> const Token * {
   }
 }
 
-auto Parser::get_or_allocate(int identifier) -> Variable * {
-  if (auto it = var_map_.find(identifier); it != var_map_.end()) {
-    return it->second;
-  } else {
-    auto var = create<Variable>(Variable{(int)var_map_.size() * 8, context_->int64()});
-    var_map_.emplace(identifier, var);
-    return var;
+auto Parser::entry_scope() -> void {
+  scope_ = context_->create<Scope>(Scope{scope_, {}});
+}
+
+auto Parser::leave_scope() -> void {
+  for (auto [_, var] : scope_->var_map) {
+    stack_size -= std::visit(size_of, *var->type);
   }
+  scope_ = scope_->parent;
+}
+
+auto Parser::find_var(const Token *token) -> Variable * {
+  auto scope = scope_;
+  for (; scope; scope = scope->parent) {
+    auto it = scope->var_map.find(token->inner);
+    if (it != scope->var_map.end()) {
+      return it->second;
+    }
+  }
+  return nullptr;
+}
+
+auto Parser::create_var(const Token *token, const Type *type) -> Variable * {
+  if (find_var(token)) {
+    context_->fatal(token->location, "");
+  }
+  auto var = create<Variable>(Variable{stack_size, type});
+  stack_size += std::visit(size_of, *type);
+  max_stack_size = std::max(max_stack_size, stack_size);
+  scope_->var_map.emplace(token->inner, var);
+  return var;
 }
 
 } // namespace lzhcc

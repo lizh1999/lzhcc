@@ -78,7 +78,8 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 // lzhcc_syntax.cc
 //
 
-using Type = std::variant<struct IntegerType, struct PointerType>;
+using Type =
+    std::variant<struct IntegerType, struct PointerType, struct FunctionType>;
 
 struct IntegerType {
   const int size_bytes;
@@ -93,14 +94,23 @@ struct PointerType {
   const Type *base;
 };
 
-struct Variable {
+struct FunctionType {
+  const Type *return_type;
+  const std::vector<const Token *> names;
+  const std::vector<Type *> paramters;
+};
+
+struct Local {
   const int offset;
   const Type *type;
 };
 
 struct Function {
+  const Token *name;
   const int max_stack_size;
   const struct Statement *stmt;
+  const Type *type;
+  const std::vector<Local *> paramters;
 };
 
 struct ExprVisitor;
@@ -112,10 +122,10 @@ struct Expression {
 };
 
 struct VarRefExpr : Expression {
-  VarRefExpr(Variable *var) : var(var) {}
+  VarRefExpr(Local *var) : var(var) {}
   virtual void visit(ExprVisitor *visitor) const override;
   const Type *type() const override;
-  Variable *var;
+  Local *var;
 };
 
 struct IntegerExpr : Expression {
@@ -167,11 +177,14 @@ struct BinaryExpr : Expression {
 };
 
 struct CallExpr : Expression {
-  CallExpr(const Token *name, const Type *type): name(name), type_(type) {}
+  CallExpr(const Token *name, const Type *type,
+           const std::vector<Expression *> arguments)
+      : name(name), type_(type), arguments(arguments) {}
   void visit(ExprVisitor *visitor) const override;
   const Type *type() const override;
   const Token *name;
   const Type *type_;
+  const std::vector<Expression *> arguments;
 };
 
 struct ExprVisitor {
@@ -242,13 +255,14 @@ struct StmtVisitor {
 // lzhcc_parse/lzhcc_parse.cc
 //
 
-auto parse(std::span<const Token> tokens, Context &context) -> Function *;
+auto parse(std::span<const Token> tokens, Context &context)
+    -> std::vector<Function *>;
 
 //
 // lzhcc_codgen/lzhcc_codgen.cc
 //
 
-auto codegen(Function *func, Context &context) -> void;
+auto codegen(std::span<Function *> func, Context &context) -> void;
 
 //
 // lzhcc_context.cc

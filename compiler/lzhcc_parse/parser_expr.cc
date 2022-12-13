@@ -24,8 +24,14 @@ auto Parser::primary() -> Expression * {
   case TokenKind::identifier: {
     auto token = consume();
     if (consume_if(TokenKind::open_paren)) {
-      consume(TokenKind::close_paren);
-      return create<CallExpr>(token, context_->int64());
+      std::vector<Expression *> arguments;
+      while (!consume_if(TokenKind::close_paren)) {
+        if (!arguments.empty()) {
+          consume(TokenKind::comma);
+        }
+        arguments.push_back(assignment());
+      }
+      return create<CallExpr>(token, context_->int64(), std::move(arguments));
     } else {
       auto var = find_var(token);
       return create<VarRefExpr>(var);

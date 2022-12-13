@@ -13,18 +13,19 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 inline auto size_of = overloaded{
     [](const IntegerType &type) -> const int { return type.size_bytes; },
     [](const PointerType &) -> const int { return 8; },
+    [](const FunctionType &) -> const int { return 0; },
 };
 
 struct Scope {
   Scope *parent;
-  std::unordered_map<int, Variable *> var_map;
+  std::unordered_map<int, Local *> var_map;
 };
 
 class Parser {
 public:
   Parser(const Token *position, Context *context)
       : position_(position), context_(context) {}
-  auto operator()() -> Function *;
+  auto operator()() -> std::vector<Function *>;
 
 private:
   auto primary() -> Expression *;
@@ -36,7 +37,7 @@ private:
   auto assignment() -> Expression *;
   auto expression() -> Expression *;
 
-  auto block_stmt() -> Statement *;
+  auto block_stmt(bool is_top=false) -> Statement *;
   auto expr_stmt() -> Statement *;
   auto for_stmt() -> Statement *;
   auto if_stmt() -> Statement *;
@@ -46,8 +47,10 @@ private:
 
   auto declspec() -> Type *;
   auto pointers(Type *base) -> Type *;
-  auto declarator(Type *base) -> Variable *;
-  auto declaration() -> std::vector<Statement*>;
+  auto suffix_type(Type *base) -> Type *;
+  auto declarator(Type *base) -> std::pair<const Token *, Type *>;
+  auto declaration() -> std::vector<Statement *>;
+  auto function() -> Function *;
 
   auto next_kind() const -> TokenKind;
   auto consume() -> const Token *;
@@ -60,8 +63,9 @@ private:
 
   auto entry_scope() -> void;
   auto leave_scope() -> void;
-  auto create_var(const Token *token, const Type *type) -> Variable *;
-  auto find_var(const Token *token) -> Variable *;
+  auto create_var(std::pair<const Token *, Type *> x) -> Local *;
+  auto create_var(const Token *token, const Type *type) -> Local *;
+  auto find_var(const Token *token) -> Local *;
 
   const Token *position_;
   Context *context_;

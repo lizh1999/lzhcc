@@ -33,6 +33,7 @@ struct StmtGenVisitor : StmtVisitor {
   void visit(const ReturnStmt *stmt) override;
   void visit(const BlockStmt *stmt) override;
   int counter = 0;
+  int return_label;
   LValueVisitor lvisitor_;
   RValueVisitor rvisitor_;
 };

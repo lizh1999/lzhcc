@@ -1,5 +1,8 @@
 #include "lzhcc.h"
 #include "lzhcc_parse.h"
+#include <cassert>
+#include <type_traits>
+#include <variant>
 
 namespace lzhcc {
 
@@ -15,15 +18,36 @@ auto Parser::pointers(Type *base) -> Type * {
   return base;
 }
 
-auto Parser::declarator(Type *base) -> Variable * {
-  auto type = pointers(base);
+auto Parser::suffix_type(Type *base) -> Type * {
+  if (!consume_if(TokenKind::open_paren)) {
+    return base;
+  }
+  std::vector<const Token *> names;
+  std::vector<Type *> paramters;
+
+  while (!consume_if(TokenKind::close_paren)) {
+    if (!paramters.empty()) {
+      consume(TokenKind::comma);
+    }
+    auto base = declspec();
+    auto [name, paramter] = declarator(base);
+    names.push_back(name);
+    paramters.push_back(paramter);
+  }
+  return create<Type>(
+      FunctionType{base, std::move(names), std::move(paramters)});
+}
+
+auto Parser::declarator(Type *base) -> std::pair<const Token *, Type *> {
+  base = pointers(base);
   auto name = consume(TokenKind::identifier);
-  return create_var(name, type);
+  auto type = suffix_type(base);
+  return std::pair(name, type);
 }
 
 auto Parser::declaration() -> std::vector<Statement *> {
   auto base = declspec();
-  auto var = declarator(base);
+  auto var = create_var(declarator(base));
 
   std::vector<Statement *> stmts;
 loop:
@@ -38,7 +62,7 @@ loop:
   }
   case TokenKind::comma:
     consume();
-    var = declarator(base);
+    var = create_var(declarator(base));
     goto loop;
   case TokenKind::semi:
     consume();
@@ -46,6 +70,35 @@ loop:
   default:
     context_->fatal(position_->location, "");
   }
+}
+
+auto Parser::function() -> Function * {
+  auto base = declspec();
+  auto [name, type] = declarator(base);
+
+  std::vector<Local *> paramters;
+  auto visitor = [&, name = name](auto &&arg) {
+    using T = std::decay_t<decltype(arg)>;
+    if constexpr (std::is_same_v<T, FunctionType>) {
+      int n = arg.paramters.size();
+      for (int i = 0; i < n; i++) {
+        auto var = create_var(arg.names[i], arg.paramters[i]);
+        paramters.push_back(var);
+      }
+    } else {
+      context_->fatal(name->location, "");
+    }
+  };
+
+  assert(!scope_);
+  stack_size = 0;
+  max_stack_size = 0;
+
+  entry_scope();
+  std::visit(visitor, *type);
+  auto stmt = block_stmt(/*is_top=*/true);
+  return create<Function>(
+      Function{name, max_stack_size, stmt, type, std::move(paramters)});
 }
 
 } // namespace lzhcc

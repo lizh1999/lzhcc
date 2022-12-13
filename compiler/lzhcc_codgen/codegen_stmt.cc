@@ -46,7 +46,7 @@ auto StmtGenVisitor::visit(const IfStmt *stmt) -> void {
 
 auto StmtGenVisitor::visit(const ReturnStmt *stmt) -> void {
   stmt->expr->visit(&rvisitor_);
-  printf("  j .L.return\n");
+  printf("  j .L.return.%d\n", return_label);
 }
 
 auto StmtGenVisitor::visit(const BlockStmt *stmt) -> void {

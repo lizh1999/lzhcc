@@ -3,8 +3,10 @@
 
 namespace lzhcc {
 
-auto Parser::block_stmt() -> Statement * {
-  entry_scope();
+auto Parser::block_stmt(bool is_top) -> Statement * {
+  if (!is_top) {
+    entry_scope();
+  }
   consume(TokenKind::open_brace);
   std::vector<Statement *> stmts;
   while (!consume_if(TokenKind::close_brace)) {

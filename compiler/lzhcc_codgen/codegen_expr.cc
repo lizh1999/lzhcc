@@ -87,10 +87,21 @@ auto RValueVisitor::visit(const BinaryExpr *expr) -> void {
   }
 }
 
+static const char *arg_reg[] = {"a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
+
 auto RValueVisitor::visit(const CallExpr *expr) -> void {
+  assert(expr->arguments.size() <= 8);
+  for (auto argument : expr->arguments) {
+    argument->visit(this);
+    push();
+  }
+  for (int i = expr->arguments.size(); i--;) {
+    pop(arg_reg[i]);
+  }
+
   auto str = context_->literal(expr->name->inner);
   push("ra");
-  printf("  call %.*s\n", (int) str.size(), str.data());
+  printf("  call %.*s\n", (int)str.size(), str.data());
   pop("ra");
 }
 

@@ -3,9 +3,14 @@
 
 namespace lzhcc {
 
+StmtGenVisitor::StmtGenVisitor(Context *context) {
+  lvisitor_.rvisitor_ = &rvisitor_;
+  rvisitor_.lvisitor_ = &lvisitor_;
+  rvisitor_.context_ = context;
+}
+
 auto StmtGenVisitor::visit(const ExpressionStmt *stmt) -> void {
-  RValueVisitor visitor;
-  stmt->expr->visit(&visitor);
+  stmt->expr->visit(&rvisitor_);
 }
 
 auto StmtGenVisitor::visit(const ForStmt *stmt) -> void {
@@ -14,22 +19,20 @@ auto StmtGenVisitor::visit(const ForStmt *stmt) -> void {
   }
   int label = counter++;
   printf(".L.begin.%d:", label);
-  RValueVisitor visitor;
   if (stmt->cond) {
-    stmt->cond->visit(&visitor);
+    stmt->cond->visit(&rvisitor_);
     printf("  beqz a0, .L.end.%d\n", label);
   }
   stmt->then->visit(this);
   if (stmt->inc) {
-    stmt->inc->visit(&visitor);
+    stmt->inc->visit(&rvisitor_);
   }
   printf("  j .L.begin.%d\n", label);
   printf(".L.end.%d:", label);
 }
 
 auto StmtGenVisitor::visit(const IfStmt *stmt) -> void {
-  RValueVisitor visitor;
-  stmt->cond->visit(&visitor);
+  stmt->cond->visit(&rvisitor_);
   int label = counter++;
   printf("  beqz a0, .L.else.%d\n", label);
   stmt->then->visit(this);
@@ -42,8 +45,7 @@ auto StmtGenVisitor::visit(const IfStmt *stmt) -> void {
 }
 
 auto StmtGenVisitor::visit(const ReturnStmt *stmt) -> void {
-  RValueVisitor visitor;
-  stmt->expr->visit(&visitor);
+  stmt->expr->visit(&rvisitor_);
   printf("  j .L.return\n");
 }
 
@@ -53,4 +55,4 @@ auto StmtGenVisitor::visit(const BlockStmt *stmt) -> void {
   }
 }
 
-}
+} // namespace lzhcc

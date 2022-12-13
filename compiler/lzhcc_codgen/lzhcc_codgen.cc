@@ -11,7 +11,7 @@ auto codegen(Function *func, Context &context) -> void {
   printf("  sd fp, 0(sp)\n");
   printf("  addi sp, sp, -%d\n", func->max_stack_size);
   printf("  mv fp, sp\n");
-  StmtGenVisitor gen;
+  StmtGenVisitor gen(&context);
   func->stmt->visit(&gen);
   printf(".L.return:\n");
   printf("  mv sp, fp\n");

@@ -5,8 +5,8 @@ assert() {
   input=$2
 
   ./lzhcc "$input" > tmp.s || exit
-  riscv64-unknown-linux-gnu-gcc tmp.s -static -o tmp
-  qemu-riscv64 tmp
+  $GCC -static -o tmp tmp.s tmp2.o
+  $QEMU tmp
   actual="$?"
 
   if [ "$actual" = "$expected" ]; then
@@ -18,6 +18,14 @@ assert() {
 }
 
 cd build
+
+GCC=riscv64-unknown-linux-gnu-gcc
+QEMU=qemu-riscv64
+
+cat <<EOF | $GCC -xc -c -o tmp2.o -
+int ret3() { return 3; }
+int ret5() { return 5; }
+EOF
 
 assert 0 '{ return 0; }'
 assert 42 '{ return 42; }'
@@ -94,5 +102,9 @@ assert 7 '{ int x=3; int y=5; *(&y-2+1)=7; return x; }'
 assert 5 '{ int x=3; return (&x+2)-&x+3; }'
 assert 8 '{ int x, y; x=3; y=5; return x+y; }'
 assert 8 '{ int x=3, y=5; return x+y; }'
+
+assert 3 '{ return ret3(); }'
+assert 5 '{ return ret5(); }'
+
 
 echo OK

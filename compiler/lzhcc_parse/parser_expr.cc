@@ -23,8 +23,13 @@ auto Parser::primary() -> Expression * {
   }
   case TokenKind::identifier: {
     auto token = consume();
-    auto var = find_var(token);
-    return create<VarRefExpr>(var);
+    if (consume_if(TokenKind::open_paren)) {
+      consume(TokenKind::close_paren);
+      return create<CallExpr>(token, context_->int64());
+    } else {
+      auto var = find_var(token);
+      return create<VarRefExpr>(var);
+    }
   }
   default:
     context_->fatal(position_->location, "");

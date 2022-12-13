@@ -10,10 +10,9 @@ auto LValueVisitor::visit(const VarRefExpr *expr) -> void {
 }
 
 auto LValueVisitor::visit(const UnaryExpr *expr) -> void {
-  RValueVisitor visitor;
   switch (expr->kind) {
   case UnaryKind::deref:
-    expr->operand->visit(&visitor);
+    expr->operand->visit(rvisitor_);
     break;
   default:
     expect_lvalue();
@@ -29,7 +28,6 @@ auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
 }
 
 auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
-  LValueVisitor visitor;
   switch (expr->kind) {
   case UnaryKind::negative:
     expr->operand->visit(this);
@@ -40,7 +38,7 @@ auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
     printf("  ld a0, 0(a0)\n");
     break;
   case UnaryKind::refrence:
-    expr->operand->visit(&visitor);
+    expr->operand->visit(lvisitor_);
     break;
   }
 }
@@ -51,8 +49,7 @@ auto RValueVisitor::visit(const BinaryExpr *expr) -> void {
   if (expr->kind != BinaryKind::assign) {
     expr->lhs->visit(this);
   } else {
-    LValueVisitor visitor;
-    expr->lhs->visit(&visitor);
+    expr->lhs->visit(lvisitor_);
   }
   pop("a1");
   switch (expr->kind) {
@@ -90,9 +87,16 @@ auto RValueVisitor::visit(const BinaryExpr *expr) -> void {
   }
 }
 
-auto RValueVisitor::push() -> void {
+auto RValueVisitor::visit(const CallExpr *expr) -> void {
+  auto str = context_->literal(expr->name->inner);
+  push("ra");
+  printf("  call %.*s\n", (int) str.size(), str.data());
+  pop("ra");
+}
+
+auto RValueVisitor::push(const char *reg) -> void {
   printf("  addi sp, sp, -8\n");
-  printf("  sd a0, 0(sp)\n");
+  printf("  sd %s, 0(sp)\n", reg);
 }
 
 auto RValueVisitor::pop(const char *reg) -> void {

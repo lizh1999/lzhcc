@@ -166,11 +166,20 @@ struct BinaryExpr : Expression {
   const Expression *rhs;
 };
 
+struct CallExpr : Expression {
+  CallExpr(const Token *name, const Type *type): name(name), type_(type) {}
+  void visit(ExprVisitor *visitor) const override;
+  const Type *type() const override;
+  const Token *name;
+  const Type *type_;
+};
+
 struct ExprVisitor {
   virtual void visit(const VarRefExpr *expr) = 0;
   virtual void visit(const IntegerExpr *expr) = 0;
   virtual void visit(const UnaryExpr *expr) = 0;
   virtual void visit(const BinaryExpr *expr) = 0;
+  virtual void visit(const CallExpr *expr) = 0;
 };
 
 struct StmtVisitor;

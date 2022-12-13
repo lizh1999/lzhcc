@@ -26,6 +26,12 @@ auto BinaryExpr::visit(ExprVisitor *visitor) const -> void {
 
 auto BinaryExpr::type() const -> const Type * { return type_; }
 
+auto CallExpr::visit(ExprVisitor *visitor) const -> void {
+  visitor->visit(this);
+}
+
+auto CallExpr::type() const -> const Type * { return type_; }
+
 auto EmptyStmt::visit(StmtVisitor *visitor) const -> void {
   visitor->visit(this);
 }

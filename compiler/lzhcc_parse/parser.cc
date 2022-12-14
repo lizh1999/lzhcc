@@ -41,7 +41,7 @@ auto Parser::entry_scope() -> void {
 
 auto Parser::leave_scope() -> void {
   for (auto [_, var] : scope_->var_map) {
-    stack_size -= std::visit(size_of, *var->type);
+    stack_size -= context_->size_of(var->type);
   }
   scope_ = scope_->parent;
 }
@@ -66,7 +66,7 @@ auto Parser::create_var(const Token *token, const Type *type) -> Local * {
     context_->fatal(token->location, "");
   }
   auto var = create<Local>(Local{stack_size, type});
-  stack_size += std::visit(size_of, *type);
+  stack_size += context_->size_of(type);
   max_stack_size = std::max(max_stack_size, stack_size);
   scope_->var_map.emplace(token->inner, var);
   return var;

@@ -6,21 +6,6 @@
 
 namespace lzhcc {
 
-inline struct {
-  auto operator()(const IntegerType& type) -> const int {
-    return type.size_bytes;
-  }
-  auto operator()(const PointerType&) -> const int {
-    return 8;
-  }
-  auto operator()(const FunctionType&) -> const int {
-    return 0;
-  }
-  auto operator()(const ArrayType &type) -> const int {
-    return type.length * std::visit(*this, *type.base);
-  }
-} size_of;
-
 struct Scope {
   Scope *parent;
   std::unordered_map<int, Local *> var_map;
@@ -35,6 +20,7 @@ public:
 private:
   auto primary() -> Expression *;
   auto unary() -> Expression *;
+  auto postfix() -> Expression *;
   auto multiplicative() -> Expression *;
   auto additive() -> Expression *;
   auto relational() -> Expression *;

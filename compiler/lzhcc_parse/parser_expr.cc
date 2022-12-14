@@ -42,6 +42,37 @@ auto Parser::primary() -> Expression * {
   }
 }
 
+struct RefenceOplower {
+  auto operator()(const ArrayType &arr) -> Expression * {
+    auto type = context->pointer_to(arr.base);
+    return context->create<UnaryExpr>(UnaryKind::refrence, type, operand);
+  }
+  auto operator()(auto &&) -> Expression * {
+    auto type = context->pointer_to(operand->type());
+    return context->create<UnaryExpr>(UnaryKind::refrence, type, operand);
+  }
+  Context *context;
+  Expression *operand;
+};
+
+struct DerefOpLower {
+  auto operator()(const ArrayType &arr) -> Expression * {
+    return context->create<UnaryExpr>(UnaryKind::deref, arr.base, operand);
+  }
+
+  auto operator()(const PointerType &ptr) -> Expression * {
+    return context->create<UnaryExpr>(UnaryKind::deref, ptr.base, operand);
+  }
+
+  auto operator()(auto &&) -> Expression * {
+    context->fatal(position->location, "");
+  }
+
+  Context *context;
+  Expression *operand;
+  const Token *position;
+};
+
 auto Parser::unary() -> Expression * {
   switch (next_kind()) {
   case TokenKind::plus:
@@ -56,35 +87,17 @@ auto Parser::unary() -> Expression * {
   case TokenKind::amp: {
     consume();
     auto operand = unary();
-    auto visitor = overloaded{
-        [&](const ArrayType &arr) -> Type * {
-          return context_->pointer_to(arr.base);
-        },
-        [&](const auto &) -> Type * {
-          return context_->pointer_to(operand->type());
-        },
-    };
-    auto type = std::visit(visitor, *operand->type());
-    return create<UnaryExpr>(UnaryKind::refrence, type, operand);
+    auto lower = RefenceOplower{context_, operand};
+    return std::visit(lower, *operand->type());
   }
   case TokenKind::star: {
     auto token = consume();
     auto operand = unary();
-    auto visitor = [&](auto &&arg) -> const Type * {
-      using T = std::decay_t<decltype(arg)>;
-      if constexpr (std::is_same_v<T, PointerType>) {
-        return arg.base;
-      } else if constexpr (std::is_same_v<T, ArrayType>) {
-        return arg.base;
-      } else {
-        context_->fatal(token->location, "");
-      }
-    };
-    auto type = std::visit(visitor, *operand->type());
-    return create<UnaryExpr>(UnaryKind::deref, type, operand);
+    auto lower = DerefOpLower{context_, operand, token};
+    return std::visit(lower, *operand->type());
   }
   default:
-    return primary();
+    return postfix();
   }
 }
 
@@ -202,6 +215,19 @@ loop:
   }
   default:
     break;
+  }
+  return lhs;
+}
+
+auto Parser::postfix() -> Expression * {
+  auto lhs = primary();
+  while (auto token = consume_if(TokenKind::open_bracket)) {
+    auto rhs = expression();
+    consume(TokenKind::close_bracket);
+    auto lower1 = AddOpLower{context_, lhs, rhs, token};
+    lhs = std::visit(lower1, *lhs->type(), *rhs->type());
+    auto lower2 = DerefOpLower{context_, lhs, token};
+    lhs = std::visit(lower2, *lhs->type());
   }
   return lhs;
 }

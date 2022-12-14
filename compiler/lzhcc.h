@@ -305,6 +305,16 @@ public:
   auto pointer_to(const Type *base) -> Type *;
   auto array_of(const Type *base, int length) -> Type *;
 
+  auto size_of(const Type *type) -> int;
+  auto integer(int64_t value) -> Expression *;
+  auto add(const Type *type, Expression *lhs, Expression *rhs) -> Expression *;
+  auto subtract(const Type *type, Expression *lhs, Expression *rhs)
+      -> Expression *;
+  auto multiply(const Type *type, Expression *lhs, Expression *rhs)
+      -> Expression *;
+  auto divide(const Type *type, Expression *lhs, Expression *rhs)
+      -> Expression *;
+
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   template <class T, class... Args> auto create(Args &&...args) -> T * {

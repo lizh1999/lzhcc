@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 
 namespace lzhcc {
@@ -110,6 +111,45 @@ auto Context::pointer_to(const Type *base) -> Type * {
 
 auto Context::array_of(const Type *base, int length) -> Type * {
   return create<Type>(ArrayType{base, length});
+}
+
+inline struct {
+  auto operator()(const IntegerType &type) -> const int {
+    return type.size_bytes;
+  }
+  auto operator()(const PointerType &) -> const int { return 8; }
+  auto operator()(const FunctionType &) -> const int { return 0; }
+  auto operator()(const ArrayType &type) -> const int {
+    return type.length * std::visit(*this, *type.base);
+  }
+} size_of;
+
+auto Context::size_of(const Type *type) -> int {
+  return std::visit(lzhcc::size_of, *type);
+}
+
+auto Context::integer(int64_t value) -> Expression * {
+  return create<IntegerExpr>(int64(), value);
+}
+
+auto Context::add(const Type *type, Expression *lhs, Expression *rhs)
+    -> Expression * {
+  return create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
+}
+
+auto Context::subtract(const Type *type, Expression *lhs, Expression *rhs)
+    -> Expression * {
+  return create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
+}
+
+auto Context::multiply(const Type *type, Expression *lhs, Expression *rhs)
+    -> Expression * {
+  return create<BinaryExpr>(BinaryKind::multiply, type, lhs, rhs);
+}
+
+auto Context::divide(const Type *type, Expression *lhs, Expression *rhs)
+  -> Expression * {
+  return create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

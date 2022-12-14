@@ -112,79 +112,92 @@ loop:
   return lhs;
 }
 
+struct AddOpLower {
+  auto operator()(const IntegerType &, const IntegerType &) -> Expression * {
+    return context->add(lhs->type(), lhs, rhs);
+  }
+
+  auto offset_of(const Type *type, Expression *n) -> Expression * {
+    int size_bytes = context->size_of(type);
+    auto size = context->integer(size_bytes);
+    return context->multiply(size->type(), n, size);
+  }
+
+  auto operator()(const IntegerType &, const PointerType &ptr) -> Expression * {
+    auto offset = offset_of(ptr.base, lhs);
+    return context->add(rhs->type(), offset, rhs);
+  }
+
+  auto operator()(const IntegerType &, const ArrayType &arr) -> Expression * {
+    auto offset = offset_of(arr.base, lhs);
+    return context->add(rhs->type(), offset, rhs);
+  }
+
+  auto operator()(const PointerType &ptr, const IntegerType &) -> Expression * {
+    auto offset = offset_of(ptr.base, rhs);
+    return context->add(lhs->type(), lhs, offset);
+  }
+
+  auto operator()(const ArrayType &arr, const IntegerType &) -> Expression * {
+    auto offset = offset_of(arr.base, rhs);
+    return context->add(lhs->type(), lhs, offset);
+  }
+
+  auto operator()(auto &&, auto &&) -> Expression * {
+    context->fatal(position->location, "");
+  }
+
+  Context *context;
+  Expression *lhs;
+  Expression *rhs;
+  const Token *position;
+};
+
+struct SubtractOpLower {
+  auto operator()(const IntegerType &, const IntegerType &) -> Expression * {
+    return context->subtract(lhs->type(), lhs, rhs);
+  }
+
+  auto operator()(const PointerType &ptr, const IntegerType &) -> Expression * {
+    int size_bytes = context->size_of(ptr.base);
+    auto size = context->integer(size_bytes);
+    auto offset = context->multiply(size->type(), rhs, size);
+    return context->subtract(lhs->type(), lhs, offset);
+  }
+
+  auto operator()(const PointerType &ptr, const PointerType &) -> Expression * {
+    int size_bytes = context->size_of(ptr.base);
+    auto size = context->integer(size_bytes);
+    auto bytes = context->subtract(size->type(), lhs, rhs);
+    return context->divide(size->type(), bytes, size);
+  }
+
+  auto operator()(auto &&, auto &&) -> Expression * {
+    context->fatal(position->location, "");
+  }
+
+  Context *context;
+  Expression *lhs;
+  Expression *rhs;
+  const Token *position;
+};
+
 auto Parser::additive() -> Expression * {
   auto lhs = multiplicative();
 loop:
   switch (next_kind()) {
   case TokenKind::plus: {
-    auto loc = consume()->location;
+    auto token = consume();
     auto rhs = multiplicative();
-
-    auto visitor = overloaded{
-        [&](const IntegerType &, const IntegerType &) -> const Type * {
-          return lhs->type();
-        },
-        [&](const IntegerType &, const PointerType &ptr) -> const Type * {
-          int size_bytes = std::visit(size_of, *ptr.base);
-          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
-          lhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), lhs,
-                                   size);
-          return rhs->type();
-        },
-        [&](const IntegerType &, const ArrayType &arr) -> const Type * {
-          int size_bytes = std::visit(size_of, *arr.base);
-          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
-          lhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), lhs,
-                                   size);
-          return context_->array_of(arr.base, -1);
-        },
-        [&](const PointerType &ptr, const IntegerType &) -> const Type * {
-          int size_bytes = std::visit(size_of, *ptr.base);
-          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
-          rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
-                                   size);
-          return lhs->type();
-        },
-        [&](const ArrayType &arr, const IntegerType &) -> const Type * {
-          int size_bytes = std::visit(size_of, *arr.base);
-          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
-          rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
-                                   size);
-          return context_->array_of(arr.base, -1);
-        },
-        [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
-    };
-    auto type = std::visit(visitor, *lhs->type(), *rhs->type());
-    lhs = create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
+    auto lower = AddOpLower{context_, lhs, rhs, token};
+    lhs = std::visit(lower, *lhs->type(), *rhs->type());
     goto loop;
   }
   case TokenKind::minus: {
-    auto loc = consume()->location;
+    auto token = consume();
     auto rhs = multiplicative();
-    int divide = 1;
-    auto visitor = overloaded{
-        [&](const IntegerType &, const IntegerType &) -> const Type * {
-          return lhs->type();
-        },
-        [&](const PointerType &ptr, const IntegerType &) -> const Type * {
-          int size_bytes = std::visit(size_of, *ptr.base);
-          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
-          rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
-                                   size);
-          return lhs->type();
-        },
-        [&](const PointerType &ptr, const PointerType &) -> const Type * {
-          divide = std::visit(size_of, *ptr.base);
-          return context_->int64();
-        },
-        [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
-    };
-    auto type = std::visit(visitor, *lhs->type(), *rhs->type());
-    lhs = create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
-    if (divide != 1) {
-      auto size = create<IntegerExpr>(context_->int64(), divide);
-      lhs = create<BinaryExpr>(BinaryKind::divide, type, lhs, size);
-    }
+    auto lower = SubtractOpLower{context_, lhs, rhs, token};
+    lhs = std::visit(lower, *lhs->type(), *rhs->type());
     goto loop;
   }
   default:

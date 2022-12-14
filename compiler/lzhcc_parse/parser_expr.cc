@@ -136,7 +136,7 @@ loop:
           auto size = create<IntegerExpr>(context_->int64(), size_bytes);
           lhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), lhs,
                                    size);
-          return create<Type>(ArrayType{arr.base, -1});
+          return context_->array_of(arr.base, -1);
         },
         [&](const PointerType &ptr, const IntegerType &) -> const Type * {
           int size_bytes = std::visit(size_of, *ptr.base);
@@ -150,7 +150,7 @@ loop:
           auto size = create<IntegerExpr>(context_->int64(), size_bytes);
           rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
                                    size);
-          return create<Type>(ArrayType{arr.base, -1});
+          return context_->array_of(arr.base, -1);
         },
         [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
     };

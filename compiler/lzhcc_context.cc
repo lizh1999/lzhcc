@@ -108,6 +108,10 @@ auto Context::pointer_to(const Type *base) -> Type * {
   return create<Type>(PointerType{base});
 }
 
+auto Context::array_of(const Type *base, int length) -> Type * {
+  return create<Type>(ArrayType{base, length});
+}
+
 auto Context::fatal(int loc, const char *fmt, ...) -> void {
   int file_id = 0;
   while (file_id < text_.size() && text_[file_id].size() <= loc) {

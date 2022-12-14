@@ -40,10 +40,15 @@ auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
     expr->operand->visit(this);
     printf("  neg a0, a0\n");
     break;
-  case UnaryKind::deref:
+  case UnaryKind::deref: {
+    auto visitor = overloaded{
+        [&](const ArrayType &) {},
+        [&](const auto &) { printf("  ld a0, 0(a0)\n"); },
+    };
     expr->operand->visit(this);
-    printf("  ld a0, 0(a0)\n");
+    std::visit(visitor, *expr->type());
     break;
+  }
   case UnaryKind::refrence:
     expr->operand->visit(lvisitor_);
     break;

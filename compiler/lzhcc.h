@@ -303,6 +303,7 @@ public:
   auto uint64() -> Type *;
 
   auto pointer_to(const Type *base) -> Type *;
+  auto array_of(const Type *base, int length) -> Type *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 

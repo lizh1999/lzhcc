@@ -1,8 +1,8 @@
 #include "lzhcc.h"
 #include "lzhcc_parse.h"
 #include <cassert>
-#include <type_traits>
 #include <charconv>
+#include <type_traits>
 #include <variant>
 
 namespace lzhcc {
@@ -26,7 +26,8 @@ auto Parser::array_dimensions(Type *base) -> Type * {
   int length;
   std::from_chars(text.begin(), text.end(), length);
   consume(TokenKind::close_bracket);
-  return create<Type>(ArrayType{base, length});
+  base = suffix_type(base);
+  return context_->array_of(base, length);
 }
 
 auto Parser::function_parameters(Type *base) -> Type * {

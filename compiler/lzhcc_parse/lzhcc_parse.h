@@ -2,19 +2,24 @@
 
 #include "lzhcc.h"
 #include <unordered_map>
+#include <variant>
 
 namespace lzhcc {
 
-template <class... Ts> struct overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
-inline auto size_of = overloaded{
-    [](const IntegerType &type) -> const int { return type.size_bytes; },
-    [](const PointerType &) -> const int { return 8; },
-    [](const FunctionType &) -> const int { return 0; },
-};
+inline struct {
+  auto operator()(const IntegerType& type) -> const int {
+    return type.size_bytes;
+  }
+  auto operator()(const PointerType&) -> const int {
+    return 8;
+  }
+  auto operator()(const FunctionType&) -> const int {
+    return 0;
+  }
+  auto operator()(const ArrayType &type) -> const int {
+    return type.length * std::visit(*this, *type.base);
+  }
+} size_of;
 
 struct Scope {
   Scope *parent;
@@ -47,6 +52,8 @@ private:
 
   auto declspec() -> Type *;
   auto pointers(Type *base) -> Type *;
+  auto array_dimensions(Type *base) -> Type *;
+  auto function_parameters(Type *base) -> Type *;
   auto suffix_type(Type *base) -> Type *;
   auto declarator(Type *base) -> std::pair<const Token *, Type *>;
   auto declaration() -> std::vector<Statement *>;

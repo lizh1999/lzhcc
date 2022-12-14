@@ -12,6 +12,11 @@
 
 namespace lzhcc {
 
+template <class... Ts> struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
 //
 // lzhcc_diagnostic.cc
 //
@@ -45,6 +50,8 @@ enum class TokenKind : uint8_t {
   star,          // "*"
   open_paren,    // "("
   close_paren,   // ")"
+  open_bracket,  // "["
+  close_bracket, // "]"
   open_brace,    // "{"
   close_brace,   // "}"
   numeric,       // numeric value
@@ -78,8 +85,8 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 // lzhcc_syntax.cc
 //
 
-using Type =
-    std::variant<struct IntegerType, struct PointerType, struct FunctionType>;
+using Type = std::variant<struct IntegerType, struct PointerType,
+                          struct FunctionType, struct ArrayType>;
 
 struct IntegerType {
   const int size_bytes;
@@ -98,6 +105,11 @@ struct FunctionType {
   const Type *return_type;
   const std::vector<const Token *> names;
   const std::vector<Type *> paramters;
+};
+
+struct ArrayType {
+  const Type *base;
+  const int length;
 };
 
 struct Local {

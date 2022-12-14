@@ -56,7 +56,15 @@ auto Parser::unary() -> Expression * {
   case TokenKind::amp: {
     consume();
     auto operand = unary();
-    auto type = context_->pointer_to(operand->type());
+    auto visitor = overloaded{
+        [&](const ArrayType &arr) -> Type * {
+          return context_->pointer_to(arr.base);
+        },
+        [&](const auto &) -> Type * {
+          return context_->pointer_to(operand->type());
+        },
+    };
+    auto type = std::visit(visitor, *operand->type());
     return create<UnaryExpr>(UnaryKind::refrence, type, operand);
   }
   case TokenKind::star: {
@@ -65,6 +73,8 @@ auto Parser::unary() -> Expression * {
     auto visitor = [&](auto &&arg) -> const Type * {
       using T = std::decay_t<decltype(arg)>;
       if constexpr (std::is_same_v<T, PointerType>) {
+        return arg.base;
+      } else if constexpr (std::is_same_v<T, ArrayType>) {
         return arg.base;
       } else {
         context_->fatal(token->location, "");
@@ -121,12 +131,26 @@ loop:
                                    size);
           return rhs->type();
         },
+        [&](const IntegerType &, const ArrayType &arr) -> const Type * {
+          int size_bytes = std::visit(size_of, *arr.base);
+          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
+          lhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), lhs,
+                                   size);
+          return create<Type>(ArrayType{arr.base, -1});
+        },
         [&](const PointerType &ptr, const IntegerType &) -> const Type * {
           int size_bytes = std::visit(size_of, *ptr.base);
           auto size = create<IntegerExpr>(context_->int64(), size_bytes);
           rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
                                    size);
           return lhs->type();
+        },
+        [&](const ArrayType &arr, const IntegerType &) -> const Type * {
+          int size_bytes = std::visit(size_of, *arr.base);
+          auto size = create<IntegerExpr>(context_->int64(), size_bytes);
+          rhs = create<BinaryExpr>(BinaryKind::multiply, context_->int64(), rhs,
+                                   size);
+          return create<Type>(ArrayType{arr.base, -1});
         },
         [&](auto &&, auto &&) -> const Type * { context_->fatal(loc, ""); },
     };
@@ -238,14 +262,17 @@ loop:
   case TokenKind::equal: {
     int loc = consume()->location;
     auto rhs = assignment();
-    auto type = rhs->type();
+    auto type = lhs->type();
 
-    auto visitor = [&](auto &&l, auto &&r) {
-      using T = std::decay_t<decltype(l)>;
-      using U = std::decay_t<decltype(r)>;
-      if constexpr (!std::is_same_v<T, U>) {
-        context_->fatal(loc, "");
-      }
+    auto visitor = overloaded{
+        [](const PointerType &, const ArrayType &) -> void {},
+        [&](const auto &l, const auto &r) -> void {
+          using T = std::decay_t<decltype(l)>;
+          using U = std::decay_t<decltype(r)>;
+          if constexpr (!std::is_same_v<T, U>) {
+            context_->fatal(loc, "");
+          }
+        },
     };
     std::visit(visitor, *lhs->type(), *rhs->type());
     lhs = create<BinaryExpr>(BinaryKind::assign, type, lhs, rhs);

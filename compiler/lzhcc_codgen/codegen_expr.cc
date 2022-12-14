@@ -2,6 +2,7 @@
 #include "lzhcc_codegen.h"
 #include <cassert>
 #include <cstdio>
+#include <variant>
 
 namespace lzhcc {
 
@@ -24,7 +25,13 @@ auto RValueVisitor::visit(const IntegerExpr *expr) -> void {
 }
 
 auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
-  printf("  ld a0, %d(fp)\n", expr->var->offset);
+  auto visitor = overloaded{
+      [&](const ArrayType &) {
+        printf("  addi a0, fp, %d\n", expr->var->offset);
+      },
+      [&](const auto &) { printf("  ld a0, %d(fp)\n", expr->var->offset); },
+  };
+  std::visit(visitor, *expr->type());
 }
 
 auto RValueVisitor::visit(const UnaryExpr *expr) -> void {

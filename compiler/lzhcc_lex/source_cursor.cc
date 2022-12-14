@@ -103,6 +103,12 @@ auto SourceCursor::punctuator() -> Token {
   case ')':
     advance_current();
     return token(TokenKind::close_paren, location);
+  case '[':
+    advance_current();
+    return token(TokenKind::open_bracket, location);
+  case ']':
+    advance_current();
+    return token(TokenKind::close_bracket, location);
   case '{':
     advance_current();
     return token(TokenKind::open_brace, location);

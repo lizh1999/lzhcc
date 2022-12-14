@@ -2,6 +2,7 @@
 #include "lzhcc_parse.h"
 #include <cassert>
 #include <type_traits>
+#include <charconv>
 #include <variant>
 
 namespace lzhcc {
@@ -18,10 +19,18 @@ auto Parser::pointers(Type *base) -> Type * {
   return base;
 }
 
-auto Parser::suffix_type(Type *base) -> Type * {
-  if (!consume_if(TokenKind::open_paren)) {
-    return base;
-  }
+auto Parser::array_dimensions(Type *base) -> Type * {
+  consume(TokenKind::open_bracket);
+  auto token = consume(TokenKind::numeric);
+  auto text = context_->literal(token->inner);
+  int length;
+  std::from_chars(text.begin(), text.end(), length);
+  consume(TokenKind::close_bracket);
+  return create<Type>(ArrayType{base, length});
+}
+
+auto Parser::function_parameters(Type *base) -> Type * {
+  consume(TokenKind::open_paren);
   std::vector<const Token *> names;
   std::vector<Type *> paramters;
 
@@ -36,6 +45,17 @@ auto Parser::suffix_type(Type *base) -> Type * {
   }
   return create<Type>(
       FunctionType{base, std::move(names), std::move(paramters)});
+}
+
+auto Parser::suffix_type(Type *base) -> Type * {
+  switch (next_kind()) {
+  case TokenKind::open_paren:
+    return function_parameters(base);
+  case TokenKind::open_bracket:
+    return array_dimensions(base);
+  default:
+    return base;
+  }
 }
 
 auto Parser::declarator(Type *base) -> std::pair<const Token *, Type *> {

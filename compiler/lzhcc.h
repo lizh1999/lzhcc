@@ -62,6 +62,7 @@ enum class TokenKind : uint8_t {
   kw_if,         // "if"
   kw_int,        // "int"
   kw_return,     // "return"
+  kw_sizeof,     // "sizeof"
   kw_while,      // "while"
 };
 

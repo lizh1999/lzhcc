@@ -38,12 +38,14 @@ Context::Context() {
   push_identifier("if");
   push_identifier("int");
   push_identifier("return");
+  push_identifier("sizeof");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_if);
   keyword_map_.push_back(TokenKind::kw_int);
   keyword_map_.push_back(TokenKind::kw_return);
+  keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_while);
 }
 
@@ -120,7 +122,7 @@ inline struct {
   auto operator()(const PointerType &) -> const int { return 8; }
   auto operator()(const FunctionType &) -> const int { return 0; }
   auto operator()(const ArrayType &type) -> const int {
-    return type.length * std::visit(*this, *type.base);
+    return type.length < 0 ? 8 : type.length * std::visit(*this, *type.base);
   }
 } size_of;
 
@@ -148,7 +150,7 @@ auto Context::multiply(const Type *type, Expression *lhs, Expression *rhs)
 }
 
 auto Context::divide(const Type *type, Expression *lhs, Expression *rhs)
-  -> Expression * {
+    -> Expression * {
   return create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
 }
 

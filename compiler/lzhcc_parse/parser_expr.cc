@@ -37,6 +37,12 @@ auto Parser::primary() -> Expression * {
       return create<VarRefExpr>(var);
     }
   }
+  case TokenKind::kw_sizeof: {
+    consume();
+    auto type = unary()->type();
+    int size = context_->size_of(type);
+    return context_->integer(size);
+  }
   default:
     context_->fatal(position_->location, "");
   }

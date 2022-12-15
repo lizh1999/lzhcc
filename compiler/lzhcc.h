@@ -54,7 +54,8 @@ enum class TokenKind : uint8_t {
   close_bracket, // "]"
   open_brace,    // "{"
   close_brace,   // "}"
-  numeric,       // numeric value
+  string,        // string literal
+  numeric,       // numeric literal
   identifier,    // identifier
   eof,           // eof
   kw_char,       // "char"
@@ -122,6 +123,7 @@ struct Local {
 struct Global {
   std::string_view name;
   const Type *type;
+  int init;
 };
 
 struct Function {

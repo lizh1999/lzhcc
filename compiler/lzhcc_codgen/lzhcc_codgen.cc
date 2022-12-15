@@ -9,14 +9,24 @@ auto codegen(Ast &ast, Context &context) -> void {
   for (Global *global : ast.globals) {
     auto name = global->name;
     printf("  .data\n");
-    printf("  .globl %.*s\n", (int)name.size(), name.data());
-    printf("%.*s:\n", (int) name.size(), name.data());
-    printf("  .zero %d\n", context.size_of(global->type));
+
+    if (global->init == -1) {
+      printf("%.*s:\n", (int) name.size(), name.data());
+      printf("  .zero %d\n", context.size_of(global->type));
+    } else {
+      printf("  .globl %.*s\n", (int)name.size(), name.data());
+      printf("%.*s:\n", (int) name.size(), name.data());
+      auto text = context.literal(global->init);
+      for (int byte : text) {
+        printf("  .byte %d\n", byte);
+      }
+    }
   }
   for (Function *func : ast.functions) {
     auto name = context.literal(func->name->inner);
     int label = gen.counter++;
     gen.return_label = label;
+    printf("  .text\n");
     printf("  .globl %.*s\n", (int)name.size(), name.data());
     printf("%.*s:\n", (int)name.size(), name.data());
     printf("  addi sp, sp, -8\n");

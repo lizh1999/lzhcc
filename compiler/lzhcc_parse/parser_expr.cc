@@ -1,5 +1,6 @@
 #include "lzhcc.h"
 #include "lzhcc_parse.h"
+#include <cassert>
 #include <charconv>
 #include <type_traits>
 #include <variant>
@@ -36,6 +37,19 @@ auto Parser::primary() -> Expression * {
       auto var = find_var(token);
       return create<VarRefExpr>(var);
     }
+  }
+  case TokenKind::string: {
+    auto token = consume();
+    auto raw = context_->literal(token->inner);
+    assert(raw.front() == '"' && raw.back() == '"');
+    raw = raw.substr(1, raw.size() - 2);
+    std::string text;
+    text.append(raw);
+    text.push_back('\0');
+    auto type = context_->array_of(context_->int8(), text.size());
+    int inner = context_->push_literal(std::move(text));
+    auto var = create_anon(type, inner);
+    return create<VarRefExpr>(var);
   }
   case TokenKind::kw_sizeof: {
     consume();

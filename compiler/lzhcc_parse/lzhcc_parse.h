@@ -28,7 +28,7 @@ private:
   auto assignment() -> Expression *;
   auto expression() -> Expression *;
 
-  auto block_stmt(bool is_top=false) -> Statement *;
+  auto block_stmt(bool is_top = false) -> Statement *;
   auto expr_stmt() -> Statement *;
   auto for_stmt() -> Statement *;
   auto if_stmt() -> Statement *;
@@ -43,7 +43,8 @@ private:
   auto suffix_type(Type *base) -> Type *;
   auto declarator(Type *base) -> std::pair<const Token *, Type *>;
   auto declaration() -> std::vector<Statement *>;
-  auto global(const Token *name, Type *base, Type *type) -> std::vector<Global *>;
+  auto global(const Token *name, Type *base, Type *type)
+      -> std::vector<Global *>;
   auto function(const Token *name, Type *type) -> Function *;
 
   auto next_kind() const -> TokenKind;
@@ -58,8 +59,11 @@ private:
   auto entry_scope() -> void;
   auto leave_scope() -> void;
   auto create_local(const Token *token, const Type *type) -> Local *;
-  auto create_global(const Token *token, const Type *type) -> Global *;
+  auto create_global(const Token *token, const Type *type, int init = -1)
+      -> Global *;
+  auto create_anon(const Type *type, int init = -1) -> Global *;
   auto find_var(const Token *token) -> Variable;
+  auto unique_name() -> std::string_view;
 
   const Token *position_;
   Context *context_;
@@ -68,6 +72,9 @@ private:
   int max_stack_size;
   Scope *current_;
   Scope file_scope_;
+  int unique_id_ = 0;
+
+  std::vector<Global *> *globals_;
 };
 
 } // namespace lzhcc

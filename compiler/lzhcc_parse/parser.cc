@@ -8,6 +8,7 @@ auto Parser::operator()() -> Ast {
   current_ = &file_scope_;
   std::vector<Global *> globals;
   std::vector<Function *> functions;
+  globals_ = &globals;
 
   while (next_kind() != TokenKind::eof) {
     auto base = declspec();
@@ -84,14 +85,29 @@ auto Parser::create_local(const Token *token, const Type *type) -> Local * {
   return var;
 }
 
-auto Parser::create_global(const Token *token, const Type *type) -> Global * {
+auto Parser::create_global(const Token *token, const Type *type, int init)
+    -> Global * {
   if (file_scope_.var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
   }
   auto name = context_->identifier(token->inner);
-  auto var = create<Global>(Global{name, type});
+  auto var = create<Global>(Global{name, type, init});
   file_scope_.var_map.emplace(token->inner, var);
   return var;
+}
+
+auto Parser::create_anon(const Type *type, int init) -> Global * {
+  int ident = -unique_id_;
+  auto var = create<Global>(Global{unique_name(), type, init});
+  file_scope_.var_map.emplace(ident, var);
+  globals_->push_back(var);
+  return var;
+}
+
+auto Parser::unique_name() -> std::string_view {
+  std::string name = ".L.." + std::to_string(unique_id_++);
+  int index = context_->push_literal(std::move(name));
+  return context_->literal(index);
 }
 
 } // namespace lzhcc

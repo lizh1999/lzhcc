@@ -23,6 +23,8 @@ auto SourceCursor::operator()() -> Token {
   case '\0':
     start_of_line_ = true;
     return token(TokenKind::eof, location_);
+  case '"':
+    return string();
   case '0' ... '9':
     return numeric();
   case '_':
@@ -44,6 +46,26 @@ static auto is_exp(char e, char s) -> bool {
   bool is_e_or_p = e == 'e' || e == 'E' || e == 'p' || e == 'P';
   bool is_sign = s == '+' || s == '-';
   return is_e_or_p && is_sign;
+}
+
+auto SourceCursor::string() -> Token {
+  std::string text = "\"";
+  int location = location_;
+  advance_current();
+  eat_while([&, last = '\0'](char ch) mutable {
+    if (last != '\\' && ch == '"') {
+      return false;
+    } else if (ch == '\n') {
+      context_->fatal(location_, "");
+    } else [[likely]] {
+      text.push_back(last = ch);
+      return true;
+    }
+  });
+  text.push_back('"');
+  advance_current();
+  int literal = context_->push_literal(std::move(text));
+  return token(TokenKind::string, location, literal);
 }
 
 auto SourceCursor::numeric() -> Token {

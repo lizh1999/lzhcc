@@ -44,7 +44,41 @@ auto Parser::primary() -> Expression * {
     assert(raw.front() == '"' && raw.back() == '"');
     raw = raw.substr(1, raw.size() - 2);
     std::string text;
-    text.append(raw);
+    for (int i = 0; i < raw.size(); i++) {
+      if (raw[i] != '\\') {
+        text.push_back(raw[i]);
+        continue;
+      }
+      switch (raw[++i]) {
+      case 'a':
+        text.push_back('\a');
+        break;
+      case 'b':
+        text.push_back('\b');
+        break;
+      case 't':
+        text.push_back('\t');
+        break;
+      case 'n':
+        text.push_back('\n');
+        break;
+      case 'v':
+        text.push_back('\v');
+        break;
+      case 'f':
+        text.push_back('\f');
+        break;
+      case 'r':
+        text.push_back('\r');
+        break;
+      case 'e':
+        text.push_back('\e');
+        break;
+      default:
+        text.push_back(raw[i]);
+        break;
+      }
+    }
     text.push_back('\0');
     auto type = context_->array_of(context_->int8(), text.size());
     int inner = context_->push_literal(std::move(text));

@@ -1,11 +1,22 @@
 #include "lzhcc.h"
 #include "lzhcc_parse.h"
 #include <cassert>
+#include <cctype>
 #include <charconv>
 #include <type_traits>
 #include <variant>
 
 namespace lzhcc {
+
+static int from_hex(char c) {
+  if ('0' <= c && c <= '9') {
+    return c - '0';
+  } else if ('a' <= c && c <= 'f') {
+    return c - 'a' + 10;
+  } else {
+    return c - 'A' + 10;
+  }
+}
 
 auto Parser::primary() -> Expression * {
   switch (next_kind()) {
@@ -49,6 +60,14 @@ auto Parser::primary() -> Expression * {
         continue;
       }
       ++i;
+      if (int c = 0; raw[i] == 'x') {
+        ++i;
+        while (std::isxdigit(raw[i])) {
+          c = c * 16 + from_hex(raw[i++]);
+        }
+        text.push_back(c);
+        continue;
+      }
       if (int c = 0; '0' <= raw[i] && raw[i] <= '7') {
         c = raw[i++] - '0';
         if ('0' <= raw[i] && raw[i] <= '7') {

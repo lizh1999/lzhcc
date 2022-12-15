@@ -2,8 +2,6 @@
 
 #include <cassert>
 #include <cstdarg>
-#include <cstdint>
-#include <cstdio>
 
 namespace lzhcc {
 
@@ -66,7 +64,7 @@ auto Context::push_literal(std::string literal) -> int {
   return index;
 }
 
-auto Context::literal(int index) const -> std::string_view {
+auto Context::storage(int index) const -> std::string_view {
   return storage_[index];
 }
 
@@ -81,10 +79,6 @@ auto Context::push_identifier(std::string literal) -> int {
   }
 }
 
-auto Context::identifier(int index) const -> std::string_view {
-  return storage_[index];
-}
-
 auto Context::into_keyword(int index) const -> TokenKind {
   if (index < keyword_map_.size()) {
     return keyword_map_[index];
@@ -93,67 +87,135 @@ auto Context::into_keyword(int index) const -> TokenKind {
   }
 }
 
-auto Context::int8() -> Type * { return create<Type>(IntegerType{1, true}); }
-
-auto Context::int16() -> Type * { return create<Type>(IntegerType{2, true}); }
-
-auto Context::int32() -> Type * { return create<Type>(IntegerType{4, true}); }
-
-auto Context::int64() -> Type * { return create<Type>(IntegerType{8, true}); }
-
-auto Context::uint8() -> Type * { return create<Type>(IntegerType{1, false}); }
-
-auto Context::uint16() -> Type * { return create<Type>(IntegerType{2, false}); }
-
-auto Context::uint32() -> Type * { return create<Type>(IntegerType{4, false}); }
-
-auto Context::uint64() -> Type * { return create<Type>(IntegerType{8, false}); }
-
-auto Context::pointer_to(const Type *base) -> Type * {
-  return create<Type>(PointerType{base});
+auto Context::int8() -> Type * {
+  return create<IntegerType>(/*size_bytes=*/1, /*is_unsigned=*/false);
 }
 
-auto Context::array_of(const Type *base, int length) -> Type * {
-  return create<Type>(ArrayType{base, length});
+auto Context::int64() -> Type * {
+  return create<IntegerType>(/*size_bytes=*/8, /*is_unsigned=*/false);
 }
 
-inline struct {
-  auto operator()(const IntegerType &type) -> const int {
-    return type.size_bytes;
+auto Context::pointer_to(Type *base) -> Type * {
+  return create<PointerType>(base);
+}
+
+auto Context::array_of(Type *base, int length) -> Type * {
+  return create<ArrayType>(base, length);
+}
+
+auto Context::function_type(Type *ret, std::vector<Type *> params) -> Type * {
+  return create<FunctionType>(ret, std::move(params));
+}
+
+auto Context::size_of(Type *type) -> int {
+  switch (type->kind) {
+  case TypeKind::pointer:
+  case TypeKind::function:
+    return 8;
+  case TypeKind::integer: {
+    auto integer = cast<IntegerType>(type);
+    return integer->size_bytes;
   }
-  auto operator()(const PointerType &) -> const int { return 8; }
-  auto operator()(const FunctionType &) -> const int { return 0; }
-  auto operator()(const ArrayType &type) -> const int {
-    return type.length < 0 ? 8 : type.length * std::visit(*this, *type.base);
+  case TypeKind::array: {
+    auto array = cast<ArrayType>(type);
+    return array->length == -1 ? 8 : array->length * size_of(array->base);
   }
-} size_of;
-
-auto Context::size_of(const Type *type) -> int {
-  return std::visit(lzhcc::size_of, *type);
+  }
 }
 
-auto Context::integer(int64_t value) -> Expression * {
+auto Context::create_local(Type *type, int offset) -> LValue * {
+  return create<LValue>(type, offset);
+}
+
+auto Context::create_global(Type *type, std::string_view name, uint8_t *init)
+    -> GValue * {
+  return create<GValue>(type, name, init);
+}
+
+auto Context::create_function(Type *type, std::string_view name, int stack_size,
+                              Stmt *stmt, std::vector<LValue *> params)
+    -> Function * {
+  return create<Function>(type, name, stack_size, stmt, std::move(params));
+}
+
+auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }
+
+auto Context::integer(int64_t value) -> Expr * {
   return create<IntegerExpr>(int64(), value);
 }
 
-auto Context::add(const Type *type, Expression *lhs, Expression *rhs)
-    -> Expression * {
+auto Context::negative(Type *type, Expr *operand) -> Expr * {
+  return create<UnaryExpr>(UnaryKind::negative, type, operand);
+}
+
+auto Context::refrence(Type *type, Expr *operand) -> Expr * {
+  return create<UnaryExpr>(UnaryKind::refrence, type, operand);
+}
+
+auto Context::deref(Type *type, Expr *operand) -> Expr * {
+  return create<UnaryExpr>(UnaryKind::deref, type, operand);
+}
+
+auto Context::add(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
 }
 
-auto Context::subtract(const Type *type, Expression *lhs, Expression *rhs)
-    -> Expression * {
+auto Context::subtract(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::subtract, type, lhs, rhs);
 }
 
-auto Context::multiply(const Type *type, Expression *lhs, Expression *rhs)
-    -> Expression * {
+auto Context::multiply(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::multiply, type, lhs, rhs);
 }
 
-auto Context::divide(const Type *type, Expression *lhs, Expression *rhs)
-    -> Expression * {
+auto Context::divide(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
+}
+
+auto Context::less_than(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::less_than, type, lhs, rhs);
+}
+
+auto Context::less_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::less_equal, type, lhs, rhs);
+}
+
+auto Context::equal(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::equal, type, lhs, rhs);
+}
+
+auto Context::not_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::not_equal, type, lhs, rhs);
+}
+
+auto Context::assign(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::assign, type, lhs, rhs);
+}
+
+auto Context::call(std::string_view name, Type *type, std::vector<Expr *> args)
+    -> Expr * {
+  return create<CallExpr>(name, type, std::move(args));
+}
+
+auto Context::empty_stmt() -> Stmt * { return create<EmptyStmt>(); }
+
+auto Context::expr_stmt(Expr *expr) -> Stmt * { return create<ExprStmt>(expr); }
+
+auto Context::for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then)
+    -> Stmt * {
+  return create<ForStmt>(init, cond, inc, then);
+}
+
+auto Context::if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt * {
+  return create<IfStmt>(cond, then, else_);
+}
+
+auto Context::return_stmt(Expr *expr) -> Stmt * {
+  return create<ReturnStmt>(expr);
+}
+
+auto Context::block_stmt(std::vector<Stmt *> stmts) -> Stmt * {
+  return create<BlockStmt>(std::move(stmts));
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

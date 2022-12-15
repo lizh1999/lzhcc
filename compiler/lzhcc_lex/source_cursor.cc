@@ -1,4 +1,3 @@
-#include "lzhcc.h"
 #include "lzhcc_lex.h"
 #include <cassert>
 #include <cctype>

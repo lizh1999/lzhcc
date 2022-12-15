@@ -1,5 +1,4 @@
 #include "lzhcc_lex.h"
-#include "lzhcc.h"
 
 namespace lzhcc {
 

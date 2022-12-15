@@ -1,56 +1,56 @@
 #pragma once
 
 #include "lzhcc.h"
-#include <unordered_map>
-#include <variant>
 
 namespace lzhcc {
 
 struct Scope {
   Scope *parent;
-  std::unordered_map<int, Variable> var_map;
+  std::unordered_map<int, Value *> var_map;
 };
+
+using ParamNames = std::vector<Token *>;
 
 class Parser {
 public:
-  Parser(const Token *position, Context *context)
+  Parser(Token *position, Context *context)
       : position_(position), context_(context) {}
-  auto operator()() -> Ast;
+  auto operator()() -> Module;
 
 private:
-  auto primary() -> Expression *;
-  auto unary() -> Expression *;
-  auto postfix() -> Expression *;
-  auto multiplicative() -> Expression *;
-  auto additive() -> Expression *;
-  auto relational() -> Expression *;
-  auto equality() -> Expression *;
-  auto assignment() -> Expression *;
-  auto expression() -> Expression *;
+  auto primary() -> Expr *;
+  auto unary() -> Expr *;
+  auto postfix() -> Expr *;
+  auto multiplicative() -> Expr *;
+  auto additive() -> Expr *;
+  auto relational() -> Expr *;
+  auto equality() -> Expr *;
+  auto assignment() -> Expr *;
+  auto expression() -> Expr *;
 
-  auto block_stmt(bool is_top = false) -> Statement *;
-  auto expr_stmt() -> Statement *;
-  auto for_stmt() -> Statement *;
-  auto if_stmt() -> Statement *;
-  auto return_stmt() -> Statement *;
-  auto while_stmt() -> Statement *;
-  auto statement() -> Statement *;
+  auto block_stmt(bool is_top = false) -> Stmt *;
+  auto expr_stmt() -> Stmt *;
+  auto for_stmt() -> Stmt *;
+  auto if_stmt() -> Stmt *;
+  auto return_stmt() -> Stmt *;
+  auto while_stmt() -> Stmt *;
+  auto statement() -> Stmt *;
 
   auto declspec() -> Type *;
   auto pointers(Type *base) -> Type *;
   auto array_dimensions(Type *base) -> Type *;
-  auto function_parameters(Type *base) -> Type *;
-  auto suffix_type(Type *base) -> Type *;
-  auto declarator(Type *base) -> std::pair<const Token *, Type *>;
-  auto declaration() -> std::vector<Statement *>;
-  auto global(const Token *name, Type *base, Type *type)
-      -> std::vector<Global *>;
-  auto function(const Token *name, Type *type) -> Function *;
+  auto function_parameters(Type *base, ParamNames *param_names) -> Type *;
+  auto suffix_type(Type *base, ParamNames *param_names) -> Type *;
+  auto declarator(Type *base, ParamNames *param_names = 0)
+      -> std::pair<Token *, Type *>;
+  auto declaration() -> std::vector<Stmt *>;
+  auto global(Token *name, Type *base, Type *type) -> void;
+  auto function(Token *name, Type *type, ParamNames param_names) -> void;
 
-  auto next_kind() const -> TokenKind;
-  auto consume() -> const Token *;
-  auto consume(TokenKind kind) -> const Token *;
-  auto consume_if(TokenKind kind) -> const Token *;
+  auto next_kind() -> TokenKind;
+  auto consume() -> Token *;
+  auto consume(TokenKind kind) -> Token *;
+  auto consume_if(TokenKind kind) -> Token *;
 
   template <class T, class... Args> auto create(Args &&...args) {
     return context_->create<T>(std::forward<Args>(args)...);
@@ -58,23 +58,21 @@ private:
 
   auto entry_scope() -> void;
   auto leave_scope() -> void;
-  auto create_local(const Token *token, const Type *type) -> Local *;
-  auto create_global(const Token *token, const Type *type, int init = -1)
-      -> Global *;
-  auto create_anon(const Type *type, int init = -1) -> Global *;
-  auto find_var(const Token *token) -> Variable;
-  auto unique_name() -> std::string_view;
+  auto create_local(Token *token, Type *type) -> LValue *;
+  auto create_global(Token *token, Type *type, uint8_t *init = 0) -> void;
+  auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
+                       std::vector<LValue *> params) -> void;
+  auto create_anon(Type *type, uint8_t *init = 0) -> GValue *;
+  auto find_var(Token *token) -> Value *;
+  auto unique_name() -> std::pair<std::string_view, int>;
 
-  const Token *position_;
+  Token *position_;
   Context *context_;
 
-  int stack_size;
-  int max_stack_size;
-  Scope *current_;
-  Scope file_scope_;
+  int stack_size_;
+  int max_stack_size_;
+  std::deque<Scope> scopes_;
   int unique_id_ = 0;
-
-  std::vector<Global *> *globals_;
 };
 
 } // namespace lzhcc

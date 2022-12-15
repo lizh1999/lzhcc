@@ -6,8 +6,6 @@
 #include <memory>
 #include <span>
 #include <string_view>
-#include <utility>
-#include <variant>
 #include <vector>
 
 namespace lzhcc {
@@ -88,75 +86,104 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 // lzhcc_syntax.cc
 //
 
-using Type = std::variant<struct IntegerType, struct PointerType,
-                          struct FunctionType, struct ArrayType>;
-
-struct IntegerType {
-  const int size_bytes;
-  const bool is_signed;
+enum class TypeKind {
+  integer,
+  pointer,
+  function,
+  array,
 };
 
-struct FloatingType {
-  const int size_bytes;
+struct Type {
+  Type(const TypeKind kind) : kind(kind) {}
+  const TypeKind kind;
 };
 
-struct PointerType {
-  const Type *base;
+struct IntegerType : Type {
+  IntegerType(int size_bytes, bool is_unsigned)
+      : Type(TypeKind::integer), size_bytes(size_bytes),
+        is_unsigned(is_unsigned) {}
+  int size_bytes;
+  bool is_unsigned;
 };
 
-struct FunctionType {
-  const Type *return_type;
-  const std::vector<const Token *> names;
-  const std::vector<Type *> paramters;
+struct PointerType : Type {
+  PointerType(Type *base) : Type(TypeKind::pointer), base(base) {}
+  Type *base;
 };
 
-struct ArrayType {
-  const Type *base;
-  const int length;
+struct FunctionType : Type {
+  FunctionType(Type *ret, std::vector<Type *> params)
+      : Type(TypeKind::function), ret(ret), params(params) {}
+  Type *ret;
+  std::vector<Type *> params;
 };
 
-struct Local {
-  const int offset;
-  const Type *type;
+struct ArrayType : Type {
+  ArrayType(Type *base, int length)
+      : Type(TypeKind::array), base(base), length(length) {}
+  Type *base;
+  int length;
 };
 
-struct Global {
+enum class ValueKind {
+  local,
+  global,
+  function,
+};
+
+struct Value {
+  Value(ValueKind kind, Type *type) : kind(kind), type(type) {}
+  const ValueKind kind;
+  Type *type;
+};
+
+struct LValue : Value {
+  LValue(Type *type, int offset)
+      : Value(ValueKind::local, type), offset(offset) {}
+  int offset;
+};
+
+struct GValue : Value {
+  GValue(Type *type, std::string_view name, uint8_t *init)
+      : Value(ValueKind::global, type), name(name), init(init) {}
   std::string_view name;
-  const Type *type;
-  int init;
+  uint8_t *init;
 };
 
-struct Function {
-  const Token *name;
-  const int max_stack_size;
-  const struct Statement *stmt;
-  const Type *type;
-  const std::vector<Local *> paramters;
+struct Function : Value {
+  Function(Type *type, std::string_view name, int stack_size, struct Stmt *stmt,
+           std::vector<LValue *> params)
+      : Value(ValueKind::function, type), name(name), stack_size(stack_size),
+        stmt(stmt), params(std::move(params)) {}
+  std::string_view name;
+  int stack_size;
+  struct Stmt *stmt;
+  std::vector<LValue *> params;
 };
 
-using Variable = std::variant<Local *, Global *, Function *>;
-
-struct ExprVisitor;
-
-struct Expression {
-  virtual void visit(ExprVisitor *visitor) const = 0;
-  virtual const Type *type() const = 0;
-  ~Expression() = default;
+enum class ExperKind {
+  value,
+  integer,
+  unary,
+  binary,
+  call,
 };
 
-struct VarRefExpr : Expression {
-  VarRefExpr(Variable var) : var(var) {}
-  virtual void visit(ExprVisitor *visitor) const override;
-  const Type *type() const override;
-  Variable var;
+struct Expr {
+  Expr(ExperKind kind, Type *type) : kind(kind), type(type) {}
+  const ExperKind kind;
+  Type *type;
 };
 
-struct IntegerExpr : Expression {
-  IntegerExpr(const Type *type, int64_t value) : type_(type), value(value) {}
-  void visit(ExprVisitor *visitor) const override;
-  const Type *type() const override;
-  const Type *type_;
-  const int64_t value;
+struct ValueExpr : Expr {
+  ValueExpr(Value *value) : Expr(ExperKind::value, value->type), value(value) {}
+  Value *value;
+};
+
+struct IntegerExpr : Expr {
+  IntegerExpr(Type *type, int64_t value)
+      : Expr(ExperKind::integer, type), value(value) {}
+  int64_t value;
 };
 
 enum class UnaryKind {
@@ -165,14 +192,11 @@ enum class UnaryKind {
   deref,
 };
 
-struct UnaryExpr : Expression {
-  UnaryExpr(UnaryKind kind, const Type *type, Expression *operand)
-      : kind(kind), type_(type), operand(operand) {}
-  void visit(ExprVisitor *visitor) const override;
-  const Type *type() const override;
-  const UnaryKind kind;
-  const Type *type_;
-  const Expression *operand;
+struct UnaryExpr : Expr {
+  UnaryExpr(UnaryKind kind, Type *type, Expr *operand)
+      : Expr(ExperKind::unary, type), kind(kind), operand(operand) {}
+  UnaryKind kind;
+  Expr *operand;
 };
 
 enum class BinaryKind {
@@ -187,109 +211,92 @@ enum class BinaryKind {
   assign,
 };
 
-struct BinaryExpr : Expression {
-  BinaryExpr(BinaryKind kind, const Type *type, Expression *lhs,
-             Expression *rhs)
-      : kind(kind), type_(type), lhs(lhs), rhs(rhs) {}
-  void visit(ExprVisitor *visitor) const override;
-  const Type *type() const override;
-  const BinaryKind kind;
-  const Type *type_;
-  const Expression *lhs;
-  const Expression *rhs;
+struct BinaryExpr : Expr {
+  BinaryExpr(BinaryKind kind, Type *type, Expr *lhs, Expr *rhs)
+      : Expr(ExperKind::binary, type), kind(kind), lhs(lhs), rhs(rhs) {}
+  BinaryKind kind;
+  Expr *lhs;
+  Expr *rhs;
 };
 
-struct CallExpr : Expression {
-  CallExpr(const Token *name, const Type *type,
-           const std::vector<Expression *> arguments)
-      : name(name), type_(type), arguments(arguments) {}
-  void visit(ExprVisitor *visitor) const override;
-  const Type *type() const override;
-  const Token *name;
-  const Type *type_;
-  const std::vector<Expression *> arguments;
+struct CallExpr : Expr {
+  CallExpr(std::string_view name, Type *type, std::vector<Expr *> argus)
+      : Expr(ExperKind::call, type), name(name), args(std::move(argus)) {}
+  std::string_view name;
+  std::vector<Expr *> args;
 };
 
-struct ExprVisitor {
-  virtual void visit(const VarRefExpr *expr) = 0;
-  virtual void visit(const IntegerExpr *expr) = 0;
-  virtual void visit(const UnaryExpr *expr) = 0;
-  virtual void visit(const BinaryExpr *expr) = 0;
-  virtual void visit(const CallExpr *expr) = 0;
+enum class StmtKind {
+  empty,
+  expr,
+  kw_for,
+  kw_if,
+  kw_return,
+  block,
 };
 
-struct StmtVisitor;
-
-struct Statement {
-  virtual void visit(StmtVisitor *visitor) const = 0;
+struct Stmt {
+  Stmt(StmtKind kind) : kind(kind) {}
+  const StmtKind kind;
 };
 
-struct EmptyStmt : Statement {
-  void visit(StmtVisitor *visitor) const override;
+struct EmptyStmt : Stmt {
+  EmptyStmt() : Stmt(StmtKind::empty) {}
 };
 
-struct ExpressionStmt : Statement {
-  ExpressionStmt(const Expression *expr) : expr(expr) {}
-  void visit(StmtVisitor *visitor) const override;
-  const Expression *expr;
+struct ExprStmt : Stmt {
+  ExprStmt(Expr *expr) : Stmt(StmtKind::expr), expr(expr) {}
+  Expr *expr;
 };
 
-struct ForStmt : Statement {
-  ForStmt(Statement *init, Expression *cond, Expression *inc, Statement *then)
-      : init(init), cond(cond), inc(inc), then(then) {}
-  void visit(StmtVisitor *visitor) const override;
-  const Statement *init;
-  const Expression *cond;
-  const Expression *inc;
-  const Statement *then;
+struct ForStmt : Stmt {
+  ForStmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then)
+      : Stmt(StmtKind::kw_for), init(init), cond(cond), inc(inc), then(then) {}
+  Stmt *init;
+  Expr *cond;
+  Expr *inc;
+  Stmt *then;
 };
 
-struct IfStmt : Statement {
-  IfStmt(const Expression *cond, const Statement *then, const Statement *else_)
-      : cond(cond), then(then), else_(else_) {}
-  void visit(StmtVisitor *visitor) const override;
-  const Expression *cond;
-  const Statement *then;
-  const Statement *else_;
+struct IfStmt : Stmt {
+  IfStmt(Expr *cond, Stmt *then, Stmt *else_)
+      : Stmt(StmtKind::kw_if), cond(cond), then(then), else_(else_) {}
+  Expr *cond;
+  Stmt *then;
+  Stmt *else_;
 };
 
-struct ReturnStmt : Statement {
-  ReturnStmt(const Expression *expr) : expr(expr) {}
-  void visit(StmtVisitor *visitor) const override;
-  const Expression *expr;
+struct ReturnStmt : Stmt {
+  ReturnStmt(Expr *expr) : Stmt(StmtKind::kw_return), expr(expr) {}
+  Expr *expr;
 };
 
-struct BlockStmt : Statement {
-  BlockStmt(std::vector<Statement *> stmts) : stmts(std::move(stmts)) {}
-  void visit(StmtVisitor *visitor) const override;
-  const std::vector<Statement *> stmts;
+struct BlockStmt : Stmt {
+  BlockStmt(std::vector<Stmt *> stmts)
+      : Stmt(StmtKind::block), stmts(std::move(stmts)) {}
+  std::vector<Stmt *> stmts;
 };
 
-struct StmtVisitor {
-  virtual void visit(const EmptyStmt *stmt) = 0;
-  virtual void visit(const ExpressionStmt *stmt) = 0;
-  virtual void visit(const ForStmt *stmt) = 0;
-  virtual void visit(const IfStmt *stmt) = 0;
-  virtual void visit(const ReturnStmt *stmt) = 0;
-  virtual void visit(const BlockStmt *stmt) = 0;
-};
+template <class T, class U> auto cast(U *origin) -> T * {
+  return reinterpret_cast<T *>(origin);
+}
 
 //
 // lzhcc_parse/lzhcc_parse.cc
 //
 
-struct Ast {
-  std::vector<Global *> globals;
+struct Module {
+  std::vector<GValue *> gvalues;
   std::vector<Function *> functions;
 };
 
-auto parse(std::span<const Token> tokens, Context &context) -> Ast;
+auto parse(std::span<Token> tokens, Context &context) -> Module;
 
 //
 // lzhcc_codgen/lzhcc_codgen.cc
 //
 
-auto codegen(Ast &ast, Context &context) -> void;
+auto codegen(Module &module, Context &context) -> void;
 
 //
 // lzhcc_context.cc
@@ -302,62 +309,81 @@ public:
   Context();
   auto append_text(std::string text) -> CharCursorFn;
   auto push_literal(std::string literal) -> int;
-  auto literal(int index) const -> std::string_view;
   auto push_identifier(std::string literal) -> int;
-  auto identifier(int index) const -> std::string_view;
+  auto storage(int index) const -> std::string_view;
   auto into_keyword(int index) const -> TokenKind;
 
+  // type
   auto int8() -> Type *;
-  auto int16() -> Type *;
-  auto int32() -> Type *;
   auto int64() -> Type *;
+  auto pointer_to(Type *base) -> Type *;
+  auto array_of(Type *base, int length) -> Type *;
+  auto function_type(Type *ret, std::vector<Type *> params) -> Type *;
+  auto size_of(Type *type) -> int;
 
-  auto uint8() -> Type *;
-  auto uint16() -> Type *;
-  auto uint32() -> Type *;
-  auto uint64() -> Type *;
+  // value
+  auto create_local(Type *type, int offset) -> LValue *;
+  auto create_global(Type *type, std::string_view name, uint8_t *init)
+      -> GValue *;
+  auto create_function(Type *type, std::string_view name, int stack_size,
+                       Stmt *stmt, std::vector<LValue *> params) -> Function *;
 
-  auto pointer_to(const Type *base) -> Type *;
-  auto array_of(const Type *base, int length) -> Type *;
+  // expr
+  auto value(Value *value) -> Expr *;
+  auto integer(int64_t value) -> Expr *;
+  auto negative(Type *type, Expr *operand) -> Expr *;
+  auto refrence(Type *type, Expr *operand) -> Expr *;
+  auto deref(Type *type, Expr *operand) -> Expr *;
+  auto add(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto subtract(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto multiply(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto divide(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto less_than(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto less_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto not_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
 
-  auto size_of(const Type *type) -> int;
-  auto integer(int64_t value) -> Expression *;
-  auto add(const Type *type, Expression *lhs, Expression *rhs) -> Expression *;
-  auto subtract(const Type *type, Expression *lhs, Expression *rhs)
-      -> Expression *;
-  auto multiply(const Type *type, Expression *lhs, Expression *rhs)
-      -> Expression *;
-  auto divide(const Type *type, Expression *lhs, Expression *rhs)
-      -> Expression *;
+  auto assign(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto call(std::string_view name, Type *type, std::vector<Expr *> args)
+      -> Expr *;
+
+  // stmt
+  auto empty_stmt() -> Stmt *;
+  auto expr_stmt(Expr *expr) -> Stmt *;
+  auto for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then) -> Stmt *;
+  auto if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt *;
+  auto return_stmt(Expr *expr) -> Stmt *;
+  auto block_stmt(std::vector<Stmt *> stmts) -> Stmt *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
-  template <class T, class... Args> auto create(Args &&...args) -> T * {
-    auto p = std::make_unique<ArenaEntryTyped<T>>(std::forward<Args>(args)...);
-    auto instance = p->instance();
-    arena_.push_back(std::move(p));
-    return instance;
+private:
+  std::deque<std::string> storage_;
+  std::deque<std::string> text_;
+  std::unordered_map<std::string_view, int> identifier_map_;
+  std::vector<TokenKind> keyword_map_;
+
+  template <typename T, typename... Args> auto create(Args &&...args) -> T * {
+    auto smart_ptr =
+        std::make_unique<ArenaEntryTyped<T>>(std::forward<Args>(args)...);
+    T *ptr = smart_ptr->instance();
+    arena_.push_back(std::move(smart_ptr));
+    return ptr;
   }
 
-private:
   struct ArenaEntry {
     virtual ~ArenaEntry() = default;
   };
 
-  template <class T> struct ArenaEntryTyped : ArenaEntry {
-    template <class... Args>
+  template <typename T> struct ArenaEntryTyped : ArenaEntry {
+    template <typename... Args>
     ArenaEntryTyped(Args &&...args) : instance_(std::forward<Args>(args)...) {}
     auto instance() -> T * { return &instance_; }
 
   private:
     T instance_;
   };
-
-  std::deque<std::string> storage_;
-  std::deque<std::string> text_;
   std::vector<std::unique_ptr<ArenaEntry>> arena_;
-  std::unordered_map<std::string_view, int> identifier_map_;
-  std::vector<TokenKind> keyword_map_;
 };
 
 //

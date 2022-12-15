@@ -2,41 +2,42 @@
 
 namespace lzhcc {
 
-struct RValueVisitor : ExprVisitor {
-  void visit(const VarRefExpr *expr) override;
-  void visit(const IntegerExpr *expr) override;
-  void visit(const UnaryExpr *expr) override;
-  void visit(const BinaryExpr *expr) override;
-  void visit(const CallExpr *expr) override;
-  void push(const char *reg = "a0");
-  void pop(const char *reg);
-  Context *context_;
-  struct LValueVisitor *lvisitor_;
-};
+class Generator {
+public:
+  Generator();
 
-struct LValueVisitor : ExprVisitor {
-  void visit(const VarRefExpr *expr) override;
-  void visit(const IntegerExpr *expr) override { expect_lvalue(); }
-  void visit(const UnaryExpr *expr) override;
-  void visit(const BinaryExpr *expr) override { expect_lvalue(); }
-  void visit(const CallExpr *expr) override { expect_lvalue(); }
-  [[noreturn]] void expect_lvalue() { std::abort(); }
-  RValueVisitor *rvisitor_;
-  Context *context_;
-};
+  auto codegen(Function *function) -> void;
 
-struct StmtGenVisitor : StmtVisitor {
-  StmtGenVisitor(Context *context);
-  void visit(const EmptyStmt *stmt) override {}
-  void visit(const ExpressionStmt *stmt) override;
-  void visit(const ForStmt *stmt) override;
-  void visit(const IfStmt *stmt) override;
-  void visit(const ReturnStmt *stmt) override;
-  void visit(const BlockStmt *stmt) override;
-  int counter = 0;
+private:
+  auto store(Type *type) -> void;
+  auto store_integer(IntegerType *type) -> void;
+  auto load(Type *type) -> void;
+  auto load_integer(IntegerType *type) -> void;
+  auto value_expr(ValueExpr *expr) -> void;
+  auto integer_expr(IntegerExpr *expr) -> void;
+  auto unary_expr(UnaryExpr *expr) -> void;
+  auto binary_expr(BinaryExpr *expr) -> void;
+  auto call_expr(CallExpr *expr) -> void;
+  auto expr_proxy(Expr *expr) -> void;
+
+  auto value_addr(ValueExpr *expr) -> void;
+  auto unary_addr(UnaryExpr *expr) -> void;
+  auto addr_proxy(Expr *expr) -> void;
+
+  auto expr_stmt(ExprStmt *stmt) -> void;
+  auto for_stmt(ForStmt *stmt) -> void;
+  auto if_stmt(IfStmt *stmt) -> void;
+  auto return_stmt(ReturnStmt *stmt) -> void;
+  auto block_stmt(BlockStmt *stmt) -> void;
+  auto stmt_proxy(Stmt *stmt) -> void;
+
+  auto push(const char *reg) -> void;
+  auto pop(const char *reg) -> void;
+
+  [[noreturn]] auto expect_lvalue() -> void { std::abort(); }
+
+  int counter;
   int return_label;
-  LValueVisitor lvisitor_;
-  RValueVisitor rvisitor_;
 };
 
 } // namespace lzhcc

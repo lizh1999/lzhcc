@@ -1,9 +1,8 @@
 #include "lzhcc_parse.h"
-#include "lzhcc.h"
 
 namespace lzhcc {
 
-auto parse(std::span<const Token> tokens, Context &context) -> Ast {
+auto parse(std::span<Token> tokens, Context &context) -> Module {
   Parser parser(tokens.data(), &context);
   return parser();
 }

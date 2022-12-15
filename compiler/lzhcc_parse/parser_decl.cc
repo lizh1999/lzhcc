@@ -1,9 +1,5 @@
-#include "lzhcc.h"
 #include "lzhcc_parse.h"
-#include <cassert>
 #include <charconv>
-#include <type_traits>
-#include <variant>
 
 namespace lzhcc {
 
@@ -14,7 +10,7 @@ auto Parser::declspec() -> Type * {
     return context_->int8();
   case TokenKind::kw_int:
     consume();
-    return  context_->int64();
+    return context_->int64();
   default:
     context_->fatal(position_->location, "");
   }
@@ -30,36 +26,37 @@ auto Parser::pointers(Type *base) -> Type * {
 auto Parser::array_dimensions(Type *base) -> Type * {
   consume(TokenKind::open_bracket);
   auto token = consume(TokenKind::numeric);
-  auto text = context_->literal(token->inner);
+  auto text = context_->storage(token->inner);
   int length;
   std::from_chars(text.begin(), text.end(), length);
   consume(TokenKind::close_bracket);
-  base = suffix_type(base);
+  base = suffix_type(base, nullptr);
   return context_->array_of(base, length);
 }
 
-auto Parser::function_parameters(Type *base) -> Type * {
+auto Parser::function_parameters(Type *base, ParamNames *param_names)
+    -> Type * {
   consume(TokenKind::open_paren);
-  std::vector<const Token *> names;
-  std::vector<Type *> paramters;
+  std::vector<Type *> params;
 
   while (!consume_if(TokenKind::close_paren)) {
-    if (!paramters.empty()) {
+    if (!params.empty()) {
       consume(TokenKind::comma);
     }
     auto base = declspec();
-    auto [name, paramter] = declarator(base);
-    names.push_back(name);
-    paramters.push_back(paramter);
+    auto [name, param] = declarator(base);
+    if (param_names) {
+      param_names->push_back(name);
+    }
+    params.push_back(param);
   }
-  return create<Type>(
-      FunctionType{base, std::move(names), std::move(paramters)});
+  return context_->function_type(base, std::move(params));
 }
 
-auto Parser::suffix_type(Type *base) -> Type * {
+auto Parser::suffix_type(Type *base, ParamNames *param_names) -> Type * {
   switch (next_kind()) {
   case TokenKind::open_paren:
-    return function_parameters(base);
+    return function_parameters(base, param_names);
   case TokenKind::open_bracket:
     return array_dimensions(base);
   default:
@@ -67,24 +64,25 @@ auto Parser::suffix_type(Type *base) -> Type * {
   }
 }
 
-auto Parser::declarator(Type *base) -> std::pair<const Token *, Type *> {
+auto Parser::declarator(Type *base, ParamNames *param_names)
+    -> std::pair<Token *, Type *> {
   base = pointers(base);
   auto name = consume(TokenKind::identifier);
-  auto type = suffix_type(base);
+  auto type = suffix_type(base, param_names);
   return std::pair(name, type);
 }
 
-auto Parser::declaration() -> std::vector<Statement *> {
+auto Parser::declaration() -> std::vector<Stmt *> {
   auto base = declspec();
-  std::vector<Statement *> stmts;
+  std::vector<Stmt *> stmts;
   while (true) {
     auto [name, type] = declarator(base);
     auto var = create_local(name, type);
     if (consume_if(TokenKind::equal)) {
-      auto lhs = create<VarRefExpr>(var);
+      auto lhs = context_->value(var);
       auto rhs = assignment();
-      auto expr = create<BinaryExpr>(BinaryKind::assign, var->type, lhs, rhs);
-      stmts.push_back(create<ExpressionStmt>(expr));
+      auto expr = context_->assign(var->type, lhs, rhs);
+      stmts.push_back(context_->expr_stmt(expr));
     }
     if (consume_if(TokenKind::comma)) {
       continue;
@@ -95,46 +93,35 @@ auto Parser::declaration() -> std::vector<Statement *> {
   }
 }
 
-auto Parser::global(const Token *name, Type *base, Type *type)
-    -> std::vector<Global *> {
-  auto var = create_global(name, type);
-  std::vector<Global *> vars{var};
+auto Parser::global(Token *name, Type *base, Type *type) -> void {
+  create_global(name, type);
   while (true) {
     if (consume_if(TokenKind::comma)) {
       std::tie(name, type) = declarator(base);
-      var = create_global(name, type);
-      vars.push_back(var);
+      create_global(name, type);
     } else {
       consume(TokenKind::semi);
-      return vars;
+      break;
     }
   }
 }
 
-auto Parser::function(const Token *name, Type *type) -> Function * {
-  std::vector<Local *> paramters;
-  auto visitor = [&](auto &&arg) {
-    using T = std::decay_t<decltype(arg)>;
-    if constexpr (std::is_same_v<T, FunctionType>) {
-      int n = arg.paramters.size();
-      for (int i = 0; i < n; i++) {
-        auto var = create_local(arg.names[i], arg.paramters[i]);
-        paramters.push_back(var);
-      }
-    } else {
-      context_->fatal(name->location, "");
-    }
-  };
+auto Parser::function(Token *name, Type *type, ParamNames param_names) -> void {
+  std::vector<LValue *> params;
+  auto function_type = cast<FunctionType>(type);
+  auto param_types = function_type->params;
 
-  assert(current_ == &file_scope_);
-  stack_size = 0;
-  max_stack_size = 0;
+  stack_size_ = 0;
+  max_stack_size_ = 0;
 
   entry_scope();
-  std::visit(visitor, *type);
+  for (int i = 0; i < param_types.size(); i++) {
+    auto var = create_local(param_names[i], param_types[i]);
+    params.push_back(var);
+  }
+
   auto stmt = block_stmt(/*is_top=*/true);
-  return create<Function>(
-      Function{name, max_stack_size, stmt, type, std::move(paramters)});
+  create_function(name, type, max_stack_size_, stmt, std::move(params));
 }
 
 } // namespace lzhcc

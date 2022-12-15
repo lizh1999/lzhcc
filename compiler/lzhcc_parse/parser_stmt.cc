@@ -1,14 +1,13 @@
-#include "lzhcc.h"
 #include "lzhcc_parse.h"
 
 namespace lzhcc {
 
-auto Parser::block_stmt(bool is_top) -> Statement * {
+auto Parser::block_stmt(bool is_top) -> Stmt * {
   if (!is_top) {
     entry_scope();
   }
   consume(TokenKind::open_brace);
-  std::vector<Statement *> stmts;
+  std::vector<Stmt *> stmts;
   while (!consume_if(TokenKind::close_brace)) {
     switch (next_kind()) {
     case TokenKind::kw_char:
@@ -22,67 +21,67 @@ auto Parser::block_stmt(bool is_top) -> Statement * {
     }
   }
   leave_scope();
-  return create<BlockStmt>(std::move(stmts));
+  return context_->block_stmt(std::move(stmts));
 }
 
-auto Parser::expr_stmt() -> Statement * {
+auto Parser::expr_stmt() -> Stmt * {
   if (consume_if(TokenKind::semi)) {
-    return create<EmptyStmt>();
+    return context_->empty_stmt();
   } else {
     auto expr = expression();
     consume(TokenKind::semi);
-    return create<ExpressionStmt>(expr);
+    return context_->expr_stmt(expr);
   }
 }
 
-auto Parser::for_stmt() -> Statement * {
+auto Parser::for_stmt() -> Stmt * {
   consume(TokenKind::kw_for);
   consume(TokenKind::open_paren);
   auto init = expr_stmt();
-  Expression *cond = nullptr;
+  Expr *cond = nullptr;
   if (!consume_if(TokenKind::semi)) {
     cond = expression();
     consume(TokenKind::semi);
   }
-  Expression *inc = nullptr;
+  Expr *inc = nullptr;
   if (!consume_if(TokenKind::close_paren)) {
     inc = expression();
     consume(TokenKind::close_paren);
   }
   auto then = statement();
-  return create<ForStmt>(init, cond, inc, then);
+  return context_->for_stmt(init, cond, inc, then);
 }
 
-auto Parser::if_stmt() -> Statement * {
+auto Parser::if_stmt() -> Stmt * {
   consume(TokenKind::kw_if);
   consume(TokenKind::open_paren);
   auto cond = expression();
   consume(TokenKind::close_paren);
   auto then = statement();
-  Statement *else_ = nullptr;
+  Stmt *else_ = nullptr;
   if (consume_if(TokenKind::kw_else)) {
     else_ = statement();
   }
-  return create<IfStmt>(cond, then, else_);
+  return context_->if_stmt(cond, then, else_);
 }
 
-auto Parser::return_stmt() -> Statement * {
+auto Parser::return_stmt() -> Stmt * {
   consume(TokenKind::kw_return);
   auto expr = expression();
   consume(TokenKind::semi);
-  return create<ReturnStmt>(expr);
+  return context_->return_stmt(expr);
 }
 
-auto Parser::while_stmt() -> Statement * {
+auto Parser::while_stmt() -> Stmt * {
   consume(TokenKind::kw_while);
   consume(TokenKind::open_paren);
   auto cond = expression();
   consume(TokenKind::close_paren);
   auto then = statement();
-  return create<ForStmt>(nullptr, cond, nullptr, then);
+  return context_->for_stmt(nullptr, cond, nullptr, then);
 }
 
-auto Parser::statement() -> Statement * {
+auto Parser::statement() -> Stmt * {
   switch (next_kind()) {
   case TokenKind::kw_for:
     return for_stmt();

@@ -42,14 +42,25 @@ auto Parser::primary() -> Expression * {
     auto token = consume();
     auto raw = context_->literal(token->inner);
     assert(raw.front() == '"' && raw.back() == '"');
-    raw = raw.substr(1, raw.size() - 2);
     std::string text;
-    for (int i = 0; i < raw.size(); i++) {
+    for (int i = 1; i + 1 < raw.size(); i++) {
       if (raw[i] != '\\') {
         text.push_back(raw[i]);
         continue;
       }
-      switch (raw[++i]) {
+      ++i;
+      if (int c = 0; '0' <= raw[i] && raw[i] <= '7') {
+        c = raw[i++] - '0';
+        if ('0' <= raw[i] && raw[i] <= '7') {
+          c = c * 8 + raw[i++] - '0';
+          if ('0' <= raw[i] && raw[i] <= '7') {
+            c = c * 8 + raw[i++] - '0';
+          }
+        }
+        text.push_back(c);
+        continue;
+      }
+      switch (raw[i]) {
       case 'a':
         text.push_back('\a');
         break;

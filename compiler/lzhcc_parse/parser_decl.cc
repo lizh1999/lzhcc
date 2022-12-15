@@ -8,8 +8,16 @@
 namespace lzhcc {
 
 auto Parser::declspec() -> Type * {
-  consume(TokenKind::kw_int);
-  return context_->int64();
+  switch (next_kind()) {
+  case TokenKind::kw_char:
+    consume();
+    return context_->int8();
+  case TokenKind::kw_int:
+    consume();
+    return  context_->int64();
+  default:
+    context_->fatal(position_->location, "");
+  }
 }
 
 auto Parser::pointers(Type *base) -> Type * {

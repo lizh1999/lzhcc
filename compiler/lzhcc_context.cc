@@ -33,6 +33,7 @@ private:
 };
 
 Context::Context() {
+  push_identifier("char");
   push_identifier("else");
   push_identifier("for");
   push_identifier("if");
@@ -40,6 +41,7 @@ Context::Context() {
   push_identifier("return");
   push_identifier("sizeof");
   push_identifier("while");
+  keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_if);

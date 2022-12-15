@@ -57,6 +57,7 @@ enum class TokenKind : uint8_t {
   numeric,       // numeric value
   identifier,    // identifier
   eof,           // eof
+  kw_char,       // "char"
   kw_else,       // "else"
   kw_for,        // "for"
   kw_if,         // "if"

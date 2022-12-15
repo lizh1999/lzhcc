@@ -43,15 +43,29 @@ auto RValueVisitor::visit(const IntegerExpr *expr) -> void {
   printf("  li a0, %ld\n", expr->value);
 }
 
+struct Loader {
+  auto operator()(const ArrayType &) -> void {}
+
+  auto operator()(const IntegerType &type) -> void {
+    switch (type.size_bytes) {
+    case 8:
+      printf("  ld a0, 0(a0)\n");
+      break;
+    case 1:
+      printf("  lb a0, 0(a0)\n");
+      break;
+    }
+  }
+
+  auto operator()(const PointerType &) -> void { printf("  ld a0, 0(a0)\n"); }
+
+  auto operator()(const FunctionType &) -> void { printf("  ld a0, 0(a0)\n"); }
+};
+
 auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
   auto lower = VariableLower{context_};
   std::visit(lower, expr->var);
-
-  auto visitor = overloaded{
-      [](const ArrayType &) {},
-      [](const auto &) { printf("  ld a0, 0(a0)\n"); },
-  };
-  std::visit(visitor, *expr->type());
+  std::visit(Loader{}, *expr->type());
 }
 
 auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
@@ -60,20 +74,32 @@ auto RValueVisitor::visit(const UnaryExpr *expr) -> void {
     expr->operand->visit(this);
     printf("  neg a0, a0\n");
     break;
-  case UnaryKind::deref: {
-    auto visitor = overloaded{
-        [&](const ArrayType &) {},
-        [&](const auto &) { printf("  ld a0, 0(a0)\n"); },
-    };
+  case UnaryKind::deref:
     expr->operand->visit(this);
-    std::visit(visitor, *expr->type());
+    std::visit(Loader{}, *expr->type());
     break;
-  }
   case UnaryKind::refrence:
     expr->operand->visit(lvisitor_);
     break;
   }
 }
+
+struct Storer {
+  auto operator()(const ArrayType &) -> void { std::abort(); }
+
+  auto operator()(const IntegerType &type) -> void {
+    switch (type.size_bytes) {
+    case 8:
+      printf("  sd a1, 0(a0)\n");
+    case 1:
+      printf("  sb a1, 0(a0)\n");
+    }
+  }
+
+  auto operator()(const PointerType &) -> void { printf("  sd a1, 0(a0)\n"); }
+
+  auto operator()(const FunctionType &) -> void { std::abort(); }
+};
 
 auto RValueVisitor::visit(const BinaryExpr *expr) -> void {
   expr->rhs->visit(this);
@@ -113,7 +139,8 @@ auto RValueVisitor::visit(const BinaryExpr *expr) -> void {
     printf("  snez a0, a0\n");
     break;
   case BinaryKind::assign:
-    printf("  sd a1, 0(a0)\n");
+    // printf("  sd a1, 0(a0)\n");
+    std::visit(Storer{}, *expr->type());
     printf("  mv a0, a1\n");
     break;
   }

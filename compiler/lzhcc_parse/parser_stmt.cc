@@ -11,6 +11,7 @@ auto Parser::block_stmt(bool is_top) -> Statement * {
   std::vector<Statement *> stmts;
   while (!consume_if(TokenKind::close_brace)) {
     switch (next_kind()) {
+    case TokenKind::kw_char:
     case TokenKind::kw_int: {
       auto init = declaration();
       stmts.insert(stmts.end(), init.begin(), init.end());

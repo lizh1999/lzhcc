@@ -1,3 +1,4 @@
+#include "lzhcc.h"
 #include "lzhcc_codegen.h"
 
 namespace lzhcc {
@@ -180,6 +181,10 @@ auto Generator::call_expr(CallExpr *expr) -> void {
   pop("ra");
 }
 
+auto Generator::stmt_expr(StmtExpr *expr) -> void {
+  return block_stmt(expr->stmt);
+}
+
 auto Generator::push(const char *reg) -> void {
   printf("  addi sp, sp, -8\n");
   printf("  sd %s, 0(sp)\n", reg);
@@ -202,6 +207,8 @@ auto Generator::expr_proxy(Expr *expr) -> void {
     return binary_expr(cast<BinaryExpr>(expr));
   case ExperKind::call:
     return call_expr(cast<CallExpr>(expr));
+  case ExperKind::stmt:
+    return stmt_expr(cast<StmtExpr>(expr));
   }
 }
 

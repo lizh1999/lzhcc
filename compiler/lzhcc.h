@@ -167,6 +167,7 @@ enum class ExperKind {
   unary,
   binary,
   call,
+  stmt,
 };
 
 struct Expr {
@@ -184,6 +185,12 @@ struct IntegerExpr : Expr {
   IntegerExpr(Type *type, int64_t value)
       : Expr(ExperKind::integer, type), value(value) {}
   int64_t value;
+};
+
+struct StmtExpr : Expr {
+  StmtExpr(Type *type, struct BlockStmt *stmt)
+      : Expr(ExperKind::stmt, type), stmt(stmt) {}
+  struct BlockStmt *stmt;
 };
 
 enum class UnaryKind {
@@ -342,6 +349,7 @@ public:
   auto less_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto not_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto stmt_expr(Type *type, BlockStmt *stmt) -> Expr *;
 
   auto assign(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto call(std::string_view name, Type *type, std::vector<Expr *> args)

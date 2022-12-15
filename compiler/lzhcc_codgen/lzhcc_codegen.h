@@ -18,6 +18,7 @@ private:
   auto unary_expr(UnaryExpr *expr) -> void;
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;
+  auto stmt_expr(StmtExpr *expr) -> void;
   auto expr_proxy(Expr *expr) -> void;
 
   auto value_addr(ValueExpr *expr) -> void;

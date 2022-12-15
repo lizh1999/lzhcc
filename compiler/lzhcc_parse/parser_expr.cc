@@ -1,3 +1,4 @@
+#include "lzhcc.h"
 #include "lzhcc_parse.h"
 #include <cassert>
 #include <cctype>
@@ -25,10 +26,21 @@ auto Parser::primary() -> Expr * {
     return context_->integer(value);
   }
   case TokenKind::open_paren: {
-    consume();
-    auto expr = expression();
-    consume(TokenKind::close_paren);
-    return expr;
+    auto token = consume();
+    if (next_kind() != TokenKind::open_brace) {
+      auto expr = expression();
+      consume(TokenKind::close_paren);
+      return expr;
+    } else {
+      auto stmt = cast<BlockStmt>(block_stmt());
+      consume(TokenKind::close_paren);
+      auto &stmts = stmt->stmts;
+      if (stmts.empty() || stmts.back()->kind != StmtKind::expr) {
+        context_->fatal(token->location, "");
+      }
+      auto type = cast<ExprStmt>(stmts.back())->expr->type;
+      return context_->stmt_expr(type, stmt);
+    }
   }
   case TokenKind::identifier: {
     auto token = consume();

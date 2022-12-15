@@ -197,6 +197,10 @@ auto Context::call(std::string_view name, Type *type, std::vector<Expr *> args)
   return create<CallExpr>(name, type, std::move(args));
 }
 
+auto Context::stmt_expr(Type *type, BlockStmt *stmt) -> Expr * {
+  return create<StmtExpr>(type, stmt);
+}
+
 auto Context::empty_stmt() -> Stmt * { return create<EmptyStmt>(); }
 
 auto Context::expr_stmt(Expr *expr) -> Stmt * { return create<ExprStmt>(expr); }

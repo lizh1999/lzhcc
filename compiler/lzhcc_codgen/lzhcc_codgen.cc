@@ -4,14 +4,21 @@
 
 namespace lzhcc {
 
-auto codegen(std::span<Function *> functions, Context &context) -> void {
+auto codegen(Ast &ast, Context &context) -> void {
   StmtGenVisitor gen(&context);
-  for (Function *func : functions) {
+  for (Global *global : ast.globals) {
+    auto name = global->name;
+    printf("  .data\n");
+    printf("  .globl %.*s\n", (int)name.size(), name.data());
+    printf("%.*s:\n", (int) name.size(), name.data());
+    printf("  .zero %d\n", context.size_of(global->type));
+  }
+  for (Function *func : ast.functions) {
     auto name = context.literal(func->name->inner);
     int label = gen.counter++;
     gen.return_label = label;
-    printf("  .globl %.*s\n", (int) name.size(), name.data());
-    printf("%.*s:\n", (int) name.size(), name.data());
+    printf("  .globl %.*s\n", (int)name.size(), name.data());
+    printf("%.*s:\n", (int)name.size(), name.data());
     printf("  addi sp, sp, -8\n");
     printf("  sd fp, 0(sp)\n");
     printf("  addi sp, sp, -%d\n", func->max_stack_size);

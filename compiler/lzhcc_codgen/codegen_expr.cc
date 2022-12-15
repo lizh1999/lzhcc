@@ -6,8 +6,27 @@
 
 namespace lzhcc {
 
+struct VariableLower {
+  auto operator()(Local *local) -> void {
+    printf("  add a0, fp, %d\n", local->offset);
+  }
+
+  auto operator()(Global *golbal) -> void { symbol(golbal->name); }
+
+  auto operator()(Function *function) -> void {
+    symbol(context->identifier(function->name->inner));
+  }
+
+  auto symbol(std::string_view name) -> void {
+    printf("  la a0, %.*s\n", (int)name.size(), name.data());
+  }
+
+  Context *context;
+};
+
 auto LValueVisitor::visit(const VarRefExpr *expr) -> void {
-  printf("  add a0, fp, %d\n", expr->var->offset);
+  auto lower = VariableLower{context_};
+  std::visit(lower, expr->var);
 }
 
 auto LValueVisitor::visit(const UnaryExpr *expr) -> void {
@@ -25,11 +44,12 @@ auto RValueVisitor::visit(const IntegerExpr *expr) -> void {
 }
 
 auto RValueVisitor::visit(const VarRefExpr *expr) -> void {
+  auto lower = VariableLower{context_};
+  std::visit(lower, expr->var);
+
   auto visitor = overloaded{
-      [&](const ArrayType &) {
-        printf("  addi a0, fp, %d\n", expr->var->offset);
-      },
-      [&](const auto &) { printf("  ld a0, %d(fp)\n", expr->var->offset); },
+      [](const ArrayType &) {},
+      [](const auto &) { printf("  ld a0, 0(a0)\n"); },
   };
   std::visit(visitor, *expr->type());
 }

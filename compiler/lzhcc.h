@@ -118,6 +118,11 @@ struct Local {
   const Type *type;
 };
 
+struct Global {
+  std::string_view name;
+  const Type *type;
+};
+
 struct Function {
   const Token *name;
   const int max_stack_size;
@@ -125,6 +130,8 @@ struct Function {
   const Type *type;
   const std::vector<Local *> paramters;
 };
+
+using Variable = std::variant<Local *, Global *, Function *>;
 
 struct ExprVisitor;
 
@@ -135,10 +142,10 @@ struct Expression {
 };
 
 struct VarRefExpr : Expression {
-  VarRefExpr(Local *var) : var(var) {}
+  VarRefExpr(Variable var) : var(var) {}
   virtual void visit(ExprVisitor *visitor) const override;
   const Type *type() const override;
-  Local *var;
+  Variable var;
 };
 
 struct IntegerExpr : Expression {
@@ -268,14 +275,18 @@ struct StmtVisitor {
 // lzhcc_parse/lzhcc_parse.cc
 //
 
-auto parse(std::span<const Token> tokens, Context &context)
-    -> std::vector<Function *>;
+struct Ast {
+  std::vector<Global *> globals;
+  std::vector<Function *> functions;
+};
+
+auto parse(std::span<const Token> tokens, Context &context) -> Ast;
 
 //
 // lzhcc_codgen/lzhcc_codgen.cc
 //
 
-auto codegen(std::span<Function *> func, Context &context) -> void;
+auto codegen(Ast &ast, Context &context) -> void;
 
 //
 // lzhcc_context.cc

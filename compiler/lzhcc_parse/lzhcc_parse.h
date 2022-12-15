@@ -8,14 +8,14 @@ namespace lzhcc {
 
 struct Scope {
   Scope *parent;
-  std::unordered_map<int, Local *> var_map;
+  std::unordered_map<int, Variable> var_map;
 };
 
 class Parser {
 public:
   Parser(const Token *position, Context *context)
       : position_(position), context_(context) {}
-  auto operator()() -> std::vector<Function *>;
+  auto operator()() -> Ast;
 
 private:
   auto primary() -> Expression *;
@@ -43,7 +43,8 @@ private:
   auto suffix_type(Type *base) -> Type *;
   auto declarator(Type *base) -> std::pair<const Token *, Type *>;
   auto declaration() -> std::vector<Statement *>;
-  auto function() -> Function *;
+  auto global(const Token *name, Type *base, Type *type) -> std::vector<Global *>;
+  auto function(const Token *name, Type *type) -> Function *;
 
   auto next_kind() const -> TokenKind;
   auto consume() -> const Token *;
@@ -56,16 +57,17 @@ private:
 
   auto entry_scope() -> void;
   auto leave_scope() -> void;
-  auto create_var(std::pair<const Token *, Type *> x) -> Local *;
-  auto create_var(const Token *token, const Type *type) -> Local *;
-  auto find_var(const Token *token) -> Local *;
+  auto create_local(const Token *token, const Type *type) -> Local *;
+  auto create_global(const Token *token, const Type *type) -> Global *;
+  auto find_var(const Token *token) -> Variable;
 
   const Token *position_;
   Context *context_;
 
   int stack_size;
   int max_stack_size;
-  Scope *scope_;
+  Scope *current_;
+  Scope file_scope_;
 };
 
 } // namespace lzhcc

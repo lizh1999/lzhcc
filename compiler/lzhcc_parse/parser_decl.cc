@@ -68,42 +68,49 @@ auto Parser::declarator(Type *base) -> std::pair<const Token *, Type *> {
 
 auto Parser::declaration() -> std::vector<Statement *> {
   auto base = declspec();
-  auto var = create_var(declarator(base));
-
   std::vector<Statement *> stmts;
-loop:
-  switch (next_kind()) {
-  case TokenKind::equal: {
-    consume();
-    auto lhs = create<VarRefExpr>(var);
-    auto rhs = assignment();
-    auto expr = create<BinaryExpr>(BinaryKind::assign, var->type, lhs, rhs);
-    stmts.push_back(create<ExpressionStmt>(expr));
-    goto loop;
-  }
-  case TokenKind::comma:
-    consume();
-    var = create_var(declarator(base));
-    goto loop;
-  case TokenKind::semi:
-    consume();
-    return stmts;
-  default:
-    context_->fatal(position_->location, "");
+  while (true) {
+    auto [name, type] = declarator(base);
+    auto var = create_local(name, type);
+    if (consume_if(TokenKind::equal)) {
+      auto lhs = create<VarRefExpr>(var);
+      auto rhs = assignment();
+      auto expr = create<BinaryExpr>(BinaryKind::assign, var->type, lhs, rhs);
+      stmts.push_back(create<ExpressionStmt>(expr));
+    }
+    if (consume_if(TokenKind::comma)) {
+      continue;
+    } else {
+      consume(TokenKind::semi);
+      return stmts;
+    }
   }
 }
 
-auto Parser::function() -> Function * {
-  auto base = declspec();
-  auto [name, type] = declarator(base);
+auto Parser::global(const Token *name, Type *base, Type *type)
+    -> std::vector<Global *> {
+  auto var = create_global(name, type);
+  std::vector<Global *> vars{var};
+  while (true) {
+    if (consume_if(TokenKind::comma)) {
+      std::tie(name, type) = declarator(base);
+      var = create_global(name, type);
+      vars.push_back(var);
+    } else {
+      consume(TokenKind::semi);
+      return vars;
+    }
+  }
+}
 
+auto Parser::function(const Token *name, Type *type) -> Function * {
   std::vector<Local *> paramters;
-  auto visitor = [&, name = name](auto &&arg) {
+  auto visitor = [&](auto &&arg) {
     using T = std::decay_t<decltype(arg)>;
     if constexpr (std::is_same_v<T, FunctionType>) {
       int n = arg.paramters.size();
       for (int i = 0; i < n; i++) {
-        auto var = create_var(arg.names[i], arg.paramters[i]);
+        auto var = create_local(arg.names[i], arg.paramters[i]);
         paramters.push_back(var);
       }
     } else {
@@ -111,7 +118,7 @@ auto Parser::function() -> Function * {
     }
   };
 
-  assert(!scope_);
+  assert(current_ == &file_scope_);
   stack_size = 0;
   max_stack_size = 0;
 

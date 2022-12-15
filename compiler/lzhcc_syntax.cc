@@ -6,7 +6,14 @@ auto VarRefExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);
 }
 
-auto VarRefExpr::type() const -> const Type * { return var->type; }
+auto VarRefExpr::type() const -> const Type * {
+  auto visitor = overloaded {
+    [](Local *local) -> const Type * { return local->type; },
+    [](Global *golbal) -> const Type * { return golbal->type; },
+    [](Function *function) -> const Type * { return function->type; },
+  };
+  return std::visit(visitor, var);
+}
 
 auto IntegerExpr::visit(ExprVisitor *visitor) const -> void {
   visitor->visit(this);

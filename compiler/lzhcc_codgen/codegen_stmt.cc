@@ -7,6 +7,7 @@ StmtGenVisitor::StmtGenVisitor(Context *context) {
   lvisitor_.rvisitor_ = &rvisitor_;
   rvisitor_.lvisitor_ = &lvisitor_;
   rvisitor_.context_ = context;
+  lvisitor_.context_ = context;
 }
 
 auto StmtGenVisitor::visit(const ExpressionStmt *stmt) -> void {

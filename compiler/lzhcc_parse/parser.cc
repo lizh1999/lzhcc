@@ -4,13 +4,26 @@
 
 namespace lzhcc {
 
-auto Parser::operator()() -> std::vector<Function *> {
-  scope_ = nullptr;
+auto Parser::operator()() -> Ast {
+  current_ = &file_scope_;
+  std::vector<Global *> globals;
   std::vector<Function *> functions;
+
   while (next_kind() != TokenKind::eof) {
-    functions.push_back(function());
+    auto base = declspec();
+    auto [name, type] = declarator(base);
+    auto visitor = overloaded{
+        [&, name = name, type = type](FunctionType &) {
+          functions.push_back(function(name, type));
+        },
+        [&, name = name, type = type](auto &&) {
+          auto vars = global(name, base, type);
+          globals.insert(globals.end(), vars.begin(), vars.end());
+        },
+    };
+    std::visit(visitor, *type);
   }
-  return functions;
+  return Ast{std::move(globals), std::move(functions)};
 }
 
 auto Parser::next_kind() const -> TokenKind { return position_->kind; }
@@ -36,39 +49,48 @@ auto Parser::consume_if(TokenKind kind) -> const Token * {
 }
 
 auto Parser::entry_scope() -> void {
-  scope_ = context_->create<Scope>(Scope{scope_, {}});
+  current_ = context_->create<Scope>(Scope{current_, {}});
 }
 
 auto Parser::leave_scope() -> void {
-  for (auto [_, var] : scope_->var_map) {
-    stack_size -= context_->size_of(var->type);
+  for (auto [_, var] : current_->var_map) {
+    auto visitor = overloaded{
+        [&](Local *local) { stack_size -= context_->size_of(local->type); },
+        [](auto &&) {}};
+    std::visit(visitor, var);
   }
-  scope_ = scope_->parent;
+  current_ = current_->parent;
 }
 
-auto Parser::find_var(const Token *token) -> Local * {
-  auto scope = scope_;
+auto Parser::find_var(const Token *token) -> Variable {
+  auto scope = current_;
   for (; scope; scope = scope->parent) {
     auto it = scope->var_map.find(token->inner);
     if (it != scope->var_map.end()) {
       return it->second;
     }
   }
-  return nullptr;
+  context_->fatal(token->location, "");
 }
 
-auto Parser::create_var(std::pair<const Token*, Type *> x) -> Local* {
-  return create_var(x.first, x.second);
-}
-
-auto Parser::create_var(const Token *token, const Type *type) -> Local * {
-  if (find_var(token)) {
+auto Parser::create_local(const Token *token, const Type *type) -> Local * {
+  if (current_->var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
   }
   auto var = create<Local>(Local{stack_size, type});
   stack_size += context_->size_of(type);
   max_stack_size = std::max(max_stack_size, stack_size);
-  scope_->var_map.emplace(token->inner, var);
+  current_->var_map.emplace(token->inner, var);
+  return var;
+}
+
+auto Parser::create_global(const Token *token, const Type *type) -> Global * {
+  if (file_scope_.var_map.contains(token->inner)) {
+    context_->fatal(token->location, "");
+  }
+  auto name = context_->identifier(token->inner);
+  auto var = create<Global>(Global{name, type});
+  file_scope_.var_map.emplace(token->inner, var);
   return var;
 }
 

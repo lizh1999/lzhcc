@@ -22,6 +22,7 @@ struct LValueVisitor : ExprVisitor {
   void visit(const CallExpr *expr) override { expect_lvalue(); }
   [[noreturn]] void expect_lvalue() { std::abort(); }
   RValueVisitor *rvisitor_;
+  Context *context_;
 };
 
 struct StmtGenVisitor : StmtVisitor {

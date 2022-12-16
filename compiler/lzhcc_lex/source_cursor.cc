@@ -13,6 +13,20 @@ SourceCursor::SourceCursor(Cursor cursor, Context *context)
 auto SourceCursor::operator()() -> Token {
 loop:
   switch (current_) {
+  case '/': {
+    int location = location_;
+    advance_current();
+    switch (current_) {
+    case '/':
+      line_comment();
+      goto loop;
+    case '*':
+      block_comment();
+      goto loop;
+    default:
+      return token(TokenKind::slash, location);
+    }
+  }
   case '\n':
     new_line();
     goto loop;
@@ -47,6 +61,29 @@ auto SourceCursor::new_line() -> void {
   advance_current();
   leading_space_ = false;
   start_of_line_ = true;
+}
+
+auto SourceCursor::line_comment() -> void {
+  assert(current_ == '/');
+  advance_current();
+  eat_while([](char ch) { return ch != '\n'; });
+  leading_space_ = true;
+}
+
+auto SourceCursor::block_comment() -> void {
+  assert(current_ == '*');
+  advance_current();
+  eat_while([last = '\0'](char ch) mutable {
+    if (last == '*' && ch == '/') {
+      return false;
+    } else {
+      last = ch;
+      return true;
+    }
+  });
+  assert(current_ == '/');
+  advance_current();
+  leading_space_ = true;
 }
 
 static auto is_exp(char e, char s) -> bool {
@@ -123,9 +160,6 @@ auto SourceCursor::punctuator() -> Token {
   case '*':
     advance_current();
     return token(TokenKind::star, location);
-  case '/':
-    advance_current();
-    return token(TokenKind::slash, location);
   case '(':
     advance_current();
     return token(TokenKind::open_paren, location);

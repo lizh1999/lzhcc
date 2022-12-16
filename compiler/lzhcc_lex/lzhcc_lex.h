@@ -14,6 +14,8 @@ public:
 private:
   auto white_space() -> void;
   auto new_line() -> void;
+  auto line_comment() -> void;
+  auto block_comment() -> void;
   auto numeric() -> Token;
   auto punctuator() -> Token;
   auto identifier() -> Token;

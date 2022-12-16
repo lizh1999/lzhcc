@@ -3,6 +3,27 @@
 
 namespace lzhcc {
 
+auto Parser::struct_decl() -> Type * {
+  consume(TokenKind::kw_struct);
+  consume(TokenKind::open_brace);
+  int offset = 0;
+  std::unordered_map<int, Member> member_map;
+  while (!consume_if(TokenKind::close_brace)) {
+    auto base = declspec();
+    bool is_first = true;
+    while (!consume_if(TokenKind::semi)) {
+      if (!is_first) {
+        consume(TokenKind::comma);
+      }
+      is_first = false;
+      auto [name, type] = declarator(base);
+      member_map.emplace(name->inner, Member{type, offset});
+      offset += context_->size_of(type);
+    }
+  }
+  return context_->record_type(std::move(member_map), offset);
+}
+
 auto Parser::declspec() -> Type * {
   switch (next_kind()) {
   case TokenKind::kw_char:
@@ -11,6 +32,8 @@ auto Parser::declspec() -> Type * {
   case TokenKind::kw_int:
     consume();
     return context_->int64();
+  case TokenKind::kw_struct:
+    return struct_decl();
   default:
     context_->fatal(position_->location, "");
   }

@@ -38,6 +38,7 @@ Context::Context() {
   push_identifier("int");
   push_identifier("return");
   push_identifier("sizeof");
+  push_identifier("struct");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
@@ -46,6 +47,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_int);
   keyword_map_.push_back(TokenKind::kw_return);
   keyword_map_.push_back(TokenKind::kw_sizeof);
+  keyword_map_.push_back(TokenKind::kw_struct);
   keyword_map_.push_back(TokenKind::kw_while);
 }
 
@@ -128,6 +130,11 @@ auto Context::function_type(Type *ret, std::vector<Type *> params) -> Type * {
   return create<FunctionType>(ret, std::move(params));
 }
 
+auto Context::record_type(std::unordered_map<int, Member> member_map,
+                          int size_bytes) -> Type * {
+  return create<RecordType>(std::move(member_map), size_bytes);
+}
+
 auto Context::size_of(Type *type) -> int {
   switch (type->kind) {
   case TypeKind::pointer:
@@ -141,6 +148,9 @@ auto Context::size_of(Type *type) -> int {
     auto array = cast<ArrayType>(type);
     return array->length == -1 ? 8 : array->length * size_of(array->base);
   }
+  case TypeKind::record:
+    auto record = cast<RecordType>(type);
+    return record->size_bytes;
   }
 }
 
@@ -220,6 +230,10 @@ auto Context::comma(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
 auto Context::call(std::string_view name, Type *type, std::vector<Expr *> args)
     -> Expr * {
   return create<CallExpr>(name, type, std::move(args));
+}
+
+auto Context::member(Type *type, Expr *record, int offset) -> Expr * {
+  return create<MemberExpr>(type, record, offset);
 }
 
 auto Context::stmt_expr(Type *type, BlockStmt *stmt) -> Expr * {

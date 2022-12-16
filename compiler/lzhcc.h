@@ -6,6 +6,7 @@
 #include <memory>
 #include <span>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace lzhcc {
@@ -28,6 +29,7 @@ class Context;
 enum class TokenKind : uint8_t {
   amp,           // "&"
   comma,         // ","
+  dot,           // "."
   equal,         // "="
   equal_equal,   // "=="
   exclaim,       // "!"
@@ -58,6 +60,7 @@ enum class TokenKind : uint8_t {
   kw_int,        // "int"
   kw_return,     // "return"
   kw_sizeof,     // "sizeof"
+  kw_struct,     // "struct"
   kw_while,      // "while"
 };
 
@@ -77,15 +80,12 @@ struct Token {
 using CharCursorFn = std::function<std::pair<char, int>()>;
 auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 
-//
-// lzhcc_syntax.cc
-//
-
 enum class TypeKind {
   integer,
   pointer,
   function,
   array,
+  record,
 };
 
 struct Type {
@@ -118,6 +118,19 @@ struct ArrayType : Type {
       : Type(TypeKind::array), base(base), length(length) {}
   Type *base;
   int length;
+};
+
+struct Member {
+  Type *type;
+  int offset;
+};
+
+struct RecordType : Type {
+  RecordType(std::unordered_map<int, Member> member_map, int size_bytes)
+      : Type(TypeKind::record), member_map(std::move(member_map)),
+        size_bytes(size_bytes) {}
+  std::unordered_map<int, Member> member_map;
+  int size_bytes;
 };
 
 enum class ValueKind {
@@ -163,6 +176,7 @@ enum class ExperKind {
   binary,
   call,
   stmt,
+  member,
 };
 
 struct Expr {
@@ -227,6 +241,13 @@ struct CallExpr : Expr {
       : Expr(ExperKind::call, type), name(name), args(std::move(argus)) {}
   std::string_view name;
   std::vector<Expr *> args;
+};
+
+struct MemberExpr : Expr {
+  MemberExpr(Type *type, Expr *record, int offset)
+      : Expr(ExperKind::member, type), record(record), offset(offset) {}
+  Expr *record;
+  int offset;
 };
 
 enum class StmtKind {
@@ -323,6 +344,8 @@ public:
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params) -> Type *;
+  auto record_type(std::unordered_map<int, Member> member_map, int size_bytes)
+      -> Type *;
   auto size_of(Type *type) -> int;
 
   // value
@@ -353,6 +376,8 @@ public:
   auto call(std::string_view name, Type *type, std::vector<Expr *> args)
       -> Expr *;
 
+  auto member(Type *type, Expr *record, int offset) -> Expr *;
+
   // stmt
   auto empty_stmt() -> Stmt *;
   auto expr_stmt(Expr *expr) -> Stmt *;
@@ -364,7 +389,7 @@ public:
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
-    const char * opt_o = nullptr;
+    const char *opt_o = nullptr;
   } arg;
 
 private:

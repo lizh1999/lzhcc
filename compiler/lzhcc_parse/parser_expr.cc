@@ -1,4 +1,3 @@
-#include "lzhcc.h"
 #include "lzhcc_parse.h"
 #include <cassert>
 #include <cctype>
@@ -160,6 +159,7 @@ static auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
   }
   case TypeKind::integer:
   case TypeKind::function:
+  case TypeKind::record:
     context->fatal(loc, "");
   }
 }
@@ -214,47 +214,6 @@ loop:
   return lhs;
 }
 
-// struct AddOpLower {
-//   auto operator()(const IntegerType &, const IntegerType &) -> Expr * {
-//     return context->add(lhs->type(), lhs, rhs);
-//   }
-
-//   auto offset_of(const Type *type, Expr *n) -> Expr * {
-//     int size_bytes = context->size_of(type);
-//     auto size = context->integer(size_bytes);
-//     return context->multiply(size->type(), n, size);
-//   }
-
-//   auto operator()(const IntegerType &, const PointerType &ptr) -> Expr * {
-//     auto offset = offset_of(ptr.base, lhs);
-//     return context->add(rhs->type(), offset, rhs);
-//   }
-
-//   auto operator()(const IntegerType &, const ArrayType &arr) -> Expr * {
-//     auto offset = offset_of(arr.base, lhs);
-//     return context->add(rhs->type(), offset, rhs);
-//   }
-
-//   auto operator()(const PointerType &ptr, const IntegerType &) -> Expr * {
-//     auto offset = offset_of(ptr.base, rhs);
-//     return context->add(lhs->type(), lhs, offset);
-//   }
-
-//   auto operator()(const ArrayType &arr, const IntegerType &) -> Expr * {
-//     auto offset = offset_of(arr.base, rhs);
-//     return context->add(lhs->type(), lhs, offset);
-//   }
-
-//   auto operator()(auto &&, auto &&) -> Expr * {
-//     context->fatal(position->location, "");
-//   }
-
-//   Context *context;
-//   Expr *lhs;
-//   Expr *rhs;
-//   const Token *position;
-// };
-
 static constexpr auto pattern(TypeKind lhs, TypeKind rhs) -> int {
   return static_cast<int>(lhs) * 65536 | static_cast<int>(rhs);
 }
@@ -289,35 +248,6 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     context->fatal(loc, "");
   }
 }
-
-// struct SubtractOpLower {
-//   auto operator()(const IntegerType &, const IntegerType &) -> Expr * {
-//     return context->subtract(lhs->type(), lhs, rhs);
-//   }
-
-//   auto operator()(const PointerType &ptr, const IntegerType &) -> Expr * {
-//     int size_bytes = context->size_of(ptr.base);
-//     auto size = context->integer(size_bytes);
-//     auto offset = context->multiply(size->type(), rhs, size);
-//     return context->subtract(lhs->type(), lhs, offset);
-//   }
-
-//   auto operator()(const PointerType &ptr, const PointerType &) -> Expr * {
-//     int size_bytes = context->size_of(ptr.base);
-//     auto size = context->integer(size_bytes);
-//     auto bytes = context->subtract(size->type(), lhs, rhs);
-//     return context->divide(size->type(), bytes, size);
-//   }
-
-//   auto operator()(auto &&, auto &&) -> Expr * {
-//     context->fatal(position->location, "");
-//   }
-
-//   Context *context;
-//   Expr *lhs;
-//   Expr *rhs;
-//   const Token *position;
-// };
 
 static auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
@@ -365,13 +295,39 @@ loop:
   return lhs;
 }
 
+static auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {
+  if (lhs->type->kind != TypeKind::record) {
+    context->fatal(loc, "");
+  }
+  auto record = cast<RecordType>(lhs->type);
+  auto it = record->member_map.find(rhs);
+  if (it == record->member_map.end()) {
+    context->fatal(loc, "");
+  }
+  auto &member = it->second;
+  return context->member(member.type, lhs, member.offset);
+}
+
 auto Parser::postfix() -> Expr * {
   auto lhs = primary();
-  while (auto token = consume_if(TokenKind::open_bracket)) {
+loop:
+  switch (next_kind()) {
+  case TokenKind::open_bracket: {
+    auto token = consume();
     auto rhs = expression();
     consume(TokenKind::close_bracket);
     lhs = low_add_op(context_, lhs, rhs, token->location);
     lhs = low_deref_op(context_, lhs, token->location);
+    goto loop;
+  }
+  case TokenKind::dot: {
+    auto token = consume();
+    auto ident = consume(TokenKind::identifier);
+    lhs = low_member_op(context_, lhs, ident->inner, token->location);
+    goto loop;
+  }
+  default:
+    break;
   }
   return lhs;
 }

@@ -11,7 +11,8 @@ auto Parser::block_stmt(bool is_top) -> Stmt * {
   while (!consume_if(TokenKind::close_brace)) {
     switch (next_kind()) {
     case TokenKind::kw_char:
-    case TokenKind::kw_int: {
+    case TokenKind::kw_int:
+    case TokenKind::kw_struct: {
       auto init = declaration();
       stmts.insert(stmts.end(), init.begin(), init.end());
       break;

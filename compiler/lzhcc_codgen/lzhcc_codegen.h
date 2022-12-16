@@ -20,11 +20,13 @@ private:
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;
   auto stmt_expr(StmtExpr *expr) -> void;
+  auto member_expr(MemberExpr *expr) -> void;
   auto expr_proxy(Expr *expr) -> void;
 
   auto value_addr(ValueExpr *expr) -> void;
   auto unary_addr(UnaryExpr *expr) -> void;
   auto binary_addr(BinaryExpr *expr) -> void;
+  auto member_addr(MemberExpr *expr) -> void;
   auto addr_proxy(Expr *expr) -> void;
 
   auto expr_stmt(ExprStmt *stmt) -> void;

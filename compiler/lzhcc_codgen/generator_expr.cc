@@ -43,6 +43,11 @@ auto Generator::binary_addr(BinaryExpr *expr) -> void {
   }
 }
 
+auto Generator::member_addr(MemberExpr *expr) -> void {
+  addr_proxy(expr->record);
+  println("  addi a0, a0, %d", expr->offset);
+}
+
 auto Generator::addr_proxy(Expr *expr) -> void {
   switch (expr->kind) {
   case ExperKind::value:
@@ -51,6 +56,8 @@ auto Generator::addr_proxy(Expr *expr) -> void {
     return unary_addr(cast<UnaryExpr>(expr));
   case ExperKind::binary:
     return binary_addr(cast<BinaryExpr>(expr));
+  case ExperKind::member:
+    return member_addr(cast<MemberExpr>(expr));
   default:
     expect_lvalue();
   }
@@ -78,6 +85,8 @@ auto Generator::load(Type *type) -> void {
     break;
   case TypeKind::function:
   case TypeKind::array:
+    break;
+  case TypeKind::record:
     break;
   }
 }
@@ -111,8 +120,10 @@ auto Generator::store_integer(IntegerType *type) -> void {
   switch (type->size_bytes) {
   case 8:
     println("  sd a1, 0(a0)");
+    break;
   case 1:
     println("  sb a1, 0(a0)");
+    break;
   }
 }
 
@@ -128,6 +139,8 @@ auto Generator::store(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::function:
     std::abort();
+  case TypeKind::record:
+    break;
   }
 }
 
@@ -205,6 +218,11 @@ auto Generator::stmt_expr(StmtExpr *expr) -> void {
   return block_stmt(expr->stmt);
 }
 
+auto Generator::member_expr(MemberExpr *expr) -> void {
+  addr_proxy(expr);
+  load(expr->type);
+}
+
 auto Generator::push(const char *reg) -> void {
   println("  addi sp, sp, -8");
   println("  sd %s, 0(sp)", reg);
@@ -229,6 +247,8 @@ auto Generator::expr_proxy(Expr *expr) -> void {
     return call_expr(cast<CallExpr>(expr));
   case ExperKind::stmt:
     return stmt_expr(cast<StmtExpr>(expr));
+  case ExperKind::member:
+    return member_expr(cast<MemberExpr>(expr));
   }
 }
 

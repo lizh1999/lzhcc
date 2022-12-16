@@ -36,6 +36,7 @@ private:
   auto while_stmt() -> Stmt *;
   auto statement() -> Stmt *;
 
+  auto struct_decl() -> Type *;
   auto declspec() -> Type *;
   auto pointers(Type *base) -> Type *;
   auto array_dimensions(Type *base) -> Type *;

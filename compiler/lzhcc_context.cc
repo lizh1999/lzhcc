@@ -49,6 +49,27 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_while);
 }
 
+auto Context::append_file(std::string path) -> CharCursorFn {
+  FILE *in = nullptr;
+  if (path == "-") {
+    in = stdin;
+  } else {
+    in = fopen(path.c_str(), "r");
+  }
+  std::string text;
+  enum { buffer_size = 1024 };
+  size_t n = 0;
+  do {
+    char buffer[buffer_size];
+    size_t n = fread(buffer, 1, 1024, in);
+    text.append(buffer, n);
+  } while (n == buffer_size);
+  if (in != stdin) {
+    fclose(in);
+  }
+  return append_text(std::move(text));
+}
+
 auto Context::append_text(std::string text) -> CharCursorFn {
   int location = 0;
   for (int i = 0; i < text_.size(); i++) {

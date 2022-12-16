@@ -314,6 +314,7 @@ struct Token;
 class Context {
 public:
   Context();
+  auto append_file(std::string path) -> CharCursorFn;
   auto append_text(std::string text) -> CharCursorFn;
   auto push_literal(std::string literal) -> int;
   auto push_identifier(std::string literal) -> int;

@@ -11,14 +11,15 @@ SourceCursor::SourceCursor(Cursor cursor, Context *context)
 }
 
 auto SourceCursor::operator()() -> Token {
-  while (true) {
-    if (std::isspace(current_)) {
-      white_space();
-    } else {
-      break;
-    }
-  }
+loop:
   switch (current_) {
+  case '\n':
+    new_line();
+    goto loop;
+  case ' ':
+  case '\t':
+    white_space();
+    goto loop;
   case '\0':
     start_of_line_ = true;
     return token(TokenKind::eof, location_);
@@ -39,6 +40,13 @@ auto SourceCursor::white_space() -> void {
   assert(std::isspace(current_));
   eat_while([](char ch) { return ch != '\n' && std::isspace(ch); });
   leading_space_ = true;
+}
+
+auto SourceCursor::new_line() -> void {
+  assert(current_ == '\n');
+  advance_current();
+  leading_space_ = false;
+  start_of_line_ = true;
 }
 
 static auto is_exp(char e, char s) -> bool {

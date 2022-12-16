@@ -13,6 +13,7 @@ public:
 
 private:
   auto white_space() -> void;
+  auto new_line() -> void;
   auto numeric() -> Token;
   auto punctuator() -> Token;
   auto identifier() -> Token;

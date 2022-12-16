@@ -24,6 +24,7 @@ private:
 
   auto value_addr(ValueExpr *expr) -> void;
   auto unary_addr(UnaryExpr *expr) -> void;
+  auto binary_addr(BinaryExpr *expr) -> void;
   auto addr_proxy(Expr *expr) -> void;
 
   auto expr_stmt(ExprStmt *stmt) -> void;

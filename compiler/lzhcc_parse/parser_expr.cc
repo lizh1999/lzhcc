@@ -466,6 +466,13 @@ loop:
   return lhs;
 }
 
-auto Parser::expression() -> Expr * { return assignment(); }
+auto Parser::expression() -> Expr * {
+  auto lhs = assignment();
+  while (consume_if(TokenKind::comma)) {
+    auto rhs = expression();
+    lhs = context_->comma(rhs->type, lhs, rhs);
+  }
+  return lhs;
+}
 
 } // namespace lzhcc

@@ -33,12 +33,24 @@ auto Generator::unary_addr(UnaryExpr *expr) -> void {
   }
 }
 
+auto Generator::binary_addr(BinaryExpr *expr) -> void {
+  switch (expr->kind) {
+  case BinaryKind::comma:
+    expr_proxy(expr->lhs);
+    return addr_proxy(expr->rhs);
+  default:
+    expect_lvalue();
+  }
+}
+
 auto Generator::addr_proxy(Expr *expr) -> void {
   switch (expr->kind) {
   case ExperKind::value:
     return value_addr(cast<ValueExpr>(expr));
   case ExperKind::unary:
     return unary_addr(cast<UnaryExpr>(expr));
+  case ExperKind::binary:
+    return binary_addr(cast<BinaryExpr>(expr));
   default:
     expect_lvalue();
   }
@@ -120,13 +132,23 @@ auto Generator::store(Type *type) -> void {
 }
 
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
+  if (expr->kind == BinaryKind::assign) {
+    expr_proxy(expr->rhs);
+    push("a0");
+    addr_proxy(expr->lhs);
+    pop("a1");
+    store(expr->type);
+    println("  mv a0, a1");
+    return;
+  }
+  if (expr->kind == BinaryKind::comma) {
+    expr_proxy(expr->lhs);
+    expr_proxy(expr->rhs);
+    return;
+  }
   expr_proxy(expr->rhs);
   push("a0");
-  if (expr->kind != BinaryKind::assign) {
-    expr_proxy(expr->lhs);
-  } else {
-    addr_proxy(expr->lhs);
-  }
+  expr_proxy(expr->lhs);
   pop("a1");
   switch (expr->kind) {
   case BinaryKind::add:
@@ -157,8 +179,7 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     println("  snez a0, a0");
     break;
   case BinaryKind::assign:
-    store(expr->type);
-    println("  mv a0, a1");
+  case BinaryKind::comma:
     break;
   }
 }

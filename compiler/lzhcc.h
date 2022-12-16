@@ -211,6 +211,7 @@ enum class BinaryKind {
   equal,
   not_equal,
   assign,
+  comma,
 };
 
 struct BinaryExpr : Expr {
@@ -346,8 +347,9 @@ public:
   auto equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto not_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto stmt_expr(Type *type, BlockStmt *stmt) -> Expr *;
-
   auto assign(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+
   auto call(std::string_view name, Type *type, std::vector<Expr *> args)
       -> Expr *;
 

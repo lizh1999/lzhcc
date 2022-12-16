@@ -4,8 +4,7 @@ assert() {
   expected=$1
   input=$2
 
-  # ./lzhcc "$input" > tmp.s || exit
-  echo "$input" | ./lzhcc - > tmp.s || exit
+  echo "$input" | ./lzhcc -o tmp.s - || exit
   $GCC -static -o tmp tmp.s tmp2.o
   $QEMU tmp
   actual="$?"

@@ -4,9 +4,10 @@ namespace lzhcc {
 
 class Generator {
 public:
-  Generator();
+  Generator(Context *context);
 
   auto codegen(Function *function) -> void;
+  auto codegen(GValue *gvalue) -> void;
 
 private:
   auto store(Type *type) -> void;
@@ -35,10 +36,15 @@ private:
   auto push(const char *reg) -> void;
   auto pop(const char *reg) -> void;
 
+  [[gnu::format(printf, 2, 3)]] auto println(const char *, ...) -> void;
+
   [[noreturn]] auto expect_lvalue() -> void { std::abort(); }
 
   int counter;
   int return_label;
+
+  FILE *out_;
+  Context *context_;
 };
 
 } // namespace lzhcc

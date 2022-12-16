@@ -1,4 +1,3 @@
-#include "lzhcc.h"
 #include "lzhcc_codegen.h"
 
 namespace lzhcc {
@@ -7,19 +6,19 @@ auto Generator::value_addr(ValueExpr *expr) -> void {
   switch (expr->value->kind) {
   case ValueKind::local: {
     auto lvalue = cast<LValue>(expr->value);
-    printf("  add a0, fp, %d\n", lvalue->offset);
+    println("  add a0, fp, %d", lvalue->offset);
     break;
   }
   case ValueKind::global: {
     auto gvalue = cast<GValue>(expr->value);
     auto name = gvalue->name;
-    printf("  la a0, %.*s\n", (int)name.size(), name.data());
+    println("  la a0, %.*s", (int)name.size(), name.data());
     break;
   }
   case ValueKind::function: {
     auto function = cast<Function>(expr->value);
     auto name = function->name;
-    printf("  la a0, %.*s\n", (int)name.size(), name.data());
+    println("  la a0, %.*s", (int)name.size(), name.data());
     break;
   }
   }
@@ -48,10 +47,10 @@ auto Generator::addr_proxy(Expr *expr) -> void {
 auto Generator::load_integer(IntegerType *type) -> void {
   switch (type->size_bytes) {
   case 8:
-    printf("  ld a0, 0(a0)\n");
+    println("  ld a0, 0(a0)");
     break;
   case 1:
-    printf("  lb a0, 0(a0)\n");
+    println("  lb a0, 0(a0)");
     break;
   }
 }
@@ -63,7 +62,7 @@ auto Generator::load(Type *type) -> void {
     return load_integer(integer);
   }
   case TypeKind::pointer:
-    printf("  ld a0, 0(a0)\n");
+    println("  ld a0, 0(a0)");
     break;
   case TypeKind::function:
   case TypeKind::array:
@@ -77,14 +76,14 @@ auto Generator::value_expr(ValueExpr *expr) -> void {
 }
 
 auto Generator::integer_expr(IntegerExpr *expr) -> void {
-  printf("  li a0, %ld\n", expr->value);
+  println("  li a0, %ld", expr->value);
 }
 
 auto Generator::unary_expr(UnaryExpr *expr) -> void {
   switch (expr->kind) {
   case UnaryKind::negative:
     expr_proxy(expr->operand);
-    printf("  neg a0, a0\n");
+    println("  neg a0, a0");
     break;
   case UnaryKind::deref:
     expr_proxy(expr->operand);
@@ -99,9 +98,9 @@ auto Generator::unary_expr(UnaryExpr *expr) -> void {
 auto Generator::store_integer(IntegerType *type) -> void {
   switch (type->size_bytes) {
   case 8:
-    printf("  sd a1, 0(a0)\n");
+    println("  sd a1, 0(a0)");
   case 1:
-    printf("  sb a1, 0(a0)\n");
+    println("  sb a1, 0(a0)");
   }
 }
 
@@ -112,7 +111,7 @@ auto Generator::store(Type *type) -> void {
     return store_integer(integer);
   }
   case TypeKind::pointer:
-    printf("  sd a1, 0(a0)\n");
+    println("  sd a1, 0(a0)");
     break;
   case TypeKind::array:
   case TypeKind::function:
@@ -131,35 +130,35 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
   pop("a1");
   switch (expr->kind) {
   case BinaryKind::add:
-    printf("  add a0, a0, a1\n");
+    println("  add a0, a0, a1");
     break;
   case BinaryKind::subtract:
-    printf("  sub a0, a0, a1\n");
+    println("  sub a0, a0, a1");
     break;
   case BinaryKind::multiply:
-    printf("  mul a0, a0, a1\n");
+    println("  mul a0, a0, a1");
     break;
   case BinaryKind::divide:
-    printf("  div a0, a0, a1\n");
+    println("  div a0, a0, a1");
     break;
   case BinaryKind::less_than:
-    printf("  slt a0, a0, a1\n");
+    println("  slt a0, a0, a1");
     break;
   case BinaryKind::less_equal:
-    printf("  slt a0, a1, a0\n");
-    printf("  xori a0, a0, 1\n");
+    println("  slt a0, a1, a0");
+    println("  xori a0, a0, 1");
     break;
   case BinaryKind::equal:
-    printf("  xor a0, a0, a1\n");
-    printf("  seqz a0, a0\n");
+    println("  xor a0, a0, a1");
+    println("  seqz a0, a0");
     break;
   case BinaryKind::not_equal:
-    printf("  xor a0, a0, a1\n");
-    printf("  snez a0, a0\n");
+    println("  xor a0, a0, a1");
+    println("  snez a0, a0");
     break;
   case BinaryKind::assign:
     store(expr->type);
-    printf("  mv a0, a1\n");
+    println("  mv a0, a1");
     break;
   }
 }
@@ -177,7 +176,7 @@ auto Generator::call_expr(CallExpr *expr) -> void {
   }
 
   push("ra");
-  printf("  call %.*s\n", (int)expr->name.size(), expr->name.data());
+  println("  call %.*s", (int)expr->name.size(), expr->name.data());
   pop("ra");
 }
 
@@ -186,13 +185,13 @@ auto Generator::stmt_expr(StmtExpr *expr) -> void {
 }
 
 auto Generator::push(const char *reg) -> void {
-  printf("  addi sp, sp, -8\n");
-  printf("  sd %s, 0(sp)\n", reg);
+  println("  addi sp, sp, -8");
+  println("  sd %s, 0(sp)", reg);
 }
 
 auto Generator::pop(const char *reg) -> void {
-  printf("  ld %s, 0(sp)\n", reg);
-  printf("  addi sp, sp, 8\n");
+  println("  ld %s, 0(sp)", reg);
+  println("  addi sp, sp, 8");
 }
 
 auto Generator::expr_proxy(Expr *expr) -> void {

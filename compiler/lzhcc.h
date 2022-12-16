@@ -10,11 +10,6 @@
 
 namespace lzhcc {
 
-template <class... Ts> struct overloaded : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
 //
 // lzhcc_diagnostic.cc
 //
@@ -365,6 +360,10 @@ public:
   auto block_stmt(std::vector<Stmt *> stmts) -> Stmt *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
+
+  struct {
+    const char * opt_o = nullptr;
+  } arg;
 
 private:
   std::deque<std::string> storage_;

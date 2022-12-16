@@ -9,35 +9,35 @@ auto Generator::for_stmt(ForStmt *stmt) -> void {
     stmt_proxy(stmt->init);
   }
   int label = counter++;
-  printf(".L.begin.%d:", label);
+  println(".L.begin.%d:", label);
   if (stmt->cond) {
     expr_proxy(stmt->cond);
-    printf("  beqz a0, .L.end.%d\n", label);
+    println("  beqz a0, .L.end.%d", label);
   }
   stmt_proxy(stmt->then);
   if (stmt->inc) {
     expr_proxy(stmt->inc);
   }
-  printf("  j .L.begin.%d\n", label);
-  printf(".L.end.%d:", label);
+  println("  j .L.begin.%d", label);
+  println(".L.end.%d:", label);
 }
 
 auto Generator::if_stmt(IfStmt *stmt) -> void {
   expr_proxy(stmt->cond);
   int label = counter++;
-  printf("  beqz a0, .L.else.%d\n", label);
+  println("  beqz a0, .L.else.%d", label);
   stmt_proxy(stmt->then);
-  printf("  j .L.end.%d\n", label);
-  printf(".L.else.%d:\n", label);
+  println("  j .L.end.%d", label);
+  println(".L.else.%d:", label);
   if (stmt->else_) {
     stmt_proxy(stmt->else_);
   }
-  printf(".L.end.%d:\n", label);
+  println(".L.end.%d:", label);
 }
 
 auto Generator::return_stmt(ReturnStmt *stmt) -> void {
   expr_proxy(stmt->expr);
-  printf("  j .L.return.%d\n", return_label);
+  println("  j .L.return.%d", return_label);
 }
 
 auto Generator::block_stmt(BlockStmt *stmt) -> void {

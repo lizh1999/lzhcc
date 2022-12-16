@@ -57,11 +57,11 @@ auto Context::append_file(std::string path) -> CharCursorFn {
     in = fopen(path.c_str(), "r");
   }
   std::string text;
-  enum { buffer_size = 1024 };
+  enum { buffer_size = 4096 };
   size_t n = 0;
   do {
     char buffer[buffer_size];
-    size_t n = fread(buffer, 1, 1024, in);
+    n = fread(buffer, 1, buffer_size, in);
     text.append(buffer, n);
   } while (n == buffer_size);
   if (in != stdin) {

@@ -5,6 +5,15 @@ namespace lzhcc {
 
 auto Parser::struct_decl() -> Type * {
   consume(TokenKind::kw_struct);
+  auto name = consume_if(TokenKind::identifier);
+  if (name && next_kind() != TokenKind::open_brace) {
+    if (auto type = find_tag(name->inner)) {
+      return type;
+    } else {
+      context_->fatal(name->location, "");
+    }
+  }
+  entry_scope();
   consume(TokenKind::open_brace);
   int offset = 0;
   int align_bytes = 1;
@@ -26,8 +35,14 @@ auto Parser::struct_decl() -> Type * {
       align_bytes = std::max(align_bytes, align);
     }
   }
+  leave_scope();
   int size_bytes = align_to(offset, align_bytes);
-  return context_->record_type(std::move(member_map), size_bytes, align_bytes);
+  auto type =
+      context_->record_type(std::move(member_map), size_bytes, align_bytes);
+  if (name) {
+    create_tag(name, type);
+  }
+  return type;
 }
 
 auto Parser::declspec() -> Type * {
@@ -104,7 +119,12 @@ auto Parser::declarator(Type *base, ParamNames *param_names)
 auto Parser::declaration() -> std::vector<Stmt *> {
   auto base = declspec();
   std::vector<Stmt *> stmts;
-  while (true) {
+  bool is_first = true;
+  while (!consume_if(TokenKind::semi)) {
+    if (!is_first) {
+      consume(TokenKind::comma);
+    }
+    is_first = false;
     auto [name, type] = declarator(base);
     auto var = create_local(name, type);
     if (consume_if(TokenKind::equal)) {
@@ -113,13 +133,8 @@ auto Parser::declaration() -> std::vector<Stmt *> {
       auto expr = context_->assign(var->type, lhs, rhs);
       stmts.push_back(context_->expr_stmt(expr));
     }
-    if (consume_if(TokenKind::comma)) {
-      continue;
-    } else {
-      consume(TokenKind::semi);
-      return stmts;
-    }
   }
+  return stmts;
 }
 
 auto Parser::global(Token *name, Type *base, Type *type) -> void {

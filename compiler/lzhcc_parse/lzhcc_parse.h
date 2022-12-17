@@ -6,8 +6,8 @@ namespace lzhcc {
 
 struct Scope {
   int old_stack_size;
-  Scope *parent;
   std::unordered_map<int, Value *> var_map;
+  std::unordered_map<int, Type *> tag_map;
 };
 
 using ParamNames = std::vector<Token *>;
@@ -65,7 +65,9 @@ private:
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
                        std::vector<LValue *> params) -> void;
   auto create_anon(Type *type, uint8_t *init = 0) -> GValue *;
-  auto find_var(Token *token) -> Value *;
+  auto create_tag(Token *token, Type *type) -> void;
+  auto find_var(int name) -> Value *;
+  auto find_tag(int name) -> Type *;
   auto unique_name() -> std::pair<std::string_view, int>;
 
   Token *position_;

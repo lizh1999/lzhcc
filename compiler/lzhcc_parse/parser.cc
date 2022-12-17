@@ -56,8 +56,7 @@ auto Parser::consume_if(TokenKind kind) -> Token * {
 }
 
 auto Parser::entry_scope() -> void {
-  Scope *parent = &scopes_.back();
-  scopes_.push_back({stack_size_, parent, {}});
+  scopes_.push_back({stack_size_, {}, {}});
 }
 
 auto Parser::leave_scope() -> void {
@@ -69,15 +68,24 @@ auto Parser::leave_scope() -> void {
   }
 }
 
-auto Parser::find_var(Token *token) -> Value * {
-  auto scope = &scopes_.back();
-  for (; scope; scope = scope->parent) {
-    auto it = scope->var_map.find(token->inner);
-    if (it != scope->var_map.end()) {
+auto Parser::find_var(int name) -> Value * {
+  for (auto &scope : scopes_) {
+    auto it = scope.var_map.find(name);
+    if (it != scope.var_map.end()) {
       return it->second;
     }
   }
-  context_->fatal(token->location, "");
+  return nullptr;
+}
+
+auto Parser::find_tag(int name) -> Type * {
+  for (auto &scope : scopes_) {
+    auto it = scope.tag_map.find(name);
+    if (it != scope.tag_map.end()) {
+      return it->second;
+    }
+  }
+  return nullptr;
 }
 
 auto Parser::create_local(Token *token, Type *type) -> LValue * {
@@ -123,6 +131,15 @@ auto Parser::create_anon(Type *type, uint8_t *init) -> GValue * {
   auto var = context_->create_global(type, name, init);
   file_scope.var_map.emplace(uid, var);
   return var;
+}
+
+auto Parser::create_tag(Token *token, Type *type) -> void {
+  auto &scope = scopes_.back();
+  auto it = scope.tag_map.find(token->inner);
+  if (it != scope.tag_map.end()) {
+    context_->fatal(token->location, "");
+  }
+  scope.tag_map.emplace(token->inner, type);
 }
 
 auto Parser::unique_name() -> std::pair<std::string_view, int> {

@@ -54,7 +54,10 @@ auto Parser::primary() -> Expr * {
       }
       return context_->call(name, context_->int64(), std::move(arguments));
     } else {
-      auto var = find_var(token);
+      auto var = find_var(token->inner);
+      if (!var) {
+        context_->fatal(token->location, "");
+      }
       return context_->value(var);
     }
   }

@@ -45,6 +45,47 @@ auto Parser::struct_decl() -> Type * {
   return type;
 }
 
+auto Parser::union_decl() -> Type * {
+  consume(TokenKind::kw_union);
+  auto name = consume_if(TokenKind::identifier);
+  if (name && next_kind() != TokenKind::open_brace) {
+    if (auto type = find_tag(name->inner)) {
+      return type;
+    } else {
+      context_->fatal(name->location, "");
+    }
+  }
+  entry_scope();
+  consume(TokenKind::open_brace);
+  int size_bytes = 0;
+  int align_bytes = 1;
+  std::unordered_map<int, Member> member_map;
+  while (!consume_if(TokenKind::close_brace)) {
+    auto base = declspec();
+    bool is_first = true;
+    while (!consume_if(TokenKind::semi)) {
+      if (!is_first) {
+        consume(TokenKind::comma);
+      }
+      is_first = false;
+      auto [name, type] = declarator(base);
+      int size = context_->size_of(type);
+      int align = context_->align_of(type);
+      member_map.emplace(name->inner, Member{type, 0});
+      size_bytes = std::max(size_bytes, size);
+      align_bytes = std::max(align_bytes, align);
+    }
+  }
+  leave_scope();
+  size_bytes = align_to(size_bytes, align_bytes);
+  auto type =
+      context_->record_type(std::move(member_map), size_bytes, align_bytes);
+  if (name) {
+    create_tag(name, type);
+  }
+  return type;
+}
+
 auto Parser::declspec() -> Type * {
   switch (next_kind()) {
   case TokenKind::kw_char:
@@ -55,6 +96,8 @@ auto Parser::declspec() -> Type * {
     return context_->int64();
   case TokenKind::kw_struct:
     return struct_decl();
+  case TokenKind::kw_union:
+    return union_decl();
   default:
     context_->fatal(position_->location, "");
   }

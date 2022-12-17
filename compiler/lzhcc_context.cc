@@ -39,6 +39,7 @@ Context::Context() {
   push_identifier("return");
   push_identifier("sizeof");
   push_identifier("struct");
+  push_identifier("union");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
@@ -48,6 +49,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_return);
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_struct);
+  keyword_map_.push_back(TokenKind::kw_union);
   keyword_map_.push_back(TokenKind::kw_while);
 }
 

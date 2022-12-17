@@ -5,6 +5,7 @@
 namespace lzhcc {
 
 struct Scope {
+  int old_stack_size;
   Scope *parent;
   std::unordered_map<int, Value *> var_map;
 };

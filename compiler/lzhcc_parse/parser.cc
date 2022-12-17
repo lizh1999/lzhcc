@@ -57,16 +57,12 @@ auto Parser::consume_if(TokenKind kind) -> Token * {
 
 auto Parser::entry_scope() -> void {
   Scope *parent = &scopes_.back();
-  scopes_.push_back({parent, {}});
+  scopes_.push_back({stack_size_, parent, {}});
 }
 
 auto Parser::leave_scope() -> void {
   auto &current = scopes_.back();
-  for (auto [_, var] : current.var_map) {
-    if (var->kind == ValueKind::local) {
-      stack_size_ -= context_->size_of(var->type);
-    }
-  }
+  stack_size_ = current.old_stack_size;
   scopes_.pop_back();
   if (scopes_.size() == 1) {
     assert(stack_size_ == 0);
@@ -89,8 +85,11 @@ auto Parser::create_local(Token *token, Type *type) -> LValue * {
   if (current.var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
   }
+  int size = context_->size_of(type);
+  int align = context_->align_of(type);
+  stack_size_ = align_to(stack_size_, align);
   auto var = context_->create_local(type, stack_size_);
-  stack_size_ += context_->size_of(type);
+  stack_size_ += size;
   max_stack_size_ = std::max(max_stack_size_, stack_size_);
   current.var_map.emplace(token->inner, var);
   return var;

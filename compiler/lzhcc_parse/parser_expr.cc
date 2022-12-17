@@ -298,7 +298,8 @@ loop:
   return lhs;
 }
 
-static auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {
+static auto low_member_op(Context *context, Expr *lhs, int rhs, int loc)
+    -> Expr * {
   if (lhs->type->kind != TypeKind::record) {
     context->fatal(loc, "");
   }
@@ -326,6 +327,13 @@ loop:
   case TokenKind::dot: {
     auto token = consume();
     auto ident = consume(TokenKind::identifier);
+    lhs = low_member_op(context_, lhs, ident->inner, token->location);
+    goto loop;
+  }
+  case TokenKind::arrow: {
+    auto token = consume();
+    auto ident = consume(TokenKind::identifier);
+    lhs = low_deref_op(context_, lhs, token->location);
     lhs = low_member_op(context_, lhs, ident->inner, token->location);
     goto loop;
   }

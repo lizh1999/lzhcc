@@ -159,9 +159,6 @@ auto SourceCursor::punctuator() -> Token {
   case '+':
     advance_current();
     return token(TokenKind::plus, location);
-  case '-':
-    advance_current();
-    return token(TokenKind::minus, location);
   case '*':
     advance_current();
     return token(TokenKind::star, location);
@@ -186,6 +183,15 @@ auto SourceCursor::punctuator() -> Token {
   case ';':
     advance_current();
     return token(TokenKind::semi, location);
+  case '-':
+    advance_current();
+    switch (current_) {
+    case '>':
+      advance_current();
+      return token(TokenKind::arrow, location);
+    default:
+      return token(TokenKind::minus, location);
+    }
   case '=':
     advance_current();
     switch (current_) {

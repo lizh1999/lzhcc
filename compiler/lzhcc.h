@@ -30,6 +30,7 @@ class Context;
 
 enum class TokenKind : uint8_t {
   amp,           // "&"
+  arrow,         // '->'
   comma,         // ","
   dot,           // "."
   equal,         // "="

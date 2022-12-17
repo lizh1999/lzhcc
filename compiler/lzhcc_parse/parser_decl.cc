@@ -7,6 +7,7 @@ auto Parser::struct_decl() -> Type * {
   consume(TokenKind::kw_struct);
   consume(TokenKind::open_brace);
   int offset = 0;
+  int align_bytes = 1;
   std::unordered_map<int, Member> member_map;
   while (!consume_if(TokenKind::close_brace)) {
     auto base = declspec();
@@ -17,11 +18,16 @@ auto Parser::struct_decl() -> Type * {
       }
       is_first = false;
       auto [name, type] = declarator(base);
+      int size = context_->size_of(type);
+      int align = context_->align_of(type);
+      offset = align_to(offset, align);
       member_map.emplace(name->inner, Member{type, offset});
-      offset += context_->size_of(type);
+      offset += size;
+      align_bytes = std::max(align_bytes, align);
     }
   }
-  return context_->record_type(std::move(member_map), offset);
+  int size_bytes = align_to(offset, align_bytes);
+  return context_->record_type(std::move(member_map), size_bytes, align_bytes);
 }
 
 auto Parser::declspec() -> Type * {

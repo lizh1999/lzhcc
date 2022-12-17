@@ -11,6 +11,8 @@
 
 namespace lzhcc {
 
+inline auto align_to(int x, int y) -> int { return (x + y - 1) / y * y; }
+
 //
 // lzhcc_diagnostic.cc
 //
@@ -126,11 +128,13 @@ struct Member {
 };
 
 struct RecordType : Type {
-  RecordType(std::unordered_map<int, Member> member_map, int size_bytes)
+  RecordType(std::unordered_map<int, Member> member_map, int size_bytes,
+             int align_bytes)
       : Type(TypeKind::record), member_map(std::move(member_map)),
-        size_bytes(size_bytes) {}
+        size_bytes(size_bytes), align_bytes(align_bytes) {}
   std::unordered_map<int, Member> member_map;
   int size_bytes;
+  int align_bytes;
 };
 
 enum class ValueKind {
@@ -344,9 +348,10 @@ public:
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params) -> Type *;
-  auto record_type(std::unordered_map<int, Member> member_map, int size_bytes)
+  auto record_type(std::unordered_map<int, Member> member_map, int size_bytes, int align_bytes)
       -> Type *;
   auto size_of(Type *type) -> int;
+  auto align_of(Type *type) -> int;
 
   // value
   auto create_local(Type *type, int offset) -> LValue *;

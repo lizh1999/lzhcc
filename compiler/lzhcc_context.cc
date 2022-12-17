@@ -131,8 +131,8 @@ auto Context::function_type(Type *ret, std::vector<Type *> params) -> Type * {
 }
 
 auto Context::record_type(std::unordered_map<int, Member> member_map,
-                          int size_bytes) -> Type * {
-  return create<RecordType>(std::move(member_map), size_bytes);
+                          int size_bytes, int align_bytes) -> Type * {
+  return create<RecordType>(std::move(member_map), size_bytes, align_bytes);
 }
 
 auto Context::size_of(Type *type) -> int {
@@ -151,6 +151,20 @@ auto Context::size_of(Type *type) -> int {
   case TypeKind::record:
     auto record = cast<RecordType>(type);
     return record->size_bytes;
+  }
+}
+
+auto Context::align_of(Type *type) -> int {
+  switch (type->kind) {
+  case TypeKind::pointer:
+  case TypeKind::function:
+    return 8;
+  case TypeKind::integer:
+    return cast<IntegerType>(type)->size_bytes;
+  case TypeKind::array:
+    return align_of(cast<ArrayType>(type)->base);
+  case TypeKind::record:
+    return cast<RecordType>(type)->align_bytes;
   }
 }
 

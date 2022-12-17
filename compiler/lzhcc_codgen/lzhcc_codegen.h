@@ -12,6 +12,7 @@ public:
 private:
   auto store(Type *type) -> void;
   auto store_integer(IntegerType *type) -> void;
+  auto store_record(RecordType *type) -> void;
   auto load(Type *type) -> void;
   auto load_integer(IntegerType *type) -> void;
   auto value_expr(ValueExpr *expr) -> void;

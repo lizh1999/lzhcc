@@ -411,6 +411,7 @@ static auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc)
   case pattern(TypeKind::integer, TypeKind::integer):
   case pattern(TypeKind::pointer, TypeKind::pointer):
   case pattern(TypeKind::pointer, TypeKind::array):
+  case pattern(TypeKind::record, TypeKind::record):
     return context->assign(lhs->type, lhs, rhs);
   default:
     context->fatal(loc, "");

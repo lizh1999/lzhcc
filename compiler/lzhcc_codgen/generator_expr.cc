@@ -85,7 +85,6 @@ auto Generator::load(Type *type) -> void {
     break;
   case TypeKind::function:
   case TypeKind::array:
-    break;
   case TypeKind::record:
     break;
   }
@@ -127,6 +126,14 @@ auto Generator::store_integer(IntegerType *type) -> void {
   }
 }
 
+auto Generator::store_record(RecordType *type) -> void {
+  int size = context_->size_of(type);
+  for (int i = 0; i < size; i++) {
+    println("  lb  t0, %d(a1)", i);
+    println("  sb  t0, %d(a0)", i);
+  }
+}
+
 auto Generator::store(Type *type) -> void {
   switch (type->kind) {
   case TypeKind::integer: {
@@ -136,11 +143,11 @@ auto Generator::store(Type *type) -> void {
   case TypeKind::pointer:
     println("  sd a1, 0(a0)");
     break;
+  case TypeKind::record:
+    return store_record(cast<RecordType>(type));
   case TypeKind::array:
   case TypeKind::function:
     std::abort();
-  case TypeKind::record:
-    break;
   }
 }
 

@@ -108,6 +108,7 @@ static auto is_valid(int mask) -> bool {
 
   case kw_long:
   case kw_long + kw_int:
+  case kw_long + kw_long:
   case kw_long + kw_long + kw_int:
 
   case other:
@@ -154,6 +155,7 @@ loop:
     return context_->int32();
   case kw_long:
   case kw_long + kw_int:
+  case kw_long + kw_long:
   case kw_long + kw_long + kw_int:
     return context_->int64();
   default:

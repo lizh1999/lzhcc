@@ -129,6 +129,9 @@ auto Parser::array_dimensions(Type *base) -> Type * {
 
 auto Parser::function_parameters(Type *base, ParamNames *param_names)
     -> Type * {
+  if (param_names) {
+    param_names->clear();
+  }
   consume(TokenKind::open_paren);
   std::vector<Type *> params;
 
@@ -160,9 +163,28 @@ auto Parser::suffix_type(Type *base, ParamNames *param_names) -> Type * {
 auto Parser::declarator(Type *base, ParamNames *param_names)
     -> std::pair<Token *, Type *> {
   base = pointers(base);
-  auto name = consume(TokenKind::identifier);
-  auto type = suffix_type(base, param_names);
-  return std::pair(name, type);
+  switch (next_kind()) {
+  case TokenKind::identifier: {
+    auto name = consume();
+    auto type = suffix_type(base, param_names);
+    return std::pair(name, type);
+  }
+  case TokenKind::open_paren: {
+    auto start = position_;
+    position_ += position_->inner + 1;
+
+    base = suffix_type(base, param_names);
+    auto end = position_;
+
+    position_ = start + 1;
+    auto result = declarator(base, param_names);
+
+    position_ = end;
+    return result;
+  }
+  default:
+    return std::pair(position_, base);
+  }
 }
 
 auto Parser::declaration() -> std::vector<Stmt *> {

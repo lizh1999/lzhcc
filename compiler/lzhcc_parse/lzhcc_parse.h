@@ -20,6 +20,7 @@ public:
 
 private:
   auto string() -> Expr *;
+  auto call(Token *name) -> Expr *;
   auto primary() -> Expr *;
   auto unary() -> Expr *;
   auto postfix() -> Expr *;
@@ -51,6 +52,7 @@ private:
   auto global(Token *name, Type *base, Type *type) -> void;
   auto function(Token *name, Type *type, ParamNames param_names) -> void;
 
+  auto next_is(TokenKind kind) -> bool;
   auto next_kind() -> TokenKind;
   auto consume() -> Token *;
   auto consume(TokenKind kind) -> Token *;
@@ -62,6 +64,7 @@ private:
 
   auto entry_scope() -> void;
   auto leave_scope() -> void;
+  auto create_declaration(Token *token, Type *type) -> void;
   auto create_local(Token *token, Type *type) -> LValue *;
   auto create_global(Token *token, Type *type, uint8_t *init = 0) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,

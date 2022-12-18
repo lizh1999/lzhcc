@@ -5,6 +5,25 @@
 
 namespace lzhcc {
 
+auto Parser::call(Token *token) -> Expr * {
+  auto name = context_->storage(token->inner);
+  consume(TokenKind::open_paren);
+  std::vector<Expr *> args;
+  while (!consume_if(TokenKind::close_paren)) {
+    if (!args.empty()) {
+      consume(TokenKind::comma);
+    }
+    args.push_back(assignment());
+  }
+  auto var = find_var(token->inner);
+  if (var->type->kind != TypeKind::function) {
+    context_->fatal(token->inner, "");
+  }
+  auto function_type = cast<FunctionType>(var->type);
+  // TODO: args type check
+  return context_->call(name, function_type->ret, std::move(args));
+}
+
 auto Parser::primary() -> Expr * {
   switch (next_kind()) {
   case TokenKind::numeric: {
@@ -16,7 +35,7 @@ auto Parser::primary() -> Expr * {
   }
   case TokenKind::open_paren: {
     auto token = consume();
-    if (next_kind() != TokenKind::open_brace) {
+    if (!next_is(TokenKind::open_brace)) {
       auto expr = expression();
       consume(TokenKind::close_paren);
       return expr;
@@ -33,16 +52,8 @@ auto Parser::primary() -> Expr * {
   }
   case TokenKind::identifier: {
     auto token = consume();
-    auto name = context_->storage(token->inner);
-    if (consume_if(TokenKind::open_paren)) {
-      std::vector<Expr *> arguments;
-      while (!consume_if(TokenKind::close_paren)) {
-        if (!arguments.empty()) {
-          consume(TokenKind::comma);
-        }
-        arguments.push_back(assignment());
-      }
-      return context_->call(name, context_->int32(), std::move(arguments));
+    if (next_is(TokenKind::open_paren)) {
+      return call(token);
     } else {
       auto var = find_var(token->inner);
       if (!var) {

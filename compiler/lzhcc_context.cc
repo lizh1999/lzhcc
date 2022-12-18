@@ -184,6 +184,10 @@ auto Context::align_of(Type *type) -> int {
   }
 }
 
+auto Context::create_declaration(Type *type, std::string_view name) -> Declaration * {
+  return create<Declaration>(type, name);
+}
+
 auto Context::create_local(Type *type, int offset) -> LValue * {
   return create<LValue>(type, offset);
 }

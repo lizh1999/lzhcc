@@ -151,6 +151,7 @@ enum class ValueKind {
   local,
   global,
   function,
+  declaraion,
 };
 
 struct Value {
@@ -181,6 +182,12 @@ struct Function : Value {
   int stack_size;
   struct Stmt *stmt;
   std::vector<LValue *> params;
+};
+
+struct Declaration : Value {
+  Declaration(Type *type, std::string_view name)
+      : Value(ValueKind::declaraion, type), name(name) {}
+  std::string_view name;
 };
 
 enum class ExperKind {
@@ -364,6 +371,7 @@ public:
   auto align_of(Type *type) -> int;
 
   // value
+  auto create_declaration(Type *type, std::string_view name) -> Declaration *;
   auto create_local(Type *type, int offset) -> LValue *;
   auto create_global(Type *type, std::string_view name, uint8_t *init)
       -> GValue *;

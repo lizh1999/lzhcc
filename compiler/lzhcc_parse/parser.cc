@@ -5,7 +5,7 @@ namespace lzhcc {
 
 auto Parser::operator()() -> Module {
   scopes_.emplace_back();
-  while (next_kind() != TokenKind::eof) {
+  while (!next_is(TokenKind::eof)) {
     auto base = declspec();
     ParamNames param_names;
     auto [name, type] = declarator(base, &param_names);
@@ -25,6 +25,8 @@ auto Parser::operator()() -> Module {
     case ValueKind::function:
       functions.push_back(cast<Function>(var));
       break;
+    case ValueKind::declaraion:
+      break;
     case ValueKind::local:
       assert(false);
     }
@@ -32,6 +34,8 @@ auto Parser::operator()() -> Module {
 
   return Module{std::move(gvalues), std::move(functions)};
 }
+
+auto Parser::next_is(TokenKind kind) -> bool { return kind == position_->kind; }
 
 auto Parser::next_kind() -> TokenKind { return position_->kind; }
 
@@ -55,9 +59,7 @@ auto Parser::consume_if(TokenKind kind) -> Token * {
   }
 }
 
-auto Parser::entry_scope() -> void {
-  scopes_.push_back({stack_size_, {}, {}});
-}
+auto Parser::entry_scope() -> void { scopes_.push_back({stack_size_, {}, {}}); }
 
 auto Parser::leave_scope() -> void {
   auto &current = scopes_.back();
@@ -88,6 +90,18 @@ auto Parser::find_tag(int name) -> Type * {
   return nullptr;
 }
 
+auto Parser::create_declaration(Token *token, Type *type) -> void {
+  auto &file_scope = scopes_.front();
+  auto it = file_scope.var_map.find(token->inner);
+  if (it != file_scope.var_map.end()) {
+    // TODO: type check
+    return;
+  }
+  auto name = context_->storage(token->inner);
+  auto var = context_->create_declaration(type, name);
+  file_scope.var_map.emplace(token->inner, var);
+}
+
 auto Parser::create_local(Token *token, Type *type) -> LValue * {
   auto &current = scopes_.back();
   if (current.var_map.contains(token->inner)) {
@@ -116,13 +130,13 @@ auto Parser::create_global(Token *token, Type *type, uint8_t *init) -> void {
 auto Parser::create_function(Token *token, Type *type, int stack_size,
                              Stmt *stmt, std::vector<LValue *> params) -> void {
   auto &file_scope = scopes_.front();
-  if (file_scope.var_map.contains(token->inner)) {
-    context_->fatal(token->location, "");
-  }
+  auto it = file_scope.var_map.find(token->inner);
+  assert(it != file_scope.var_map.end());
+
   auto name = context_->storage(token->inner);
   auto var = context_->create_function(type, name, stack_size, stmt,
                                        std::move(params));
-  file_scope.var_map.emplace(token->inner, var);
+  it->second = var;
 }
 
 auto Parser::create_anon(Type *type, uint8_t *init) -> GValue * {

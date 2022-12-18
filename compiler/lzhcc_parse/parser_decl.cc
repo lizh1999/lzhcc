@@ -6,7 +6,7 @@ namespace lzhcc {
 auto Parser::struct_decl() -> Type * {
   consume(TokenKind::kw_struct);
   auto name = consume_if(TokenKind::identifier);
-  if (name && next_kind() != TokenKind::open_brace) {
+  if (name && !next_is(TokenKind::open_brace)) {
     if (auto type = find_tag(name->inner)) {
       return type;
     } else {
@@ -48,7 +48,7 @@ auto Parser::struct_decl() -> Type * {
 auto Parser::union_decl() -> Type * {
   consume(TokenKind::kw_union);
   auto name = consume_if(TokenKind::identifier);
-  if (name && next_kind() != TokenKind::open_brace) {
+  if (name && !next_is(TokenKind::open_brace)) {
     if (auto type = find_tag(name->inner)) {
       return type;
     } else {
@@ -222,6 +222,10 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
 }
 
 auto Parser::function(Token *name, Type *type, ParamNames param_names) -> void {
+  create_declaration(name, type);
+  if (consume_if(TokenKind::semi)) {
+    return;
+  }
   std::vector<LValue *> params;
   auto function_type = cast<FunctionType>(type);
   auto param_types = function_type->params;

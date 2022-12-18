@@ -88,6 +88,9 @@ auto Parser::union_decl() -> Type * {
 
 auto Parser::declspec() -> Type * {
   switch (next_kind()) {
+  case TokenKind::kw_void:
+    consume();
+    return context_->void_type();
   case TokenKind::kw_char:
     consume();
     return context_->int8();

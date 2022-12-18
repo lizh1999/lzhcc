@@ -91,6 +91,8 @@ auto Generator::load(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::record:
     break;
+  case TypeKind::kw_void:
+    std::abort();
   }
 }
 
@@ -153,6 +155,7 @@ auto Generator::store(Type *type) -> void {
     return store_record(cast<RecordType>(type));
   case TypeKind::array:
   case TypeKind::function:
+  case TypeKind::kw_void:
     std::abort();
   }
 }

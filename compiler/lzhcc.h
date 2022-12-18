@@ -67,6 +67,7 @@ enum class TokenKind : uint8_t {
   kw_sizeof,     // "sizeof"
   kw_struct,     // "struct"
   kw_union,      // "union"
+  kw_void,       // "void"
   kw_while,      // "while"
 };
 
@@ -87,6 +88,7 @@ using CharCursorFn = std::function<std::pair<char, int>()>;
 auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 
 enum class TypeKind {
+  kw_void,
   integer,
   pointer,
   function,
@@ -97,6 +99,10 @@ enum class TypeKind {
 struct Type {
   Type(const TypeKind kind) : kind(kind) {}
   const TypeKind kind;
+};
+
+struct VoidType : Type {
+  VoidType() : Type(TypeKind::kw_void) {}
 };
 
 enum class IntegerKind {
@@ -358,6 +364,7 @@ public:
   auto into_keyword(int index) const -> TokenKind;
 
   // type
+  auto void_type() -> Type *;
   auto int8() -> Type *;
   auto int16() -> Type *;
   auto int32() -> Type *;

@@ -42,6 +42,7 @@ Context::Context() {
   push_identifier("sizeof");
   push_identifier("struct");
   push_identifier("union");
+  push_identifier("void");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
@@ -54,6 +55,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_struct);
   keyword_map_.push_back(TokenKind::kw_union);
+  keyword_map_.push_back(TokenKind::kw_void);
   keyword_map_.push_back(TokenKind::kw_while);
 }
 
@@ -116,6 +118,8 @@ auto Context::into_keyword(int index) const -> TokenKind {
   }
 }
 
+auto Context::void_type() -> Type * { return create<VoidType>(); }
+
 auto Context::int8() -> Type * {
   return create<IntegerType>(IntegerKind::byte, /*is_unsigned=*/false);
 }
@@ -151,6 +155,8 @@ auto Context::record_type(std::unordered_map<int, Member> member_map,
 
 auto Context::size_of(Type *type) -> int {
   switch (type->kind) {
+  case TypeKind::kw_void:
+    return 1;
   case TypeKind::pointer:
   case TypeKind::function:
     return 8;
@@ -170,6 +176,8 @@ auto Context::size_of(Type *type) -> int {
 
 auto Context::align_of(Type *type) -> int {
   switch (type->kind) {
+  case TypeKind::kw_void:
+    std::abort();
   case TypeKind::pointer:
   case TypeKind::function:
     return 8;
@@ -184,7 +192,8 @@ auto Context::align_of(Type *type) -> int {
   }
 }
 
-auto Context::create_declaration(Type *type, std::string_view name) -> Declaration * {
+auto Context::create_declaration(Type *type, std::string_view name)
+    -> Declaration * {
   return create<Declaration>(type, name);
 }
 

@@ -90,6 +90,9 @@ static auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
   switch (operand->type->kind) {
   case TypeKind::pointer: {
     auto ptr = cast<PointerType>(operand->type);
+    if (ptr->base->kind == TypeKind::kw_void) {
+      context->fatal(loc, "");
+    }
     return context->deref(ptr->base, operand);
   }
   case TypeKind::array: {
@@ -99,6 +102,7 @@ static auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
   case TypeKind::integer:
   case TypeKind::function:
   case TypeKind::record:
+  case TypeKind::kw_void:
     context->fatal(loc, "");
   }
 }

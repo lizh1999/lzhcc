@@ -15,7 +15,8 @@ auto Parser::block_stmt(bool is_top) -> Stmt * {
     case TokenKind::kw_long:
     case TokenKind::kw_short:
     case TokenKind::kw_struct:
-    case TokenKind::kw_union: {
+    case TokenKind::kw_union:
+    case TokenKind::kw_void: {
       auto init = declaration();
       stmts.insert(stmts.end(), init.begin(), init.end());
       break;

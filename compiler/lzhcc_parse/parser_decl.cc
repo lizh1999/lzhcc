@@ -86,29 +86,78 @@ auto Parser::union_decl() -> Type * {
   return type;
 }
 
-auto Parser::declspec() -> Type * {
-  switch (next_kind()) {
-  case TokenKind::kw_void:
-    consume();
-    return context_->void_type();
-  case TokenKind::kw_char:
-    consume();
-    return context_->int8();
-  case TokenKind::kw_short:
-    consume();
-    return context_->int16();
-  case TokenKind::kw_int:
-    consume();
-    return context_->int32();
-  case TokenKind::kw_long:
-    consume();
-    return context_->int64();
-  case TokenKind::kw_struct:
-    return struct_decl();
-  case TokenKind::kw_union:
-    return union_decl();
+enum {
+  kw_void = 1 << 0,
+  kw_char = 1 << 2,
+  kw_int = 1 << 4,
+  kw_short = 1 << 6,
+  kw_long = 1 << 8,
+  other = 1 << 10,
+};
+
+static auto is_valid(int mask) -> bool {
+  switch (mask) {
+  case kw_void:
+
+  case kw_char:
+
+  case kw_short:
+  case kw_short + kw_int:
+
+  case kw_int:
+
+  case kw_long:
+  case kw_long + kw_int:
+  case kw_long + kw_long + kw_int:
+
+  case other:
+    return true;
   default:
-    context_->fatal(position_->location, "");
+    return false;
+  }
+}
+
+auto Parser::declspec() -> Type * {
+#define case_goto(value, target, update)                                       \
+  case value:                                                                  \
+    mask += target;                                                            \
+    if (!is_valid(mask))                                                       \
+      context_->fatal(position_->location, "");                                \
+    update;                                                                    \
+    goto loop
+
+  Type *result = nullptr;
+  int mask = 0;
+loop:
+  switch (next_kind()) {
+    case_goto(TokenKind::kw_void, kw_void, consume());
+    case_goto(TokenKind::kw_char, kw_char, consume());
+    case_goto(TokenKind::kw_short, kw_short, consume());
+    case_goto(TokenKind::kw_int, kw_int, consume());
+    case_goto(TokenKind::kw_long, kw_long, consume());
+    case_goto(TokenKind::kw_struct, other, result = struct_decl());
+    case_goto(TokenKind::kw_union, other, result = union_decl());
+  default:
+    if (!is_valid(mask))
+      context_->fatal(position_->location, "");
+    break;
+  }
+  switch (mask) {
+  case kw_void:
+    return context_->void_type();
+  case kw_char:
+    return context_->int8();
+  case kw_short:
+  case kw_short + kw_int:
+    return context_->int16();
+  case kw_int:
+    return context_->int32();
+  case kw_long:
+  case kw_long + kw_int:
+  case kw_long + kw_long + kw_int:
+    return context_->int64();
+  default:
+    return result;
   }
 }
 

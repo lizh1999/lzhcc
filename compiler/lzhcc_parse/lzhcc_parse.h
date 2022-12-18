@@ -19,6 +19,7 @@ public:
   auto operator()() -> Module;
 
 private:
+  auto string() -> Expr *;
   auto primary() -> Expr *;
   auto unary() -> Expr *;
   auto postfix() -> Expr *;

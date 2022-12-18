@@ -64,13 +64,15 @@ auto Generator::addr_proxy(Expr *expr) -> void {
 }
 
 auto Generator::load_integer(IntegerType *type) -> void {
-  switch (type->size_bytes) {
-  case 8:
-    println("  ld a0, 0(a0)");
-    break;
-  case 1:
-    println("  lb a0, 0(a0)");
-    break;
+  switch (type->kind) {
+  case IntegerKind::byte:
+    return println("  lb a0, 0(a0)");
+  case IntegerKind::half:
+    return println("  lh a0, 0(a0)");
+  case IntegerKind::word:
+    return println("  lw a0, 0(a0)");
+  case IntegerKind::dword:
+    return println("  ld a0, 0(a0)");
   }
 }
 
@@ -116,13 +118,15 @@ auto Generator::unary_expr(UnaryExpr *expr) -> void {
 }
 
 auto Generator::store_integer(IntegerType *type) -> void {
-  switch (type->size_bytes) {
-  case 8:
-    println("  sd a1, 0(a0)");
-    break;
-  case 1:
-    println("  sb a1, 0(a0)");
-    break;
+  switch (type->kind) {
+  case IntegerKind::byte:
+    return println("  sb a1, 0(a0)");
+  case IntegerKind::half:
+    return println("  sh a1, 0(a0)");
+  case IntegerKind::word:
+    return println("  sw a1, 0(a0)");
+  case IntegerKind::dword:
+    return println("  sd a1, 0(a0)");
   }
 }
 

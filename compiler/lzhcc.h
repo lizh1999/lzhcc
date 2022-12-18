@@ -97,11 +97,17 @@ struct Type {
   const TypeKind kind;
 };
 
+enum class IntegerKind {
+  byte = 1,
+  half = 2,
+  word = 4,
+  dword = 8,
+};
+
 struct IntegerType : Type {
-  IntegerType(int size_bytes, bool is_unsigned)
-      : Type(TypeKind::integer), size_bytes(size_bytes),
-        is_unsigned(is_unsigned) {}
-  int size_bytes;
+  IntegerType(IntegerKind kind, bool is_unsigned)
+      : Type(TypeKind::integer), kind(kind), is_unsigned(is_unsigned) {}
+  IntegerKind kind;
   bool is_unsigned;
 };
 
@@ -332,8 +338,6 @@ auto codegen(Module &module, Context &context) -> void;
 // lzhcc_context.cc
 //
 
-struct Token;
-
 class Context {
 public:
   Context();
@@ -346,12 +350,13 @@ public:
 
   // type
   auto int8() -> Type *;
-  auto int64() -> Type *;
+  auto int32() -> Type *;
+  // auto int64() -> Type *;
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params) -> Type *;
-  auto record_type(std::unordered_map<int, Member> member_map, int size_bytes, int align_bytes)
-      -> Type *;
+  auto record_type(std::unordered_map<int, Member> member_map, int size_bytes,
+                   int align_bytes) -> Type *;
   auto size_of(Type *type) -> int;
   auto align_of(Type *type) -> int;
 
@@ -364,7 +369,7 @@ public:
 
   // expr
   auto value(Value *value) -> Expr *;
-  auto integer(int64_t value) -> Expr *;
+  auto integer(int32_t value) -> Expr *;
   auto negative(Type *type, Expr *operand) -> Expr *;
   auto refrence(Type *type, Expr *operand) -> Expr *;
   auto deref(Type *type, Expr *operand) -> Expr *;

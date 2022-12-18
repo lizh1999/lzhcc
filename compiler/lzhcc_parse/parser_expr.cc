@@ -5,22 +5,12 @@
 
 namespace lzhcc {
 
-static int from_hex(char c) {
-  if ('0' <= c && c <= '9') {
-    return c - '0';
-  } else if ('a' <= c && c <= 'f') {
-    return c - 'a' + 10;
-  } else {
-    return c - 'A' + 10;
-  }
-}
-
 auto Parser::primary() -> Expr * {
   switch (next_kind()) {
   case TokenKind::numeric: {
     auto token = consume();
     auto text = context_->storage(token->inner);
-    int64_t value;
+    int32_t value;
     std::from_chars(text.begin(), text.end(), value);
     return context_->integer(value);
   }
@@ -52,7 +42,7 @@ auto Parser::primary() -> Expr * {
         }
         arguments.push_back(assignment());
       }
-      return context_->call(name, context_->int64(), std::move(arguments));
+      return context_->call(name, context_->int32(), std::move(arguments));
     } else {
       auto var = find_var(token->inner);
       if (!var) {
@@ -61,73 +51,8 @@ auto Parser::primary() -> Expr * {
       return context_->value(var);
     }
   }
-  case TokenKind::string: {
-    auto token = consume();
-    auto raw = context_->storage(token->inner);
-    assert(raw.front() == '"' && raw.back() == '"');
-    std::string text;
-    for (int i = 1; i + 1 < raw.size(); i++) {
-      if (raw[i] != '\\') {
-        text.push_back(raw[i]);
-        continue;
-      }
-      ++i;
-      if (int c = 0; raw[i] == 'x') {
-        ++i;
-        while (std::isxdigit(raw[i])) {
-          c = c * 16 + from_hex(raw[i++]);
-        }
-        text.push_back(c);
-        continue;
-      }
-      if (int c = 0; '0' <= raw[i] && raw[i] <= '7') {
-        c = raw[i++] - '0';
-        if ('0' <= raw[i] && raw[i] <= '7') {
-          c = c * 8 + raw[i++] - '0';
-          if ('0' <= raw[i] && raw[i] <= '7') {
-            c = c * 8 + raw[i++] - '0';
-          }
-        }
-        text.push_back(c);
-        continue;
-      }
-      switch (raw[i]) {
-      case 'a':
-        text.push_back('\a');
-        break;
-      case 'b':
-        text.push_back('\b');
-        break;
-      case 't':
-        text.push_back('\t');
-        break;
-      case 'n':
-        text.push_back('\n');
-        break;
-      case 'v':
-        text.push_back('\v');
-        break;
-      case 'f':
-        text.push_back('\f');
-        break;
-      case 'r':
-        text.push_back('\r');
-        break;
-      case 'e':
-        text.push_back('\e');
-        break;
-      default:
-        text.push_back(raw[i]);
-        break;
-      }
-    }
-    text.push_back('\0');
-    auto type = context_->array_of(context_->int8(), text.size());
-    int inner = context_->push_literal(std::move(text));
-    auto view = context_->storage(inner);
-    auto var = create_anon(type, (uint8_t *)view.data());
-    return context_->value(var);
-  }
+  case TokenKind::string:
+    return string();
   case TokenKind::kw_sizeof: {
     consume();
     auto type = unary()->type;
@@ -175,7 +100,7 @@ auto Parser::unary() -> Expr * {
   case TokenKind::minus: {
     consume();
     auto operand = unary();
-    auto type = context_->int64();
+    auto type = context_->int32();
     return context_->negative(type, operand);
   }
   case TokenKind::amp: {
@@ -200,14 +125,14 @@ loop:
   case TokenKind::star: {
     consume();
     auto rhs = unary();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->multiply(type, lhs, rhs);
     goto loop;
   }
   case TokenKind::slash: {
     consume();
     auto rhs = unary();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->divide(type, lhs, rhs);
     goto loop;
   }
@@ -350,28 +275,28 @@ loop:
   case TokenKind::less: {
     consume();
     auto rhs = additive();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->less_than(type, lhs, rhs);
     goto loop;
   }
   case TokenKind::less_equal: {
     consume();
     auto rhs = additive();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->less_equal(type, lhs, rhs);
     goto loop;
   }
   case TokenKind::greater: {
     consume();
     auto rhs = additive();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->less_than(type, rhs, lhs);
     goto loop;
   }
   case TokenKind::greater_equal: {
     consume();
     auto rhs = additive();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->less_equal(type, rhs, lhs);
     goto loop;
   }
@@ -388,14 +313,14 @@ loop:
   case TokenKind::equal_equal: {
     consume();
     auto rhs = relational();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->equal(type, lhs, rhs);
     goto loop;
   }
   case TokenKind::exclaim_equal: {
     consume();
     auto rhs = relational();
-    auto type = context_->int64();
+    auto type = context_->int32();
     lhs = context_->not_equal(type, lhs, rhs);
     goto loop;
   }

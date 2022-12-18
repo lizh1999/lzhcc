@@ -93,7 +93,7 @@ auto Parser::declspec() -> Type * {
     return context_->int8();
   case TokenKind::kw_int:
     consume();
-    return context_->int64();
+    return context_->int32();
   case TokenKind::kw_struct:
     return struct_decl();
   case TokenKind::kw_union:

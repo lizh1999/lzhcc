@@ -113,11 +113,11 @@ auto Context::into_keyword(int index) const -> TokenKind {
 }
 
 auto Context::int8() -> Type * {
-  return create<IntegerType>(/*size_bytes=*/1, /*is_unsigned=*/false);
+  return create<IntegerType>(IntegerKind::byte, /*is_unsigned=*/false);
 }
 
-auto Context::int64() -> Type * {
-  return create<IntegerType>(/*size_bytes=*/8, /*is_unsigned=*/false);
+auto Context::int32() -> Type * {
+  return create<IntegerType>(IntegerKind::word, /*is_unsigned=*/false);
 }
 
 auto Context::pointer_to(Type *base) -> Type * {
@@ -144,7 +144,7 @@ auto Context::size_of(Type *type) -> int {
     return 8;
   case TypeKind::integer: {
     auto integer = cast<IntegerType>(type);
-    return integer->size_bytes;
+    return static_cast<int>(integer->kind);
   }
   case TypeKind::array: {
     auto array = cast<ArrayType>(type);
@@ -161,8 +161,10 @@ auto Context::align_of(Type *type) -> int {
   case TypeKind::pointer:
   case TypeKind::function:
     return 8;
-  case TypeKind::integer:
-    return cast<IntegerType>(type)->size_bytes;
+  case TypeKind::integer: {
+    auto integer = cast<IntegerType>(type);
+    return static_cast<int>(integer->kind);
+  }
   case TypeKind::array:
     return align_of(cast<ArrayType>(type)->base);
   case TypeKind::record:
@@ -187,8 +189,8 @@ auto Context::create_function(Type *type, std::string_view name, int stack_size,
 
 auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }
 
-auto Context::integer(int64_t value) -> Expr * {
-  return create<IntegerExpr>(int64(), value);
+auto Context::integer(int32_t value) -> Expr * {
+  return create<IntegerExpr>(int32(), value);
 }
 
 auto Context::negative(Type *type, Expr *operand) -> Expr * {

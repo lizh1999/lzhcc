@@ -51,6 +51,7 @@ int main() {
   ASSERT(4, ({ int x; char y; char *a = &y; char *b = &x; a - b; }));
 
   ASSERT(8, ({ long x; sizeof(x); }));
+  ASSERT(2, ({ short x; sizeof(x); }));
 
   printf("OK\n");
   return 0;

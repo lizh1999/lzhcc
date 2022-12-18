@@ -91,6 +91,9 @@ auto Parser::declspec() -> Type * {
   case TokenKind::kw_char:
     consume();
     return context_->int8();
+  case TokenKind::kw_short:
+    consume();
+    return context_->int16();
   case TokenKind::kw_int:
     consume();
     return context_->int32();

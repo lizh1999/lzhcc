@@ -38,6 +38,7 @@ Context::Context() {
   push_identifier("int");
   push_identifier("long");
   push_identifier("return");
+  push_identifier("short");
   push_identifier("sizeof");
   push_identifier("struct");
   push_identifier("union");
@@ -49,6 +50,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_int);
   keyword_map_.push_back(TokenKind::kw_long);
   keyword_map_.push_back(TokenKind::kw_return);
+  keyword_map_.push_back(TokenKind::kw_short);
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_struct);
   keyword_map_.push_back(TokenKind::kw_union);
@@ -116,6 +118,10 @@ auto Context::into_keyword(int index) const -> TokenKind {
 
 auto Context::int8() -> Type * {
   return create<IntegerType>(IntegerKind::byte, /*is_unsigned=*/false);
+}
+
+auto Context::int16() -> Type * {
+  return create<IntegerType>(IntegerKind::half, /*is_unsigned=*/false);
 }
 
 auto Context::int32() -> Type * {

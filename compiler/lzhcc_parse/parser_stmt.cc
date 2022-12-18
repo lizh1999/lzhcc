@@ -12,6 +12,7 @@ auto Parser::block_stmt(bool is_top) -> Stmt * {
     switch (next_kind()) {
     case TokenKind::kw_char:
     case TokenKind::kw_int:
+    case TokenKind::kw_long:
     case TokenKind::kw_struct:
     case TokenKind::kw_union: {
       auto init = declaration();

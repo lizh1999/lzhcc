@@ -35,6 +35,32 @@ auto Generator::codegen(GValue *gvalue) -> void {
   }
 }
 
+auto Generator::store_integer(IntegerType *type, int src, int offset) -> void {
+  switch (type->kind) {
+  case IntegerKind::byte:
+    return println("  sb a%d, %d(sp)", src, offset);
+  case IntegerKind::half:
+    return println("  sh a%d, %d(sp)", src, offset);
+  case IntegerKind::word:
+    return println("  sw a%d, %d(sp)", src, offset);
+  case IntegerKind::dword:
+    return println("  sd a%d, %d(sp)", src, offset);
+  }
+}
+
+auto Generator::store(Type *type, int src, int offset) -> void {
+  switch (type->kind) {
+  case TypeKind::integer:
+    return store_integer(cast<IntegerType>(type), src, offset);
+  case TypeKind::pointer:
+    return println("  sd a%d, %d(sp)", src, offset);
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
 auto Generator::codegen(Function *function) -> void {
   auto name = function->name;
   return_label = counter++;
@@ -48,7 +74,7 @@ auto Generator::codegen(Function *function) -> void {
 
   auto &params = function->params;
   for (int i = 0; i < params.size(); i++) {
-    println("  sd a%d, %d(sp)", i, params[i]->offset);
+    store(params[i]->type, i, params[i]->offset);
   }
 
   stmt_proxy(function->stmt);

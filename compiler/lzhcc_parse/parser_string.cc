@@ -42,7 +42,7 @@ static auto from_escape(const char *&ptr) -> char {
 
   case 'x':
     while (std::isxdigit(*++ptr)) {
-      c = c * 16 - from_hex(*ptr);
+      c = c * 16 + from_hex(*ptr);
     }
     return c;
   default:

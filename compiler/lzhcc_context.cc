@@ -36,6 +36,7 @@ Context::Context() {
   push_identifier("for");
   push_identifier("if");
   push_identifier("int");
+  push_identifier("long");
   push_identifier("return");
   push_identifier("sizeof");
   push_identifier("struct");
@@ -46,6 +47,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_if);
   keyword_map_.push_back(TokenKind::kw_int);
+  keyword_map_.push_back(TokenKind::kw_long);
   keyword_map_.push_back(TokenKind::kw_return);
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_struct);
@@ -118,6 +120,10 @@ auto Context::int8() -> Type * {
 
 auto Context::int32() -> Type * {
   return create<IntegerType>(IntegerKind::word, /*is_unsigned=*/false);
+}
+
+auto Context::int64() -> Type * {
+  return create<IntegerType>(IntegerKind::dword, /*is_unsigned=*/false);
 }
 
 auto Context::pointer_to(Type *base) -> Type * {

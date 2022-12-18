@@ -61,6 +61,7 @@ enum class TokenKind : uint8_t {
   kw_for,        // "for"
   kw_if,         // "if"
   kw_int,        // "int"
+  kw_long,       // "long"
   kw_return,     // "return"
   kw_sizeof,     // "sizeof"
   kw_struct,     // "struct"
@@ -351,7 +352,7 @@ public:
   // type
   auto int8() -> Type *;
   auto int32() -> Type *;
-  // auto int64() -> Type *;
+  auto int64() -> Type *;
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params) -> Type *;

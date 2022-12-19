@@ -21,6 +21,19 @@ private:
   auto value_expr(ValueExpr *expr) -> void;
   auto integer_expr(IntegerExpr *expr) -> void;
   auto unary_expr(UnaryExpr *expr) -> void;
+
+  auto add(Type *type) -> void;
+  auto add_integer(IntegerType *type) -> void;
+
+  auto subtract(Type *type) -> void;
+  auto subtract_integer(IntegerType *type) -> void;
+
+  auto multiply(Type *type) -> void;
+  auto multiply_integer(IntegerType *type) -> void;
+
+  auto divide(Type *type) -> void;
+  auto divide_integer(IntegerType *type) -> void;
+
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;
   auto stmt_expr(StmtExpr *expr) -> void;

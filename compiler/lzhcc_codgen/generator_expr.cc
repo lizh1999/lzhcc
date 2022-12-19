@@ -160,6 +160,104 @@ auto Generator::store(Type *type) -> void {
   }
 }
 
+auto Generator::add(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::integer:
+    return add_integer(cast<IntegerType>(type));
+  case TypeKind::array:
+  case TypeKind::pointer:
+    return println("  add a0, a0, a1");
+  case TypeKind::kw_void:
+  case TypeKind::function:
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
+auto Generator::add_integer(IntegerType *type) -> void {
+  switch (type->kind) {
+  case IntegerKind::byte:
+  case IntegerKind::half:
+  case IntegerKind::word:
+    return println("  addw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  add a0, a0, a1");
+  }
+}
+
+auto Generator::subtract(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::integer:
+    return subtract_integer(cast<IntegerType>(type));
+  case TypeKind::array:
+  case TypeKind::pointer:
+    return println("  sub a0, a0, a1");
+  case TypeKind::kw_void:
+  case TypeKind::function:
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
+auto Generator::subtract_integer(IntegerType *type) -> void {
+  switch (type->kind) {
+  case IntegerKind::byte:
+  case IntegerKind::half:
+  case IntegerKind::word:
+    return println("  subw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  sub a0, a0, a1");
+  }
+}
+
+auto Generator::multiply(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::integer:
+    return multiply_integer(cast<IntegerType>(type));
+  case TypeKind::array:
+  case TypeKind::pointer:
+  case TypeKind::kw_void:
+  case TypeKind::function:
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
+auto Generator::multiply_integer(IntegerType *type) -> void {
+  switch (type->kind) {
+  case IntegerKind::byte:
+  case IntegerKind::half:
+  case IntegerKind::word:
+    return println("  mulw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  mul a0, a0, a1");
+  }
+}
+
+auto Generator::divide(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::integer:
+    return divide_integer(cast<IntegerType>(type));
+  case TypeKind::kw_void:
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
+auto Generator::divide_integer(IntegerType *type) -> void {
+  switch (type->kind) {
+  case IntegerKind::byte:
+  case IntegerKind::half:
+  case IntegerKind::word:
+    return println("  divw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  div a0, a0, a1");
+  }
+}
+
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
   if (expr->kind == BinaryKind::assign) {
     expr_proxy(expr->rhs);
@@ -181,17 +279,13 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
   pop("a1");
   switch (expr->kind) {
   case BinaryKind::add:
-    println("  add a0, a0, a1");
-    break;
+    return add(expr->type);
   case BinaryKind::subtract:
-    println("  sub a0, a0, a1");
-    break;
+    return subtract(expr->type);
   case BinaryKind::multiply:
-    println("  mul a0, a0, a1");
-    break;
+    return multiply(expr->type);
   case BinaryKind::divide:
-    println("  div a0, a0, a1");
-    break;
+    return divide(expr->type);
   case BinaryKind::less_than:
     println("  slt a0, a0, a1");
     break;

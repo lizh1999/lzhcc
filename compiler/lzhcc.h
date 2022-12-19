@@ -66,6 +66,7 @@ enum class TokenKind : uint8_t {
   kw_short,      // "short"
   kw_sizeof,     // "sizeof"
   kw_struct,     // "struct"
+  kw_typedef,    // "typedef"
   kw_union,      // "union"
   kw_void,       // "void"
   kw_while,      // "while"

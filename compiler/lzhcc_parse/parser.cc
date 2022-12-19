@@ -6,7 +6,12 @@ namespace lzhcc {
 auto Parser::operator()() -> Module {
   scopes_.emplace_back();
   while (!next_is(TokenKind::eof)) {
-    auto base = declspec();
+    VarAttr attr{};
+    auto base = declspec(&attr);
+    if (attr.is_typedef) {
+      type_define(base);
+      continue;
+    }
     ParamNames param_names;
     auto [name, type] = declarator(base, &param_names);
     if (type->kind == TypeKind::function) {
@@ -18,17 +23,19 @@ auto Parser::operator()() -> Module {
   std::vector<GValue *> gvalues;
   std::vector<Function *> functions;
   for (auto [_, var] : scopes_.front().var_map) {
-    switch (var->kind) {
-    case ValueKind::global:
-      gvalues.push_back(cast<GValue>(var));
-      break;
-    case ValueKind::function:
-      functions.push_back(cast<Function>(var));
-      break;
-    case ValueKind::declaraion:
-      break;
-    case ValueKind::local:
-      assert(false);
+    if (Value *value = var; value) {
+      switch (value->kind) {
+      case ValueKind::global:
+        gvalues.push_back(cast<GValue>(value));
+        break;
+      case ValueKind::function:
+        functions.push_back(cast<Function>(value));
+        break;
+      case ValueKind::declaraion:
+        break;
+      case ValueKind::local:
+        assert(false);
+      }
     }
   }
 
@@ -70,20 +77,25 @@ auto Parser::leave_scope() -> void {
   }
 }
 
-auto Parser::find_var(int name) -> Value * {
+auto Parser::find_var(int name) -> Variable {
   for (auto &scope : scopes_) {
     auto it = scope.var_map.find(name);
     if (it != scope.var_map.end()) {
       return it->second;
     }
   }
-  return nullptr;
+  return Variable();
 }
 
+auto Parser::find_value(int name) -> Value * { return find_var(name); }
+
+auto Parser::find_type(int name) -> Type * { return find_var(name); }
+
 auto Parser::find_tag(int name) -> Type * {
-  for (auto &scope : scopes_) {
-    auto it = scope.tag_map.find(name);
-    if (it != scope.tag_map.end()) {
+  auto sp = scopes_.rbegin();
+  for (; sp != scopes_.rend(); sp--) {
+    auto it = sp->tag_map.find(name);
+    if (it != sp->tag_map.end()) {
       return it->second;
     }
   }
@@ -100,6 +112,14 @@ auto Parser::create_declaration(Token *token, Type *type) -> void {
   auto name = context_->storage(token->inner);
   auto var = context_->create_declaration(type, name);
   file_scope.var_map.emplace(token->inner, var);
+}
+
+auto Parser::create_typedef(Token *token, Type *type) -> void {
+  auto &current = scopes_.back();
+  if (current.var_map.contains(token->inner)) {
+    context_->fatal(token->location, "");
+  }
+  current.var_map.emplace(token->inner, type);
 }
 
 auto Parser::create_local(Token *token, Type *type) -> LValue * {

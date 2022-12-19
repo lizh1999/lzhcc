@@ -57,6 +57,7 @@ auto Generator::store(Type *type, int src, int offset) -> void {
   case TypeKind::function:
   case TypeKind::array:
   case TypeKind::record:
+  case TypeKind::kw_void:
     std::abort();
   }
 }

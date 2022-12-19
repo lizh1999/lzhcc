@@ -1,4 +1,5 @@
 #include "lzhcc_parse.h"
+#include <cassert>
 #include <charconv>
 
 namespace lzhcc {
@@ -118,7 +119,7 @@ static auto is_valid(int mask) -> bool {
   }
 }
 
-auto Parser::declspec() -> Type * {
+auto Parser::declspec(VarAttr *attr) -> Type * {
 #define case_goto(value, target, update)                                       \
   case value:                                                                  \
     mask += target;                                                            \
@@ -138,6 +139,21 @@ loop:
     case_goto(TokenKind::kw_long, kw_long, consume());
     case_goto(TokenKind::kw_struct, other, result = struct_decl());
     case_goto(TokenKind::kw_union, other, result = union_decl());
+  case TokenKind::kw_typedef:
+    if (auto token = consume(); !attr) {
+      context_->fatal(token->location, "");
+    }
+    attr->is_typedef = true;
+    goto loop;
+  case TokenKind::identifier: {
+    auto type = find_type(position_->inner);
+    if (type && mask == 0) {
+      mask += other;
+      consume();
+      result = type;
+      goto loop;
+    }
+  }
   default:
     if (!is_valid(mask))
       context_->fatal(position_->location, "");
@@ -159,6 +175,7 @@ loop:
   case kw_long + kw_long + kw_int:
     return context_->int64();
   default:
+    assert(result);
     return result;
   }
 }
@@ -241,8 +258,25 @@ auto Parser::declarator(Type *base, ParamNames *param_names)
   }
 }
 
+auto Parser::type_define(Type *base) -> void {
+  bool is_first = true;
+  while (!consume_if(TokenKind::semi)) {
+    if (!is_first) {
+      consume(TokenKind::comma);
+    }
+    is_first = false;
+    auto [name, type] = declarator(base);
+    create_typedef(name, type);
+  }
+}
+
 auto Parser::declaration() -> std::vector<Stmt *> {
-  auto base = declspec();
+  VarAttr attr{};
+  auto base = declspec(&attr);
+  if (attr.is_typedef) {
+    type_define(base);
+    return {};
+  }
   std::vector<Stmt *> stmts;
   bool is_first = true;
   while (!consume_if(TokenKind::semi)) {

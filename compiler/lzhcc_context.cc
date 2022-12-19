@@ -41,6 +41,7 @@ Context::Context() {
   push_identifier("short");
   push_identifier("sizeof");
   push_identifier("struct");
+  push_identifier("typedef");
   push_identifier("union");
   push_identifier("void");
   push_identifier("while");
@@ -54,6 +55,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_short);
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_struct);
+  keyword_map_.push_back(TokenKind::kw_typedef);
   keyword_map_.push_back(TokenKind::kw_union);
   keyword_map_.push_back(TokenKind::kw_void);
   keyword_map_.push_back(TokenKind::kw_while);

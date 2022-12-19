@@ -15,7 +15,7 @@ auto Parser::call(Token *token) -> Expr * {
     }
     args.push_back(assignment());
   }
-  auto var = find_var(token->inner);
+  auto var = find_value(token->inner);
   if (var->type->kind != TypeKind::function) {
     context_->fatal(token->inner, "");
   }
@@ -55,7 +55,7 @@ auto Parser::primary() -> Expr * {
     if (next_is(TokenKind::open_paren)) {
       return call(token);
     } else {
-      auto var = find_var(token->inner);
+      auto var = find_value(token->inner);
       if (!var) {
         context_->fatal(token->location, "");
       }

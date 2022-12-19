@@ -16,11 +16,18 @@ auto Parser::block_stmt(bool is_top) -> Stmt * {
     case TokenKind::kw_short:
     case TokenKind::kw_struct:
     case TokenKind::kw_union:
-    case TokenKind::kw_void: {
+    case TokenKind::kw_void:
+    case TokenKind::kw_typedef: {
       auto init = declaration();
       stmts.insert(stmts.end(), init.begin(), init.end());
       break;
     }
+    case TokenKind::identifier:
+      if (find_type(position_->inner)) {
+        auto init = declaration();
+        stmts.insert(stmts.end(), init.begin(), init.end());
+        break;
+      }
     default:
       stmts.push_back(statement());
     }

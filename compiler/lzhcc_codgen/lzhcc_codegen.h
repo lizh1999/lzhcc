@@ -20,6 +20,8 @@ private:
   auto load_integer(IntegerType *type) -> void;
   auto value_expr(ValueExpr *expr) -> void;
   auto integer_expr(IntegerExpr *expr) -> void;
+
+  auto cast(Type* src, Type* dest) -> void;
   auto unary_expr(UnaryExpr *expr) -> void;
 
   auto add(Type *type) -> void;

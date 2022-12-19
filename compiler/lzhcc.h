@@ -234,6 +234,7 @@ enum class UnaryKind {
   negative,
   refrence,
   deref,
+  cast,
 };
 
 struct UnaryExpr : Expr {
@@ -389,9 +390,11 @@ public:
   // expr
   auto value(Value *value) -> Expr *;
   auto integer(int32_t value) -> Expr *;
+  auto integer(int64_t value) -> Expr *;
   auto negative(Type *type, Expr *operand) -> Expr *;
   auto refrence(Type *type, Expr *operand) -> Expr *;
   auto deref(Type *type, Expr *operand) -> Expr *;
+  auto cast(Type *type, Expr *operand) -> Expr *;
   auto add(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto subtract(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto multiply(Type *type, Expr *lhs, Expr *rhs) -> Expr *;

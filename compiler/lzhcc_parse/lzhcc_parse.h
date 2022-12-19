@@ -45,10 +45,12 @@ public:
   auto operator()() -> Module;
 
 private:
+  auto integer() -> Expr *;
   auto string() -> Expr *;
   auto call(Token *name) -> Expr *;
   auto primary() -> Expr *;
   auto unary() -> Expr *;
+  auto cast() -> Expr *;
   auto postfix() -> Expr *;
   auto multiplicative() -> Expr *;
   auto additive() -> Expr *;

@@ -105,19 +105,70 @@ auto Generator::integer_expr(IntegerExpr *expr) -> void {
   println("  li a0, %ld", expr->value);
 }
 
+static const char i64i8[] = "  slliw a0, a0, 24\n"
+                            "  sraiw a0, a0, 24";
+static const char i64i16[] = "  slliw a0, a0, 16\n"
+                             "  sraiw a0, a0, 16";
+static const char i64i32[] = "  sext.w  a0, a0";
+
+// clang-format off
+static const char *cast_table[][4] = {
+    {nullptr, nullptr,  nullptr,  nullptr},
+    {i64i8,   nullptr,  nullptr,  nullptr},
+    {i64i8,   i64i16,   nullptr,  nullptr},
+    {i64i8,   i64i16,   i64i32,   nullptr},
+};
+// clang-format on
+
+static auto type_id(IntegerType *type) -> int {
+  switch (type->kind) {
+  case IntegerKind::byte:
+    return 0;
+  case IntegerKind::half:
+    return 1;
+  case IntegerKind::word:
+    return 2;
+  case IntegerKind::dword:
+    return 3;
+  }
+}
+
+static auto type_id(Type *type) -> int {
+  switch (type->kind) {
+  case TypeKind::kw_void:
+    return 0;
+  case TypeKind::integer:
+    return type_id(cast<IntegerType>(type));
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+    return 3;
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
+auto Generator::cast(Type *src, Type *dest) -> void {
+  int lhs = type_id(src);
+  int rhs = type_id(dest);
+  if (cast_table[lhs][rhs]) {
+    println("%s", cast_table[lhs][rhs]);
+  }
+}
+
 auto Generator::unary_expr(UnaryExpr *expr) -> void {
   switch (expr->kind) {
   case UnaryKind::negative:
     expr_proxy(expr->operand);
-    println("  neg a0, a0");
-    break;
+    return println("  neg a0, a0");
   case UnaryKind::deref:
     expr_proxy(expr->operand);
-    load(expr->type);
-    break;
+    return load(expr->type);
   case UnaryKind::refrence:
-    addr_proxy(expr->operand);
-    break;
+    return addr_proxy(expr->operand);
+  case UnaryKind::cast:
+    expr_proxy(expr->operand);
+    return cast(expr->operand->type, expr->type);
   }
 }
 

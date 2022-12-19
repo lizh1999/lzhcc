@@ -1,7 +1,6 @@
 #include "lzhcc_parse.h"
 #include <cassert>
 #include <cctype>
-#include <charconv>
 
 namespace lzhcc {
 
@@ -26,13 +25,8 @@ auto Parser::call(Token *token) -> Expr * {
 
 auto Parser::primary() -> Expr * {
   switch (next_kind()) {
-  case TokenKind::numeric: {
-    auto token = consume();
-    auto text = context_->storage(token->inner);
-    int32_t value;
-    std::from_chars(text.begin(), text.end(), value);
-    return context_->integer(value);
-  }
+  case TokenKind::numeric:
+    return integer();
   case TokenKind::open_paren: {
     auto token = consume();
     if (!next_is(TokenKind::open_brace)) {
@@ -114,25 +108,29 @@ static auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
   }
 }
 
+auto static low_cast_op(Context *context, Type *type, Expr *operand) -> Expr * {
+  return context->cast(type, operand);
+}
+
 auto Parser::unary() -> Expr * {
   switch (next_kind()) {
   case TokenKind::plus:
     consume();
-    return unary();
+    return cast();
   case TokenKind::minus: {
     consume();
-    auto operand = unary();
+    auto operand = cast();
     auto type = context_->int32();
     return context_->negative(type, operand);
   }
   case TokenKind::amp: {
     consume();
-    auto operand = unary();
+    auto operand = cast();
     return low_refernce_op(context_, operand);
   }
   case TokenKind::star: {
     auto token = consume();
-    auto operand = unary();
+    auto operand = cast();
     return low_deref_op(context_, operand, token->location);
   }
   default:
@@ -140,20 +138,32 @@ auto Parser::unary() -> Expr * {
   }
 }
 
+auto Parser::cast() -> Expr * {
+  if (!next_is(TokenKind::open_paren) || !is_typename(position_ + 1)) {
+    return unary();
+  } else {
+    consume(TokenKind::open_paren);
+    auto type = abstract_declarator(declspec());
+    consume(TokenKind::close_paren);
+    auto operand = cast();
+    return low_cast_op(context_, type, operand);
+  }
+}
+
 auto Parser::multiplicative() -> Expr * {
-  auto lhs = unary();
+  auto lhs = cast();
 loop:
   switch (next_kind()) {
   case TokenKind::star: {
     consume();
-    auto rhs = unary();
+    auto rhs = cast();
     auto type = context_->int32();
     lhs = context_->multiply(type, lhs, rhs);
     goto loop;
   }
   case TokenKind::slash: {
     consume();
-    auto rhs = unary();
+    auto rhs = cast();
     auto type = context_->int32();
     lhs = context_->divide(type, lhs, rhs);
     goto loop;

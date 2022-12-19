@@ -220,6 +220,10 @@ auto Context::integer(int32_t value) -> Expr * {
   return create<IntegerExpr>(int32(), value);
 }
 
+auto Context::integer(int64_t value) -> Expr * {
+  return create<IntegerExpr>(int64(), value);
+}
+
 auto Context::negative(Type *type, Expr *operand) -> Expr * {
   return create<UnaryExpr>(UnaryKind::negative, type, operand);
 }
@@ -230,6 +234,10 @@ auto Context::refrence(Type *type, Expr *operand) -> Expr * {
 
 auto Context::deref(Type *type, Expr *operand) -> Expr * {
   return create<UnaryExpr>(UnaryKind::deref, type, operand);
+}
+
+auto Context::cast(Type *type, Expr *operand) -> Expr * {
+  return create<UnaryExpr>(UnaryKind::cast, type, operand);
 }
 
 auto Context::add(Type *type, Expr *lhs, Expr *rhs) -> Expr * {

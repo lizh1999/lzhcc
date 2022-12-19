@@ -9,26 +9,10 @@ auto Parser::block_stmt(bool is_top) -> Stmt * {
   consume(TokenKind::open_brace);
   std::vector<Stmt *> stmts;
   while (!consume_if(TokenKind::close_brace)) {
-    switch (next_kind()) {
-    case TokenKind::kw_char:
-    case TokenKind::kw_int:
-    case TokenKind::kw_long:
-    case TokenKind::kw_short:
-    case TokenKind::kw_struct:
-    case TokenKind::kw_union:
-    case TokenKind::kw_void:
-    case TokenKind::kw_typedef: {
+    if (is_typename(position_)) {
       auto init = declaration();
       stmts.insert(stmts.end(), init.begin(), init.end());
-      break;
-    }
-    case TokenKind::identifier:
-      if (find_type(position_->inner)) {
-        auto init = declaration();
-        stmts.insert(stmts.end(), init.begin(), init.end());
-        break;
-      }
-    default:
+    } else {
       stmts.push_back(statement());
     }
   }

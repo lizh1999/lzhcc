@@ -72,6 +72,7 @@ private:
     bool is_typedef;
   };
 
+  auto is_typename(Token *token) -> bool;
   auto declspec(VarAttr *attr = 0) -> Type *;
   auto pointers(Type *base) -> Type *;
   auto array_dimensions(Type *base) -> Type *;
@@ -79,6 +80,7 @@ private:
   auto suffix_type(Type *base, ParamNames *param_names) -> Type *;
   auto declarator(Type *base, ParamNames *param_names = 0)
       -> std::pair<Token *, Type *>;
+  auto abstract_declarator(Type *base) -> Type *;
   auto type_define(Type *base) -> void;
   auto declaration() -> std::vector<Stmt *>;
   auto global(Token *name, Type *base, Type *type) -> void;

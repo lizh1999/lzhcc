@@ -66,7 +66,14 @@ auto Parser::primary() -> Expr * {
     return string();
   case TokenKind::kw_sizeof: {
     consume();
-    auto type = unary()->type;
+    Type *type = nullptr;
+    if (!next_is(TokenKind::open_paren) || !is_typename(position_ + 1)) {
+      type = unary()->type;
+    } else {
+      consume(TokenKind::open_paren);
+      type = abstract_declarator(declspec());
+      consume(TokenKind::close_paren);
+    }
     int size = context_->size_of(type);
     return context_->integer(size);
   }

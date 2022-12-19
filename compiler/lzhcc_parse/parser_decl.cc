@@ -119,6 +119,24 @@ static auto is_valid(int mask) -> bool {
   }
 }
 
+auto Parser::is_typename(Token *token) -> bool {
+  switch (token->kind) {
+  case TokenKind::kw_void:
+  case TokenKind::kw_char:
+  case TokenKind::kw_int:
+  case TokenKind::kw_short:
+  case TokenKind::kw_long:
+  case TokenKind::kw_struct:
+  case TokenKind::kw_union:
+  case TokenKind::kw_typedef:
+    return true;
+  case TokenKind::identifier:
+    return find_type(token->inner);
+  default:
+    return false;
+  }
+}
+
 auto Parser::declspec(VarAttr *attr) -> Type * {
 #define case_goto(value, target, update)                                       \
   case value:                                                                  \
@@ -255,6 +273,25 @@ auto Parser::declarator(Type *base, ParamNames *param_names)
   }
   default:
     return std::pair(position_, base);
+  }
+}
+
+auto Parser::abstract_declarator(Type *base) -> Type * {
+  base = pointers(base);
+  if (!next_is(TokenKind::open_paren)) {
+    return suffix_type(base, nullptr);
+  } else {
+    auto start = position_;
+    position_ += position_->inner + 1;
+
+    base = suffix_type(base, nullptr);
+    auto end = position_;
+
+    position_ = start + 1;
+    auto result = abstract_declarator(base);
+
+    position_ = end;
+    return result;
   }
 }
 

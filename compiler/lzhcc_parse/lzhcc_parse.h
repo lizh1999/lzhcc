@@ -11,6 +11,7 @@ class Variable {
     null,
     value,
     type,
+    cint,
   };
   using enum Kind;
 
@@ -18,8 +19,10 @@ public:
   Variable() : data(0), kind(null) {}
   Variable(Value *value) : data(from(value)), kind(Kind::value) {}
   Variable(Type *type) : data(from(type)), kind(Kind::type) {}
+  Variable(int value) : data(value), kind(Kind::cint) {}
   operator Value *() { return kind == value ? into<Value>() : nullptr; }
   operator Type *() { return kind == type ? into<Type>() : nullptr; }
+  auto get(int *value) -> bool { return *value = data, kind == cint; }
 
 private:
   static auto from(void *pointer) -> uint64_t {
@@ -70,6 +73,7 @@ private:
   auto while_stmt() -> Stmt *;
   auto statement() -> Stmt *;
 
+  auto enum_spec() -> Type *;
   auto struct_decl() -> Type *;
   auto union_decl() -> Type *;
 
@@ -101,6 +105,7 @@ private:
   auto leave_scope() -> void;
   auto create_declaration(Token *token, Type *type) -> void;
   auto create_typedef(Token *token, Type *type) -> void;
+  auto create_enum(Token *token, int value) -> void;
   auto create_local(Token *token, Type *type) -> LValue *;
   auto create_global(Token *token, Type *type, uint8_t *init = 0) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,

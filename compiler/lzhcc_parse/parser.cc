@@ -79,9 +79,10 @@ auto Parser::leave_scope() -> void {
 }
 
 auto Parser::find_var(int name) -> Variable {
-  for (auto &scope : scopes_) {
-    auto it = scope.var_map.find(name);
-    if (it != scope.var_map.end()) {
+  auto sp = scopes_.rbegin();
+  for (; sp != scopes_.rend(); sp++) {
+    auto it = sp->var_map.find(name);
+    if (it != sp->var_map.end()) {
       return it->second;
     }
   }
@@ -94,7 +95,7 @@ auto Parser::find_type(int name) -> Type * { return find_var(name); }
 
 auto Parser::find_tag(int name) -> Type * {
   auto sp = scopes_.rbegin();
-  for (; sp != scopes_.rend(); sp--) {
+  for (; sp != scopes_.rend(); sp++) {
     auto it = sp->tag_map.find(name);
     if (it != sp->tag_map.end()) {
       return it->second;
@@ -121,6 +122,14 @@ auto Parser::create_typedef(Token *token, Type *type) -> void {
     context_->fatal(token->location, "");
   }
   current.var_map.emplace(token->inner, type);
+}
+
+auto Parser::create_enum(Token *token, int value) ->  void {
+  auto &current = scopes_.back();
+  if (current.var_map.contains(token->inner)) {
+    context_->fatal(token->location, "");
+  }
+  current.var_map.emplace(token->inner, value);
 }
 
 auto Parser::create_local(Token *token, Type *type) -> LValue * {

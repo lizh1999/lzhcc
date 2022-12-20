@@ -34,6 +34,7 @@ Context::Context() {
   push_identifier("_Bool");
   push_identifier("char");
   push_identifier("else");
+  push_identifier("enum");
   push_identifier("for");
   push_identifier("if");
   push_identifier("int");
@@ -49,6 +50,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
+  keyword_map_.push_back(TokenKind::kw_enum);
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_if);
   keyword_map_.push_back(TokenKind::kw_int);

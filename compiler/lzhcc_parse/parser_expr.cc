@@ -58,11 +58,14 @@ auto Parser::primary() -> Expr * {
     if (next_is(TokenKind::open_paren)) {
       return call(token);
     } else {
-      auto var = find_value(token->inner);
-      if (!var) {
+      auto var = find_var(token->inner);
+      if (Value *value = var; value) {
+        return context_->value(value);
+      } else if (int value; var.get(&value)) {
+        return context_->integer(value);
+      } else {
         context_->fatal(token->location, "");
       }
-      return context_->value(var);
     }
   }
   case TokenKind::string:

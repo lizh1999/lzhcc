@@ -4,6 +4,39 @@
 
 namespace lzhcc {
 
+auto Parser::enum_spec() -> Type * {
+  consume(TokenKind::kw_enum);
+  auto name = consume_if(TokenKind::identifier);
+  if (name && !next_is(TokenKind::open_brace)) {
+    if (auto type = find_tag(name->inner)) {
+      return type;
+    } else {
+      context_->fatal(name->location, "");
+    }
+  }
+  consume(TokenKind::open_brace);
+  int value = 0;
+  bool is_first = true;
+  while (!consume_if(TokenKind ::close_brace)) {
+    if (!is_first) {
+      consume(TokenKind::comma);
+    }
+    is_first = false;
+    auto ident = consume(TokenKind::identifier);
+    if (consume_if(TokenKind::equal)) {
+      auto token = consume(TokenKind::numeric);
+      auto text = context_->storage(token->inner);
+      std::from_chars(text.begin(), text.end(), value);
+    }
+    create_enum(ident, value++);
+  }
+  auto type = context_->int32();
+  if (name) {
+    create_tag(name, type);
+  }
+  return type;
+}
+
 auto Parser::struct_decl() -> Type * {
   consume(TokenKind::kw_struct);
   auto name = consume_if(TokenKind::identifier);
@@ -125,6 +158,7 @@ static auto is_valid(int mask) -> bool {
 auto Parser::is_typename(Token *token) -> bool {
   switch (token->kind) {
   case TokenKind::kw_void:
+  case TokenKind::kw_enum:
   case TokenKind::kw_bool:
   case TokenKind::kw_char:
   case TokenKind::kw_int:
@@ -162,6 +196,7 @@ loop:
     case_goto(TokenKind::kw_long, kw_long, consume());
     case_goto(TokenKind::kw_struct, other, result = struct_decl());
     case_goto(TokenKind::kw_union, other, result = union_decl());
+    case_goto(TokenKind::kw_enum, other, result = enum_spec());
   case TokenKind::kw_typedef:
     if (auto token = consume(); !attr) {
       context_->fatal(token->location, "");

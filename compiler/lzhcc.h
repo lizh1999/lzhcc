@@ -60,6 +60,7 @@ enum class TokenKind : uint8_t {
   kw_bool,       // "_Bool"
   kw_char,       // "char"
   kw_else,       // "else"
+  kw_enum,       // "enum"
   kw_for,        // "for"
   kw_if,         // "if"
   kw_int,        // "int"

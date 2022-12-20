@@ -108,20 +108,60 @@ static auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
   }
 }
 
-auto static low_cast_op(Context *context, Type *type, Expr *operand) -> Expr * {
+static auto low_cast_op(Context *context, Type *type, Expr *operand) -> Expr * {
   return context->cast(type, operand);
+}
+
+static auto convert(Context *context, Expr *lhs, Expr *rhs)
+    -> std::tuple<Expr *, Expr *, Type *> {
+  assert(lhs->type->kind == TypeKind::integer);
+  assert(rhs->type->kind == TypeKind::integer);
+  auto lhs_type = cast<IntegerType>(lhs->type);
+  auto rhs_type = cast<IntegerType>(rhs->type);
+  using enum IntegerKind;
+
+  auto target = std::max({lhs_type->kind, rhs_type->kind, word});
+  auto type = target == word ? context->int32() : context->int64();
+  if (target != lhs_type->kind) {
+    lhs = low_cast_op(context, type, lhs);
+  }
+  if (target != rhs_type->kind) {
+    rhs = low_cast_op(context, type, rhs);
+  }
+  return std::tuple(lhs, rhs, type);
+}
+
+auto convert(Context *context, Expr *operand) -> std::pair<Expr *, Type *> {
+  assert(operand->type->kind == TypeKind::integer);
+  auto operand_type = cast<IntegerType>(operand->type);
+  using enum IntegerKind;
+
+  auto target = std::max(operand_type->kind, word);
+  auto type = target == word ? context->int32() : context->int64();
+  if (target != operand_type->kind) {
+    operand = low_cast_op(context, type, operand);
+  }
+  return std::pair(operand, type);
 }
 
 auto Parser::unary() -> Expr * {
   switch (next_kind()) {
-  case TokenKind::plus:
-    consume();
-    return cast();
-  case TokenKind::minus: {
-    consume();
+  case TokenKind::plus: {
+    auto token = consume();
     auto operand = cast();
-    auto type = context_->int32();
-    return context_->negative(type, operand);
+    if (operand->type->kind != TypeKind::integer) {
+      context_->fatal(token->location, "");
+    }
+    return convert(context_, operand).first;
+  }
+  case TokenKind::minus: {
+    auto token = consume();
+    auto operand = cast();
+    if (operand->type->kind != TypeKind::integer) {
+      context_->fatal(token->location, "");
+    }
+    auto [o, type] = convert(context_, operand);
+    return context_->negative(type, o);
   }
   case TokenKind::amp: {
     consume();
@@ -157,15 +197,15 @@ loop:
   case TokenKind::star: {
     consume();
     auto rhs = cast();
-    auto type = context_->int32();
-    lhs = context_->multiply(type, lhs, rhs);
+    auto [l, r, t] = convert(context_, lhs, rhs);
+    lhs = context_->multiply(t, l, r);
     goto loop;
   }
   case TokenKind::slash: {
     consume();
     auto rhs = cast();
-    auto type = context_->int32();
-    lhs = context_->divide(type, lhs, rhs);
+    auto [l, r, t] = convert(context_, lhs, rhs);
+    lhs = context_->divide(t, l, r);
     goto loop;
   }
   default:
@@ -186,7 +226,7 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     [[fallthrough]];
   case pattern(TypeKind::array, TypeKind::integer): {
     auto arr = cast<ArrayType>(lhs->type);
-    int size_bytes = context->size_of(arr->base);
+    int64_t size_bytes = context->size_of(arr->base);
     auto size = context->integer(size_bytes);
     auto offset = context->multiply(size->type, size, rhs);
     return context->add(lhs->type, lhs, offset);
@@ -196,13 +236,14 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     [[fallthrough]];
   case pattern(TypeKind::pointer, TypeKind::integer): {
     auto ptr = cast<PointerType>(lhs->type);
-    int size_bytes = context->size_of(ptr->base);
+    int64_t size_bytes = context->size_of(ptr->base);
     auto size = context->integer(size_bytes);
     auto offset = context->multiply(size->type, size, rhs);
     return context->add(lhs->type, lhs, offset);
   }
   case pattern(TypeKind::integer, TypeKind::integer): {
-    return context->add(lhs->type, lhs, rhs);
+    auto [l, r, t] = convert(context, lhs, rhs);
+    return context->add(t, l, r);
   }
   default:
     context->fatal(loc, "");
@@ -212,18 +253,20 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
 static auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
   switch (pattern(lhs->type->kind, rhs->type->kind)) {
-  case pattern(TypeKind::integer, TypeKind::integer):
-    return context->subtract(lhs->type, lhs, rhs);
+  case pattern(TypeKind::integer, TypeKind::integer): {
+    auto [l, r, t] = convert(context, lhs, rhs);
+    return context->subtract(t, l, r);
+  }
   case pattern(TypeKind::pointer, TypeKind::integer): {
     auto ptr = cast<PointerType>(lhs->type);
-    int size_bytes = context->size_of(ptr->base);
+    int64_t size_bytes = context->size_of(ptr->base);
     auto size = context->integer(size_bytes);
     auto offset = context->multiply(size->type, rhs, size);
     return context->subtract(lhs->type, lhs, offset);
   }
   case pattern(TypeKind::pointer, TypeKind::pointer): {
     auto ptr = cast<PointerType>(lhs->type);
-    int size_bytes = context->size_of(ptr->base);
+    int64_t size_bytes = context->size_of(ptr->base);
     auto size = context->integer(size_bytes);
     auto bytes = context->subtract(size->type, lhs, rhs);
     return context->divide(size->type, bytes, size);
@@ -307,29 +350,29 @@ loop:
   case TokenKind::less: {
     consume();
     auto rhs = additive();
-    auto type = context_->int32();
-    lhs = context_->less_than(type, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs);
+    lhs = context_->less_than(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::less_equal: {
     consume();
     auto rhs = additive();
-    auto type = context_->int32();
-    lhs = context_->less_equal(type, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs);
+    lhs = context_->less_equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::greater: {
     consume();
     auto rhs = additive();
-    auto type = context_->int32();
-    lhs = context_->less_than(type, rhs, lhs);
+    auto [l, r, _] = convert(context_, lhs, rhs);
+    lhs = context_->less_than(context_->int32(), r, l);
     goto loop;
   }
   case TokenKind::greater_equal: {
     consume();
     auto rhs = additive();
-    auto type = context_->int32();
-    lhs = context_->less_equal(type, rhs, lhs);
+    auto [l, r, _] = convert(context_, lhs, rhs);
+    lhs = context_->less_equal(context_->int32(), r, l);
     goto loop;
   }
   default:
@@ -345,15 +388,15 @@ loop:
   case TokenKind::equal_equal: {
     consume();
     auto rhs = relational();
-    auto type = context_->int32();
-    lhs = context_->equal(type, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs);
+    lhs = context_->equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::exclaim_equal: {
     consume();
     auto rhs = relational();
-    auto type = context_->int32();
-    lhs = context_->not_equal(type, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs);
+    lhs = context_->not_equal(context_->int32(), l, r);
     goto loop;
   }
   default:
@@ -365,7 +408,14 @@ loop:
 static auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
   switch (pattern(lhs->type->kind, rhs->type->kind)) {
-  case pattern(TypeKind::integer, TypeKind::integer):
+  case pattern(TypeKind::integer, TypeKind::integer): {
+    auto src = cast<IntegerType>(rhs);
+    auto dest = cast<IntegerType>(lhs);
+    if (src->kind != dest->kind) {
+      rhs = low_cast_op(context, lhs->type, rhs);
+    }
+    [[fallthrough]];
+  }
   case pattern(TypeKind::pointer, TypeKind::pointer):
   case pattern(TypeKind::pointer, TypeKind::array):
   case pattern(TypeKind::record, TypeKind::record):

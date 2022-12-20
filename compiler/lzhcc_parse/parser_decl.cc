@@ -89,16 +89,19 @@ auto Parser::union_decl() -> Type * {
 
 enum {
   kw_void = 1 << 0,
-  kw_char = 1 << 2,
-  kw_int = 1 << 4,
-  kw_short = 1 << 6,
-  kw_long = 1 << 8,
-  other = 1 << 10,
+  kw_bool = 1 << 2,
+  kw_char = 1 << 4,
+  kw_int = 1 << 6,
+  kw_short = 1 << 8,
+  kw_long = 1 << 10,
+  other = 1 << 12,
 };
 
 static auto is_valid(int mask) -> bool {
   switch (mask) {
   case kw_void:
+
+  case kw_bool:
 
   case kw_char:
 
@@ -122,6 +125,7 @@ static auto is_valid(int mask) -> bool {
 auto Parser::is_typename(Token *token) -> bool {
   switch (token->kind) {
   case TokenKind::kw_void:
+  case TokenKind::kw_bool:
   case TokenKind::kw_char:
   case TokenKind::kw_int:
   case TokenKind::kw_short:
@@ -151,6 +155,7 @@ auto Parser::declspec(VarAttr *attr) -> Type * {
 loop:
   switch (next_kind()) {
     case_goto(TokenKind::kw_void, kw_void, consume());
+    case_goto(TokenKind::kw_bool, kw_bool, consume());
     case_goto(TokenKind::kw_char, kw_char, consume());
     case_goto(TokenKind::kw_short, kw_short, consume());
     case_goto(TokenKind::kw_int, kw_int, consume());
@@ -180,6 +185,8 @@ loop:
   switch (mask) {
   case kw_void:
     return context_->void_type();
+  case kw_bool:
+    return context_->boolean();
   case kw_char:
     return context_->int8();
   case kw_short:
@@ -326,7 +333,7 @@ auto Parser::declaration() -> std::vector<Stmt *> {
     if (consume_if(TokenKind::equal)) {
       auto lhs = context_->value(var);
       auto rhs = assignment();
-      auto expr = context_->assign(var->type, lhs, rhs);
+      auto expr = low_assign_op(context_, lhs, rhs, name->location);
       stmts.push_back(context_->expr_stmt(expr));
     }
   }

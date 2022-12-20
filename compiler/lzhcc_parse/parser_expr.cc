@@ -107,6 +107,7 @@ static auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
     auto arr = cast<ArrayType>(operand->type);
     return context->deref(arr->base, operand);
   }
+  case TypeKind::boolean:
   case TypeKind::integer:
   case TypeKind::function:
   case TypeKind::record:
@@ -121,6 +122,12 @@ static auto low_cast_op(Context *context, Type *type, Expr *operand) -> Expr * {
 
 static auto convert(Context *context, Expr *lhs, Expr *rhs)
     -> std::tuple<Expr *, Expr *, Type *> {
+  if (lhs->type->kind == TypeKind::boolean) {
+    lhs = context->cast(context->int32(), lhs);
+  }
+  if (rhs->type->kind == TypeKind::boolean) {
+    rhs = context->cast(context->int32(), rhs);
+  }
   assert(lhs->type->kind == TypeKind::integer);
   assert(rhs->type->kind == TypeKind::integer);
   auto lhs_type = cast<IntegerType>(lhs->type);
@@ -248,6 +255,9 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     auto offset = context->multiply(size->type, size, rhs);
     return context->add(lhs->type, lhs, offset);
   }
+  case pattern(TypeKind::boolean, TypeKind::boolean):
+  case pattern(TypeKind::boolean, TypeKind::integer):
+  case pattern(TypeKind::integer, TypeKind::boolean):
   case pattern(TypeKind::integer, TypeKind::integer): {
     auto [l, r, t] = convert(context, lhs, rhs);
     return context->add(t, l, r);
@@ -260,6 +270,9 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
 static auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
   switch (pattern(lhs->type->kind, rhs->type->kind)) {
+  case pattern(TypeKind::boolean, TypeKind::boolean):
+  case pattern(TypeKind::boolean, TypeKind::integer):
+  case pattern(TypeKind::integer, TypeKind::boolean):
   case pattern(TypeKind::integer, TypeKind::integer): {
     auto [l, r, t] = convert(context, lhs, rhs);
     return context->subtract(t, l, r);
@@ -412,8 +425,7 @@ loop:
   return lhs;
 }
 
-static auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc)
-    -> Expr * {
+auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   switch (pattern(lhs->type->kind, rhs->type->kind)) {
   case pattern(TypeKind::integer, TypeKind::integer): {
     auto src = cast<IntegerType>(rhs);
@@ -421,8 +433,13 @@ static auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     if (src->kind != dest->kind) {
       rhs = low_cast_op(context, lhs->type, rhs);
     }
-    [[fallthrough]];
+    return context->assign(lhs->type, lhs, rhs);
   }
+  case pattern(TypeKind::boolean, TypeKind::integer):
+  case pattern(TypeKind::boolean, TypeKind::pointer):
+  case pattern(TypeKind::boolean, TypeKind::array):
+    rhs = context->cast(lhs->type, rhs);
+    return context->assign(lhs->type, lhs, rhs);
   case pattern(TypeKind::pointer, TypeKind::pointer):
   case pattern(TypeKind::pointer, TypeKind::array):
   case pattern(TypeKind::record, TypeKind::record):

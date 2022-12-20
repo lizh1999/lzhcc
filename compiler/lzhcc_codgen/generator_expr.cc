@@ -80,6 +80,8 @@ auto Generator::load_integer(IntegerType *type) -> void {
 
 auto Generator::load(Type *type) -> void {
   switch (type->kind) {
+  case TypeKind::boolean:
+    return println("  lb a0, 0(a0)");
   case TypeKind::integer: {
     auto integer = cast<IntegerType>(type);
     return load_integer(integer);
@@ -111,12 +113,15 @@ static const char i64i16[] = "  slliw a0, a0, 16\n"
                              "  sraiw a0, a0, 16";
 static const char i64i32[] = "  sext.w  a0, a0";
 
+static const char neq[] = "snez a0, a0";
+
 // clang-format off
-static const char *cast_table[][4] = {
-    {nullptr, nullptr,  nullptr,  nullptr},
-    {i64i8,   nullptr,  nullptr,  nullptr},
-    {i64i8,   i64i16,   nullptr,  nullptr},
-    {i64i8,   i64i16,   i64i32,   nullptr},
+static const char *cast_table[][5] = {
+    {nullptr, nullptr,  nullptr,  nullptr,  neq},     // i8
+    {i64i8,   nullptr,  nullptr,  nullptr,  neq},     // i16
+    {i64i8,   i64i16,   nullptr,  nullptr,  neq},     // i32
+    {i64i8,   i64i16,   i64i32,   nullptr,  neq},     // i64
+    {nullptr, nullptr,  nullptr,  nullptr,  nullptr}, // boolean
 };
 // clang-format on
 
@@ -143,6 +148,8 @@ static auto type_id(Type *type) -> int {
   case TypeKind::function:
   case TypeKind::array:
     return 3;
+  case TypeKind::boolean:
+    return 4;
   case TypeKind::record:
     std::abort();
   }
@@ -195,6 +202,8 @@ auto Generator::store_record(RecordType *type) -> void {
 
 auto Generator::store(Type *type) -> void {
   switch (type->kind) {
+  case TypeKind::boolean:
+    return println("  sb a1, 0(a0)");
   case TypeKind::integer: {
     auto integer = cast<IntegerType>(type);
     return store_integer(integer);
@@ -218,6 +227,7 @@ auto Generator::add(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::pointer:
     return println("  add a0, a0, a1");
+  case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::function:
   case TypeKind::record:
@@ -243,6 +253,7 @@ auto Generator::subtract(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::pointer:
     return println("  sub a0, a0, a1");
+  case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::function:
   case TypeKind::record:
@@ -265,6 +276,7 @@ auto Generator::multiply(Type *type) -> void {
   switch (type->kind) {
   case TypeKind::integer:
     return multiply_integer(cast<IntegerType>(type));
+  case TypeKind::boolean:
   case TypeKind::array:
   case TypeKind::pointer:
   case TypeKind::kw_void:
@@ -289,6 +301,7 @@ auto Generator::divide(Type *type) -> void {
   switch (type->kind) {
   case TypeKind::integer:
     return divide_integer(cast<IntegerType>(type));
+  case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::pointer:
   case TypeKind::function:

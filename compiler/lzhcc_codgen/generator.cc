@@ -52,6 +52,8 @@ auto Generator::store(Type *type, int src, int offset) -> void {
   switch (type->kind) {
   case TypeKind::integer:
     return store_integer(cast<IntegerType>(type), src, offset);
+  case TypeKind::boolean:
+    return println("  sb a%d, %d(sp)", src, offset);
   case TypeKind::pointer:
     return println("  sd a%d, %d(sp)", src, offset);
   case TypeKind::function:

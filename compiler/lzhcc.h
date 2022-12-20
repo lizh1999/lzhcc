@@ -56,6 +56,7 @@ enum class TokenKind : uint8_t {
   numeric,       // numeric literal
   identifier,    // identifier
   eof,           // eof
+  kw_bool,       // "_Bool"
   kw_char,       // "char"
   kw_else,       // "else"
   kw_for,        // "for"
@@ -90,6 +91,7 @@ auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 
 enum class TypeKind {
   kw_void,
+  boolean,
   integer,
   pointer,
   function,
@@ -104,6 +106,10 @@ struct Type {
 
 struct VoidType : Type {
   VoidType() : Type(TypeKind::kw_void) {}
+};
+
+struct BoolType: Type {
+  BoolType() : Type(TypeKind::boolean) {}
 };
 
 enum class IntegerKind {
@@ -367,6 +373,7 @@ public:
 
   // type
   auto void_type() -> Type *;
+  auto boolean() -> Type *;
   auto int8() -> Type *;
   auto int16() -> Type *;
   auto int32() -> Type *;

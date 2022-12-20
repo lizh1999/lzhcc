@@ -4,6 +4,8 @@
 
 namespace lzhcc {
 
+auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr *;
+
 class Variable {
   enum class Kind : uint8_t {
     null,

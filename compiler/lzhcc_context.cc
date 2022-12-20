@@ -31,6 +31,7 @@ private:
 };
 
 Context::Context() {
+  push_identifier("_Bool");
   push_identifier("char");
   push_identifier("else");
   push_identifier("for");
@@ -45,6 +46,7 @@ Context::Context() {
   push_identifier("union");
   push_identifier("void");
   push_identifier("while");
+  keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_for);
@@ -122,6 +124,8 @@ auto Context::into_keyword(int index) const -> TokenKind {
 
 auto Context::void_type() -> Type * { return create<VoidType>(); }
 
+auto Context::boolean() -> Type * { return create<BoolType>(); }
+
 auto Context::int8() -> Type * {
   return create<IntegerType>(IntegerKind::byte, /*is_unsigned=*/false);
 }
@@ -158,6 +162,7 @@ auto Context::record_type(std::unordered_map<int, Member> member_map,
 auto Context::size_of(Type *type) -> int {
   switch (type->kind) {
   case TypeKind::kw_void:
+  case TypeKind::boolean:
     return 1;
   case TypeKind::pointer:
   case TypeKind::function:
@@ -180,6 +185,8 @@ auto Context::align_of(Type *type) -> int {
   switch (type->kind) {
   case TypeKind::kw_void:
     std::abort();
+  case TypeKind::boolean:
+    return 1;
   case TypeKind::pointer:
   case TypeKind::function:
     return 8;

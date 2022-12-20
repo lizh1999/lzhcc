@@ -16,7 +16,8 @@ auto Parser::operator()() -> Module {
     auto [name, type] = declarator(base, &param_names);
     if (type->kind == TypeKind::function) {
       ret_ = cast<FunctionType>(type)->ret;
-      function(name, type, std::move(param_names));
+      function(name, type, std::move(param_names),
+               attr.is_static ? Linkage::internal : Linkage::external);
     } else {
       global(name, base, type);
     }
@@ -124,7 +125,7 @@ auto Parser::create_typedef(Token *token, Type *type) -> void {
   current.var_map.emplace(token->inner, type);
 }
 
-auto Parser::create_enum(Token *token, int value) ->  void {
+auto Parser::create_enum(Token *token, int value) -> void {
   auto &current = scopes_.back();
   if (current.var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
@@ -158,14 +159,15 @@ auto Parser::create_global(Token *token, Type *type, uint8_t *init) -> void {
 }
 
 auto Parser::create_function(Token *token, Type *type, int stack_size,
-                             Stmt *stmt, std::vector<LValue *> params) -> void {
+                             Stmt *stmt, std::vector<LValue *> params,
+                             Linkage linkage) -> void {
   auto &file_scope = scopes_.front();
   auto it = file_scope.var_map.find(token->inner);
   assert(it != file_scope.var_map.end());
 
   auto name = context_->storage(token->inner);
   auto var = context_->create_function(type, name, stack_size, stmt,
-                                       std::move(params));
+                                       std::move(params), linkage);
   it->second = var;
 }
 

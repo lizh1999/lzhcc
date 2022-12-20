@@ -167,6 +167,7 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_struct:
   case TokenKind::kw_union:
   case TokenKind::kw_typedef:
+  case TokenKind::kw_static:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -184,6 +185,12 @@ auto Parser::declspec(VarAttr *attr) -> Type * {
     update;                                                                    \
     goto loop
 
+#define attr_goto(value, target, update)                                       \
+  case value:                                                                  \
+    attr->target = true;                                                       \
+    update;                                                                    \
+    goto loop
+
   Type *result = nullptr;
   int mask = 0;
 loop:
@@ -197,12 +204,10 @@ loop:
     case_goto(TokenKind::kw_struct, other, result = struct_decl());
     case_goto(TokenKind::kw_union, other, result = union_decl());
     case_goto(TokenKind::kw_enum, other, result = enum_spec());
-  case TokenKind::kw_typedef:
-    if (auto token = consume(); !attr) {
-      context_->fatal(token->location, "");
-    }
-    attr->is_typedef = true;
-    goto loop;
+
+    attr_goto(TokenKind::kw_typedef, is_typedef, consume());
+    attr_goto(TokenKind::kw_static, is_static, consume());
+
   case TokenKind::identifier: {
     auto type = find_type(position_->inner);
     if (type && mask == 0) {
@@ -388,7 +393,7 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
   }
 }
 
-auto Parser::function(Token *name, Type *type, ParamNames param_names) -> void {
+auto Parser::function(Token *name, Type *type, ParamNames param_names, Linkage linkage) -> void {
   create_declaration(name, type);
   if (consume_if(TokenKind::semi)) {
     return;
@@ -407,7 +412,7 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names) -> void {
   }
 
   auto stmt = block_stmt(/*is_top=*/true);
-  create_function(name, type, max_stack_size_, stmt, std::move(params));
+  create_function(name, type, max_stack_size_, stmt, std::move(params), linkage);
 }
 
 } // namespace lzhcc

@@ -68,7 +68,15 @@ auto Generator::codegen(Function *function) -> void {
   auto name = function->name;
   return_label = counter++;
   println("  .text");
-  println("  .globl %.*s", (int)name.size(), name.data());
+  switch (function->linkage) {
+  case Linkage::external:
+    println("  .globl %.*s", (int)name.size(), name.data());
+    break;
+  case Linkage::internal:
+    println("  .local %.*s", (int)name.size(), name.data());
+    break;
+  }
+
   println("%.*s:", (int)name.size(), name.data());
   println("  addi sp, sp, -8");
   println("  sd fp, 0(sp)");

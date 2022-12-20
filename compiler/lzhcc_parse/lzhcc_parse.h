@@ -79,6 +79,7 @@ private:
 
   struct VarAttr {
     bool is_typedef;
+    bool is_static;
   };
 
   auto is_typename(Token *token) -> bool;
@@ -93,7 +94,8 @@ private:
   auto type_define(Type *base) -> void;
   auto declaration() -> std::vector<Stmt *>;
   auto global(Token *name, Type *base, Type *type) -> void;
-  auto function(Token *name, Type *type, ParamNames param_names) -> void;
+  auto function(Token *name, Type *type, ParamNames param_names,
+                Linkage linkage) -> void;
 
   auto next_is(TokenKind kind) -> bool;
   auto next_kind() -> TokenKind;
@@ -109,7 +111,7 @@ private:
   auto create_local(Token *token, Type *type) -> LValue *;
   auto create_global(Token *token, Type *type, uint8_t *init = 0) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
-                       std::vector<LValue *> params) -> void;
+                       std::vector<LValue *> params, Linkage linkage) -> void;
   auto create_anon(Type *type, uint8_t *init = 0) -> GValue *;
   auto create_tag(Token *token, Type *type) -> void;
   auto find_var(int name) -> Variable;

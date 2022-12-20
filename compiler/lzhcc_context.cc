@@ -42,6 +42,7 @@ Context::Context() {
   push_identifier("return");
   push_identifier("short");
   push_identifier("sizeof");
+  push_identifier("static");
   push_identifier("struct");
   push_identifier("typedef");
   push_identifier("union");
@@ -58,6 +59,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_return);
   keyword_map_.push_back(TokenKind::kw_short);
   keyword_map_.push_back(TokenKind::kw_sizeof);
+  keyword_map_.push_back(TokenKind::kw_static);
   keyword_map_.push_back(TokenKind::kw_struct);
   keyword_map_.push_back(TokenKind::kw_typedef);
   keyword_map_.push_back(TokenKind::kw_union);
@@ -218,9 +220,10 @@ auto Context::create_global(Type *type, std::string_view name, uint8_t *init)
 }
 
 auto Context::create_function(Type *type, std::string_view name, int stack_size,
-                              Stmt *stmt, std::vector<LValue *> params)
-    -> Function * {
-  return create<Function>(type, name, stack_size, stmt, std::move(params));
+                              Stmt *stmt, std::vector<LValue *> params,
+                              Linkage linkage) -> Function * {
+  return create<Function>(type, name, stack_size, stmt, std::move(params),
+                          linkage);
 }
 
 auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }

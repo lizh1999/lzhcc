@@ -68,6 +68,7 @@ enum class TokenKind : uint8_t {
   kw_return,     // "return"
   kw_short,      // "short"
   kw_sizeof,     // "sizeof"
+  kw_static,     // "static"
   kw_struct,     // "struct"
   kw_typedef,    // "typedef"
   kw_union,      // "union"
@@ -110,7 +111,7 @@ struct VoidType : Type {
   VoidType() : Type(TypeKind::kw_void) {}
 };
 
-struct BoolType: Type {
+struct BoolType : Type {
   BoolType() : Type(TypeKind::boolean) {}
 };
 
@@ -188,15 +189,21 @@ struct GValue : Value {
   uint8_t *init;
 };
 
+enum class Linkage {
+  external,
+  internal,
+};
+
 struct Function : Value {
   Function(Type *type, std::string_view name, int stack_size, struct Stmt *stmt,
-           std::vector<LValue *> params)
+           std::vector<LValue *> params, Linkage linkage)
       : Value(ValueKind::function, type), name(name), stack_size(stack_size),
-        stmt(stmt), params(std::move(params)) {}
+        stmt(stmt), params(std::move(params)), linkage(linkage) {}
   std::string_view name;
   int stack_size;
   struct Stmt *stmt;
   std::vector<LValue *> params;
+  Linkage linkage;
 };
 
 struct Declaration : Value {
@@ -394,7 +401,7 @@ public:
   auto create_global(Type *type, std::string_view name, uint8_t *init)
       -> GValue *;
   auto create_function(Type *type, std::string_view name, int stack_size,
-                       Stmt *stmt, std::vector<LValue *> params) -> Function *;
+                       Stmt *stmt, std::vector<LValue *> params, Linkage linkage) -> Function *;
 
   // expr
   auto value(Value *value) -> Expr *;

@@ -9,3 +9,5 @@ void assert(int expected, int actual, const char *code) {
     exit(EXIT_FAILURE);
   }
 }
+
+static int static_fn() { return 5; }

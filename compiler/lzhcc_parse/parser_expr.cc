@@ -19,7 +19,14 @@ auto Parser::call(Token *token) -> Expr * {
     context_->fatal(token->inner, "");
   }
   auto function_type = cast<FunctionType>(var->type);
-  // TODO: args type check
+  int n = args.size();
+  auto &params = function_type->params;
+  if (n != params.size()) {
+    context_->fatal(token->location, "");
+  }
+  for (int i = 0; i < n; i++) {
+    args[i] = context_->cast(params[i], args[i]);
+  }
   return context_->call(name, function_type->ret, std::move(args));
 }
 

@@ -52,7 +52,7 @@ static auto from_escape(const char *&ptr) -> char {
 }
 
 auto Parser::string() -> Expr * {
-  auto token = consume();
+  auto token = consume(TokenKind::string);
   auto raw = context_->storage(token->inner);
   assert(raw.front() == '"' && raw.back() == '"');
   std::string init;
@@ -70,6 +70,20 @@ auto Parser::string() -> Expr * {
   auto init_view = context_->storage(index);
   auto var = create_anon(type, (uint8_t *)init_view.data());
   return context_->value(var);
+}
+
+auto Parser::character() -> Expr * {
+  auto token = consume(TokenKind::character);
+  auto raw = context_->storage(token->inner);
+  assert(raw.front() == '\'' && raw.back() == '\'');
+  const char *ptr = raw.data() + 1;
+  char value;
+  if (*ptr == '\\') {
+    value = from_escape(ptr);
+  } else {
+    value = *ptr++;
+  }
+  return context_->integer(value);
 }
 
 } // namespace lzhcc

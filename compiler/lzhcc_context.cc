@@ -223,6 +223,10 @@ auto Context::create_function(Type *type, std::string_view name, int stack_size,
 
 auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }
 
+auto Context::integer(int8_t value) -> Expr * {
+  return create<IntegerExpr>(int8(), value);
+}
+
 auto Context::integer(int32_t value) -> Expr * {
   return create<IntegerExpr>(int32(), value);
 }

@@ -20,6 +20,7 @@ private:
   auto punctuator() -> Token;
   auto identifier() -> Token;
   auto string() -> Token;
+  auto character() -> Token;
 
   auto token(TokenKind kind, int location, int inner = -1) -> Token;
 

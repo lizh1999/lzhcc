@@ -34,6 +34,8 @@ auto Parser::primary() -> Expr * {
   switch (next_kind()) {
   case TokenKind::numeric:
     return integer();
+  case TokenKind::character:
+    return character();
   case TokenKind::open_paren: {
     auto token = consume();
     if (!next_is(TokenKind::open_brace)) {

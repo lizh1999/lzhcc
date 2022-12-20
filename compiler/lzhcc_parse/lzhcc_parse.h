@@ -49,6 +49,7 @@ public:
 private:
   auto integer() -> Expr *;
   auto string() -> Expr *;
+  auto character() -> Expr *;
   auto call(Token *name) -> Expr *;
   auto primary() -> Expr *;
   auto unary() -> Expr *;

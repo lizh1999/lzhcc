@@ -53,6 +53,7 @@ enum class TokenKind : uint8_t {
   open_brace,    // "{"
   close_brace,   // "}"
   string,        // string literal
+  character,     // character literal
   numeric,       // numeric literal
   identifier,    // identifier
   eof,           // eof
@@ -396,6 +397,7 @@ public:
 
   // expr
   auto value(Value *value) -> Expr *;
+  auto integer(int8_t value) -> Expr *;
   auto integer(int32_t value) -> Expr *;
   auto integer(int64_t value) -> Expr *;
   auto negative(Type *type, Expr *operand) -> Expr *;

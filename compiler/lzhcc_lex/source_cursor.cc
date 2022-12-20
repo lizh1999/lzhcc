@@ -39,6 +39,8 @@ loop:
     return token(TokenKind::eof, location_);
   case '"':
     return string();
+  case '\'':
+    return character();
   case '.': {
     int location = location_;
     advance_current();
@@ -115,6 +117,26 @@ auto SourceCursor::string() -> Token {
   advance_current();
   int literal = context_->push_literal(std::move(text));
   return token(TokenKind::string, location, literal);
+}
+
+auto SourceCursor::character() -> Token {
+  std::string text = "\'";
+  int location = location_;
+  advance_current();
+  eat_while([&, last = '\0'](char ch) mutable {
+    if (last != '\\' && ch == '\'') {
+      return false;
+    } else if (ch == '\n') {
+      context_->fatal(location_, "");
+    } else [[likely]] {
+      text.push_back(last = ch);
+      return true;
+    }
+  });
+  text.push_back('\'');
+  advance_current();
+  int literal = context_->push_literal(std::move(text));
+  return token(TokenKind::character, location, literal);
 }
 
 auto SourceCursor::numeric() -> Token {

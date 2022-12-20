@@ -15,6 +15,7 @@ auto Parser::operator()() -> Module {
     ParamNames param_names;
     auto [name, type] = declarator(base, &param_names);
     if (type->kind == TypeKind::function) {
+      ret_ = cast<FunctionType>(type)->ret;
       function(name, type, std::move(param_names));
     } else {
       global(name, base, type);

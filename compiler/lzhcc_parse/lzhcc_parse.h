@@ -94,10 +94,6 @@ private:
   auto consume(TokenKind kind) -> Token *;
   auto consume_if(TokenKind kind) -> Token *;
 
-  template <class T, class... Args> auto create(Args &&...args) {
-    return context_->create<T>(std::forward<Args>(args)...);
-  }
-
   auto entry_scope() -> void;
   auto leave_scope() -> void;
   auto create_declaration(Token *token, Type *type) -> void;
@@ -116,6 +112,8 @@ private:
 
   Token *position_;
   Context *context_;
+
+  Type *ret_;
 
   int stack_size_;
   int max_stack_size_;

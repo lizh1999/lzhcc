@@ -105,20 +105,12 @@ auto Parser::unary() -> Expr * {
   switch (next_kind()) {
   case TokenKind::plus: {
     auto token = consume();
-    auto operand = cast();
-    if (operand->type->kind != TypeKind::integer) {
-      context_->fatal(token->location, "");
-    }
-    return convert(context_, operand).first;
+    return convert(context_, cast()).first;
   }
   case TokenKind::minus: {
     auto token = consume();
-    auto operand = cast();
-    if (operand->type->kind != TypeKind::integer) {
-      context_->fatal(token->location, "");
-    }
-    auto [o, type] = convert(context_, operand);
-    return context_->negative(type, o);
+    auto [operand, type] = convert(context_, cast());
+    return context_->negative(type, operand);
   }
   case TokenKind::amp: {
     consume();
@@ -134,6 +126,11 @@ auto Parser::unary() -> Expr * {
     auto token = consume();
     auto operand = cast();
     return context_->logical_not(context_->int32(), operand);
+  }
+  case TokenKind::tilde: {
+    auto token = consume();
+    auto [operand, type] = convert(context_, cast());
+    return context_->bitwise_not(type, operand);
   }
   case TokenKind::plus_plus: {
     auto token = consume();

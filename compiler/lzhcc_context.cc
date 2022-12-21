@@ -260,6 +260,10 @@ auto Context::logical_not(Type *type, Expr *operand) -> Expr * {
   return create<UnaryExpr>(UnaryKind::logical_not, type, operand);
 }
 
+auto Context::bitwise_not(Type *type, Expr *operand) -> Expr * {
+  return create<UnaryExpr>(UnaryKind::bitwise_not, type, operand);
+}
+
 auto Context::add(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
 }

@@ -179,6 +179,9 @@ auto Generator::unary_expr(UnaryExpr *expr) -> void {
   case UnaryKind::logical_not:
     expr_proxy(expr->operand);
     return println("  seqz a0, a0");
+  case UnaryKind::bitwise_not:
+    expr_proxy(expr->operand);
+    return println("  not a0, a0");
   }
 }
 

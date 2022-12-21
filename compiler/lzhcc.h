@@ -52,6 +52,7 @@ enum class TokenKind : uint8_t {
   slash_equal,   // "/="
   star,          // "*"
   star_equal,    // "*="
+  tilde,         // "~"
   open_paren,    // "("
   close_paren,   // ")"
   open_bracket,  // "["
@@ -257,6 +258,7 @@ enum class UnaryKind {
   deref,
   cast,
   logical_not,
+  bitwise_not,
 };
 
 struct UnaryExpr : Expr {
@@ -420,6 +422,7 @@ public:
   auto deref(Type *type, Expr *operand) -> Expr *;
   auto cast(Type *type, Expr *operand) -> Expr *;
   auto logical_not(Type *type, Expr *operand) -> Expr *;
+  auto bitwise_not(Type *type, Expr *operand) -> Expr *;
   auto add(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto subtract(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto multiply(Type *type, Expr *lhs, Expr *rhs) -> Expr *;

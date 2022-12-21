@@ -36,6 +36,9 @@ private:
   auto divide(Type *type) -> void;
   auto divide_integer(IntegerType *type) -> void;
 
+  auto modulo(Type *type) -> void;
+  auto modulo_integer(IntegerType *type) -> void;
+
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;
   auto stmt_expr(StmtExpr *expr) -> void;

@@ -328,6 +328,31 @@ auto Generator::divide_integer(IntegerType *type) -> void {
   }
 }
 
+auto Generator::modulo(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::integer:
+    return modulo_integer(cast<IntegerType>(type));
+  case TypeKind::boolean:
+  case TypeKind::kw_void:
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::record:
+    std::abort();
+  }
+}
+
+auto Generator::modulo_integer(IntegerType *type) -> void {
+  switch (type->kind) {
+  case IntegerKind::byte:
+  case IntegerKind::half:
+  case IntegerKind::word:
+    return println("  remw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  rem a0, a0, a1");
+  }
+}
+
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
   if (expr->kind == BinaryKind::assign) {
     expr_proxy(expr->rhs);
@@ -356,6 +381,8 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     return multiply(expr->type);
   case BinaryKind::divide:
     return divide(expr->type);
+  case BinaryKind::modulo:
+    return modulo(expr->type);
   case BinaryKind::less_than:
     println("  slt a0, a0, a1");
     break;

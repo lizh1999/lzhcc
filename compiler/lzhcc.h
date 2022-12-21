@@ -44,6 +44,8 @@ enum class TokenKind : uint8_t {
   minus,         // "-"
   minus_equal,   // "-="
   minus_minus,   // "--"
+  percent,       // "%"
+  percent_equal, // "%="
   plus,          // "+"
   plus_equal,    // "+="
   plus_plus,     // "++"
@@ -273,6 +275,7 @@ enum class BinaryKind {
   subtract,
   multiply,
   divide,
+  modulo,
   less_than,
   less_equal,
   equal,
@@ -410,7 +413,8 @@ public:
   auto create_global(Type *type, std::string_view name, uint8_t *init)
       -> GValue *;
   auto create_function(Type *type, std::string_view name, int stack_size,
-                       Stmt *stmt, std::vector<LValue *> params, Linkage linkage) -> Function *;
+                       Stmt *stmt, std::vector<LValue *> params,
+                       Linkage linkage) -> Function *;
 
   // expr
   auto value(Value *value) -> Expr *;
@@ -427,6 +431,7 @@ public:
   auto subtract(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto multiply(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto divide(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto modulo(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto less_than(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto less_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;

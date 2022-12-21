@@ -196,6 +196,15 @@ auto SourceCursor::punctuator() -> Token {
     default:
       return token(TokenKind::plus, location);
     }
+  case '%':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::percent_equal, location);
+    default:
+      return token(TokenKind::percent, location);
+    }
   case '*':
     advance_current();
     switch (current_) {

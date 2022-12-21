@@ -12,8 +12,10 @@ static auto convert(Context *, Expr *, Expr *, int)
 static auto convert(Context *, Expr *) -> std::pair<Expr *, Type *>;
 static auto low_mul_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_div_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_mod_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_add_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_sub_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_member_op(Context *, Expr *, int, int) -> Expr *;
 
 auto Parser::call(Token *token) -> Expr * {
   auto name = context_->storage(token->inner);
@@ -177,6 +179,12 @@ loop:
     lhs = low_div_op(context_, lhs, rhs, token->location);
     goto loop;
   }
+  case TokenKind::percent: {
+    auto token = consume();
+    auto rhs = cast();
+    lhs = low_mod_op(context_, lhs, rhs, token->location);
+    goto loop;
+  }
   default:
     break;
   }
@@ -203,20 +211,6 @@ loop:
     break;
   }
   return lhs;
-}
-
-static auto low_member_op(Context *context, Expr *lhs, int rhs, int loc)
-    -> Expr * {
-  if (lhs->type->kind != TypeKind::record) {
-    context->fatal(loc, "");
-  }
-  auto record = cast<RecordType>(lhs->type);
-  auto it = record->member_map.find(rhs);
-  if (it == record->member_map.end()) {
-    context->fatal(loc, "");
-  }
-  auto &member = it->second;
-  return context->member(member.type, lhs, member.offset);
 }
 
 auto Parser::postfix() -> Expr * {
@@ -363,6 +357,12 @@ loop:
     lhs = assign_to(lhs, rhs, low_div_op, token->location);
     goto loop;
   }
+  case TokenKind::percent_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_mod_op, token->location);
+    goto loop;
+  }
   default:
     break;
   }
@@ -469,6 +469,11 @@ auto low_div_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   return context->divide(t, l, r);
 }
 
+auto low_mod_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
+  auto [l, r, t] = convert(context, lhs, rhs, loc);
+  return context->modulo(t, l, r);
+}
+
 auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   switch (pattern(lhs->type->kind, rhs->type->kind)) {
   case pattern(TypeKind::integer, TypeKind::array):
@@ -553,6 +558,19 @@ auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   default:
     context->fatal(loc, "");
   }
+}
+
+auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {
+  if (lhs->type->kind != TypeKind::record) {
+    context->fatal(loc, "");
+  }
+  auto record = cast<RecordType>(lhs->type);
+  auto it = record->member_map.find(rhs);
+  if (it == record->member_map.end()) {
+    context->fatal(loc, "");
+  }
+  auto &member = it->second;
+  return context->member(member.type, lhs, member.offset);
 }
 
 } // namespace lzhcc

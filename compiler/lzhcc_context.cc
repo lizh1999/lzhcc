@@ -280,6 +280,10 @@ auto Context::divide(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::divide, type, lhs, rhs);
 }
 
+auto Context::modulo(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::modulo, type, lhs, rhs);
+}
+
 auto Context::less_than(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::less_than, type, lhs, rhs);
 }

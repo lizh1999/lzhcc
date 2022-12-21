@@ -256,6 +256,10 @@ auto Context::cast(Type *type, Expr *operand) -> Expr * {
   return create<UnaryExpr>(UnaryKind::cast, type, operand);
 }
 
+auto Context::logical_not(Type *type, Expr *operand) -> Expr * {
+  return create<UnaryExpr>(UnaryKind::logical_not, type, operand);
+}
+
 auto Context::add(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::add, type, lhs, rhs);
 }

@@ -176,6 +176,9 @@ auto Generator::unary_expr(UnaryExpr *expr) -> void {
   case UnaryKind::cast:
     expr_proxy(expr->operand);
     return cast(expr->operand->type, expr->type);
+  case UnaryKind::logical_not:
+    expr_proxy(expr->operand);
+    return println("  seqz a0, a0");
   }
 }
 

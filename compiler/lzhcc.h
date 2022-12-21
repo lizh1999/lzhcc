@@ -256,6 +256,7 @@ enum class UnaryKind {
   refrence,
   deref,
   cast,
+  logical_not,
 };
 
 struct UnaryExpr : Expr {
@@ -418,6 +419,7 @@ public:
   auto refrence(Type *type, Expr *operand) -> Expr *;
   auto deref(Type *type, Expr *operand) -> Expr *;
   auto cast(Type *type, Expr *operand) -> Expr *;
+  auto logical_not(Type *type, Expr *operand) -> Expr *;
   auto add(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto subtract(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto multiply(Type *type, Expr *lhs, Expr *rhs) -> Expr *;

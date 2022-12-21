@@ -130,6 +130,11 @@ auto Parser::unary() -> Expr * {
     auto operand = cast();
     return low_deref_op(context_, operand, token->location);
   }
+  case TokenKind::exclaim: {
+    auto token = consume();
+    auto operand = cast();
+    return context_->logical_not(context_->int32(), operand);
+  }
   case TokenKind::plus_plus: {
     auto token = consume();
     auto lhs = unary();

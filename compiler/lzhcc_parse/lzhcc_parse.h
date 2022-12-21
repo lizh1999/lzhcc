@@ -57,6 +57,7 @@ private:
   auto primary() -> Expr *;
   auto unary() -> Expr *;
   auto cast() -> Expr *;
+  auto post_inc(Expr *lhs, Expr *rhs, int loc) -> Expr *;
   auto postfix() -> Expr *;
   auto multiplicative() -> Expr *;
   auto additive() -> Expr *;

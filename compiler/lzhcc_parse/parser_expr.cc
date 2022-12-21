@@ -216,6 +216,13 @@ loop:
   return lhs;
 }
 
+auto Parser::post_inc(Expr *lhs, Expr *rhs, int loc) -> Expr * {
+  // (decltype(lhs)) ((lhs += rhs) - rhs)
+  auto add = assign_to(lhs, rhs, low_add_op, loc);
+  auto sub = low_sub_op(context_, add, rhs, loc);
+  return context_->cast(lhs->type, sub);
+}
+
 auto Parser::postfix() -> Expr * {
   auto lhs = primary();
 loop:
@@ -239,6 +246,16 @@ loop:
     auto ident = consume(TokenKind::identifier);
     lhs = low_deref_op(context_, lhs, token->location);
     lhs = low_member_op(context_, lhs, ident->inner, token->location);
+    goto loop;
+  }
+  case TokenKind::plus_plus: {
+    auto token = consume();
+    lhs = post_inc(lhs, context_->integer(1), token->location);
+    goto loop;
+  }
+  case TokenKind::minus_minus: {
+    auto token = consume();
+    lhs = post_inc(lhs, context_->integer(-1), token->location);
     goto loop;
   }
   default:

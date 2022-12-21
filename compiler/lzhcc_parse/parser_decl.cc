@@ -290,6 +290,10 @@ auto Parser::function_parameters(Type *base, ParamNames *param_names)
     if (param_names) {
       param_names->push_back(name);
     }
+    if (param->kind == TypeKind::array) {
+      auto array = cast<ArrayType>(param);
+      param = context_->pointer_to(array->base);
+    }
     params.push_back(param);
   }
   return context_->function_type(base, std::move(params));

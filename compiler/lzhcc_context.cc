@@ -158,9 +158,8 @@ auto Context::function_type(Type *ret, std::vector<Type *> params) -> Type * {
   return create<FunctionType>(ret, std::move(params));
 }
 
-auto Context::record_type(std::unordered_map<int, Member> member_map,
-                          int size_bytes, int align_bytes) -> Type * {
-  return create<RecordType>(std::move(member_map), size_bytes, align_bytes);
+auto Context::record_type() -> RecordType * {
+  return create<RecordType>(RecordType::dummy());
 }
 
 auto Context::size_of(Type *type) -> int {

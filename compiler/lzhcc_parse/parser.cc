@@ -200,6 +200,20 @@ auto Parser::create_tag(Token *token, Type *type) -> void {
   scope.tag_map.emplace(token->inner, type);
 }
 
+auto Parser::get_or_create_tag(Token *token) -> RecordType * {
+  auto &scope = scopes_.back();
+  auto it = scope.tag_map.find(token->inner);
+  if (it == scope.tag_map.end()) {
+    auto result = context_->record_type();
+    scope.tag_map.emplace(token->inner, result);
+    return result;
+  } else if (it->second->kind != TypeKind::record) {
+    context_->fatal(token->location, "");
+  } else {
+    return cast<RecordType>(it->second);
+  }
+}
+
 auto Parser::unique_name() -> std::pair<std::string_view, int> {
   int uid = unique_id_++;
   std::string name = ".L.." + std::to_string(uid);

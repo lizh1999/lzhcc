@@ -174,6 +174,11 @@ struct RecordType : Type {
              int align_bytes)
       : Type(TypeKind::record), member_map(std::move(member_map)),
         size_bytes(size_bytes), align_bytes(align_bytes) {}
+  static auto dummy() -> RecordType { return RecordType({}, -1, -1); }
+  auto is_dummy() -> bool {
+    return member_map.empty() && size_bytes == -1 && align_bytes == -1;
+  }
+
   std::unordered_map<int, Member> member_map;
   int size_bytes;
   int align_bytes;
@@ -414,8 +419,7 @@ public:
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params) -> Type *;
-  auto record_type(std::unordered_map<int, Member> member_map, int size_bytes,
-                   int align_bytes) -> Type *;
+  auto record_type() -> RecordType *;
   auto size_of(Type *type) -> int;
   auto align_of(Type *type) -> int;
 

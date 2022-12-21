@@ -37,17 +37,54 @@ auto Parser::enum_spec() -> Type * {
   return type;
 }
 
-auto Parser::struct_decl() -> Type * {
-  consume(TokenKind::kw_struct);
+auto Parser::struct_or_union_decl() -> Type * {
+  void (Parser::*ptr)(RecordType *) = nullptr;
+  if (consume_if(TokenKind::kw_struct)) {
+    ptr = &Parser::struct_decl;
+  } else if (consume_if(TokenKind::kw_union)) {
+    ptr = &Parser::union_decl;
+  }
   auto name = consume_if(TokenKind::identifier);
-  if (name && !next_is(TokenKind::open_brace)) {
-    if (auto type = find_tag(name->inner)) {
-      return type;
+  RecordType *type = nullptr;
+
+  //
+  // case 1:
+  // struct { int x; };
+  //
+  // case 2:
+  // struct A { int x; };
+  //
+  // case 3:
+  // struct A *ptr;
+  // struct A { int x };
+  //
+  // case 4:
+  // struct A { int x };
+  // struct A a;
+  //
+
+  if (!name) {
+    // case 1
+    type = context_->record_type();
+    (this->*ptr)(type);
+  } else if (next_is(TokenKind::open_brace)) {
+    // case 2
+    type = get_or_create_tag(name);
+    (this->*ptr)(type);
+  } else {
+    auto tag = find_tag(name->inner);
+    // case 3 and case 4
+    if (!tag || tag->kind != TypeKind::record) {
+      type = context_->record_type();
+      create_tag(name, type);
     } else {
-      context_->fatal(name->location, "");
+      type = cast<RecordType>(tag);
     }
   }
-  entry_scope();
+  return type;
+}
+
+auto Parser::struct_decl(RecordType *type) -> void {
   consume(TokenKind::open_brace);
   int offset = 0;
   int align_bytes = 1;
@@ -69,27 +106,13 @@ auto Parser::struct_decl() -> Type * {
       align_bytes = std::max(align_bytes, align);
     }
   }
-  leave_scope();
   int size_bytes = align_to(offset, align_bytes);
-  auto type =
-      context_->record_type(std::move(member_map), size_bytes, align_bytes);
-  if (name) {
-    create_tag(name, type);
-  }
-  return type;
+  type->member_map = std::move(member_map);
+  type->size_bytes = size_bytes;
+  type->align_bytes = align_bytes;
 }
 
-auto Parser::union_decl() -> Type * {
-  consume(TokenKind::kw_union);
-  auto name = consume_if(TokenKind::identifier);
-  if (name && !next_is(TokenKind::open_brace)) {
-    if (auto type = find_tag(name->inner)) {
-      return type;
-    } else {
-      context_->fatal(name->location, "");
-    }
-  }
-  entry_scope();
+auto Parser::union_decl(RecordType *type) -> void {
   consume(TokenKind::open_brace);
   int size_bytes = 0;
   int align_bytes = 1;
@@ -110,14 +133,9 @@ auto Parser::union_decl() -> Type * {
       align_bytes = std::max(align_bytes, align);
     }
   }
-  leave_scope();
-  size_bytes = align_to(size_bytes, align_bytes);
-  auto type =
-      context_->record_type(std::move(member_map), size_bytes, align_bytes);
-  if (name) {
-    create_tag(name, type);
-  }
-  return type;
+  type->member_map = std::move(member_map);
+  type->size_bytes = align_to(size_bytes, align_bytes);
+  type->align_bytes = align_bytes;
 }
 
 enum {
@@ -201,8 +219,8 @@ loop:
     case_goto(TokenKind::kw_short, kw_short, consume());
     case_goto(TokenKind::kw_int, kw_int, consume());
     case_goto(TokenKind::kw_long, kw_long, consume());
-    case_goto(TokenKind::kw_struct, other, result = struct_decl());
-    case_goto(TokenKind::kw_union, other, result = union_decl());
+    case_goto(TokenKind::kw_struct, other, result = struct_or_union_decl());
+    case_goto(TokenKind::kw_union, other, result = struct_or_union_decl());
     case_goto(TokenKind::kw_enum, other, result = enum_spec());
 
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
@@ -407,7 +425,8 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
   }
 }
 
-auto Parser::function(Token *name, Type *type, ParamNames param_names, Linkage linkage) -> void {
+auto Parser::function(Token *name, Type *type, ParamNames param_names,
+                      Linkage linkage) -> void {
   create_declaration(name, type);
   if (consume_if(TokenKind::semi)) {
     return;
@@ -427,7 +446,8 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names, Linkage l
 
   auto stmt = block_stmt();
   leave_scope();
-  create_function(name, type, max_stack_size_, stmt, std::move(params), linkage);
+  create_function(name, type, max_stack_size_, stmt, std::move(params),
+                  linkage);
 }
 
 } // namespace lzhcc

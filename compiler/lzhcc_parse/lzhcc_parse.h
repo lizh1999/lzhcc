@@ -83,8 +83,9 @@ private:
   auto statement() -> Stmt *;
 
   auto enum_spec() -> Type *;
-  auto struct_decl() -> Type *;
-  auto union_decl() -> Type *;
+  auto struct_decl(RecordType *type) -> void;
+  auto union_decl(RecordType *type) -> void;
+  auto struct_or_union_decl() -> Type *;
 
   struct VarAttr {
     bool is_typedef;
@@ -124,6 +125,7 @@ private:
   auto create_anon_global(Type *type, uint8_t *init = 0) -> GValue *;
   auto create_anon_local(Type *type) -> LValue *;
   auto create_tag(Token *token, Type *type) -> void;
+  auto get_or_create_tag(Token *token) -> RecordType *;
   auto find_var(int name) -> Variable;
   auto find_value(int name) -> Value *;
   auto find_type(int name) -> Type *;

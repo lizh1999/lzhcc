@@ -333,6 +333,26 @@ auto Parser::bitwise_or() -> Expr * {
   return lhs;
 }
 
+auto Parser::logical_and() -> Expr * {
+  auto lhs = bitwise_or();
+  while (auto token = consume_if(TokenKind::amp_amp)) {
+    auto rhs = bitwise_or();
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    lhs = context_->logical_and(context_->int32(), l, r);
+  }
+  return lhs;
+}
+
+auto Parser::logical_or() -> Expr * {
+  auto lhs = logical_and();
+  while (auto token = consume_if(TokenKind::pipe_pipe)) {
+    auto rhs = logical_and();
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    lhs = context_->logical_or(context_->int32(), l, r);
+  }
+  return lhs;
+}
+
 auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
   // decltype(lhs) * tmp;
   auto tmp = create_anon_local(context_->pointer_to(lhs->type));
@@ -351,7 +371,7 @@ auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
 }
 
 auto Parser::assignment() -> Expr * {
-  auto lhs = bitwise_or();
+  auto lhs = logical_or();
 loop:
   switch (next_kind()) {
   case TokenKind::equal: {

@@ -65,6 +65,8 @@ private:
   auto bitwise_and() -> Expr *;
   auto bitwise_xor() -> Expr *;
   auto bitwise_or() -> Expr *;
+  auto logical_and() -> Expr *;
+  auto logical_or() -> Expr *;
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 

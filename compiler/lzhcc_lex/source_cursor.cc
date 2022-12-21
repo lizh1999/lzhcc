@@ -184,6 +184,9 @@ auto SourceCursor::punctuator() -> Token {
     case '=':
       advance_current();
       return token(TokenKind::amp_equal, location);
+    case '&':
+      advance_current();
+      return token(TokenKind::amp_amp, location);
     default:
       return token(TokenKind::amp, location);
     }
@@ -193,6 +196,9 @@ auto SourceCursor::punctuator() -> Token {
     case '=':
       advance_current();
       return token(TokenKind::pipe_equal, location);
+    case '|':
+      advance_current();
+      return token(TokenKind::pipe_pipe, location);
     default:
       return token(TokenKind::pipe, location);
     }

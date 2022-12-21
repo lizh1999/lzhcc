@@ -316,59 +316,78 @@ auto Generator::modulo(Type *type) -> void {
 }
 
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
-  if (expr->kind == BinaryKind::assign) {
+#define rvalue()                                                               \
+  expr_proxy(expr->rhs);                                                       \
+  push("a0");                                                                  \
+  expr_proxy(expr->lhs);                                                       \
+  pop("a1")
+
+  switch (expr->kind) {
+  case BinaryKind::add:
+    rvalue();
+    return add(expr->type);
+  case BinaryKind::subtract:
+    rvalue();
+    return subtract(expr->type);
+  case BinaryKind::multiply:
+    rvalue();
+    return multiply(expr->type);
+  case BinaryKind::divide:
+    rvalue();
+    return divide(expr->type);
+  case BinaryKind::modulo:
+    rvalue();
+    return modulo(expr->type);
+  case BinaryKind::bitwise_and:
+    rvalue();
+    return println("  and a0, a0, a1");
+  case BinaryKind::bitwise_xor:
+    rvalue();
+    return println("  xor a0, a0, a1");
+  case BinaryKind::bitwise_or:
+    rvalue();
+    return println("  or a0, a0, a1");
+  case BinaryKind::less_than:
+    rvalue();
+    return println("  slt a0, a0, a1");
+  case BinaryKind::less_equal:
+    rvalue();
+    println("  slt a0, a1, a0");
+    return println("  xori a0, a0, 1");
+  case BinaryKind::equal:
+    rvalue();
+    println("  xor a0, a0, a1");
+    return println("  seqz a0, a0");
+  case BinaryKind::not_equal:
+    rvalue();
+    println("  xor a0, a0, a1");
+    return println("  snez a0, a0");
+  case BinaryKind::assign:
     expr_proxy(expr->rhs);
     push("a0");
     addr_proxy(expr->lhs);
     pop("a1");
     store(expr->type);
-    println("  mv a0, a1");
-    return;
-  }
-  if (expr->kind == BinaryKind::comma) {
-    expr_proxy(expr->lhs);
-    expr_proxy(expr->rhs);
-    return;
-  }
-  expr_proxy(expr->rhs);
-  push("a0");
-  expr_proxy(expr->lhs);
-  pop("a1");
-  switch (expr->kind) {
-  case BinaryKind::add:
-    return add(expr->type);
-  case BinaryKind::subtract:
-    return subtract(expr->type);
-  case BinaryKind::multiply:
-    return multiply(expr->type);
-  case BinaryKind::divide:
-    return divide(expr->type);
-  case BinaryKind::modulo:
-    return modulo(expr->type);
-  case BinaryKind::bitwise_and:
-    return println("  and a0, a0, a1");
-  case BinaryKind::bitwise_xor:
-    return println("  xor a0, a0, a1");
-  case BinaryKind::bitwise_or:
-    return println("  or a0, a0, a1");
-  case BinaryKind::less_than:
-    println("  slt a0, a0, a1");
-    break;
-  case BinaryKind::less_equal:
-    println("  slt a0, a1, a0");
-    println("  xori a0, a0, 1");
-    break;
-  case BinaryKind::equal:
-    println("  xor a0, a0, a1");
-    println("  seqz a0, a0");
-    break;
-  case BinaryKind::not_equal:
-    println("  xor a0, a0, a1");
-    println("  snez a0, a0");
-    break;
-  case BinaryKind::assign:
+    return println("  mv a0, a1");
   case BinaryKind::comma:
-    break;
+    expr_proxy(expr->lhs);
+    return expr_proxy(expr->rhs);
+  case BinaryKind::logical_and: {
+    int label = counter++;
+    expr_proxy(expr->lhs);
+    println("  beq a0, zero, .L.and.%d", label);
+    expr_proxy(expr->rhs);
+    println(".L.and.%d:", label);
+    return println("  snez a0, a0");
+  }
+  case BinaryKind::logical_or: {
+    int label = counter++;
+    expr_proxy(expr->lhs);
+    println("  bne a0, zero, .L.or.%d", label);
+    expr_proxy(expr->rhs);
+    println(".L.or.%d:", label);
+    return println("  snez a0, a0");
+  }
   }
 }
 

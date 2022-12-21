@@ -253,14 +253,24 @@ auto Parser::pointers(Type *base) -> Type * {
 }
 
 auto Parser::array_dimensions(Type *base) -> Type * {
-  consume(TokenKind::open_bracket);
-  auto token = consume(TokenKind::numeric);
-  auto text = context_->storage(token->inner);
-  int length;
-  std::from_chars(text.begin(), text.end(), length);
-  consume(TokenKind::close_bracket);
-  base = suffix_type(base, nullptr);
-  return context_->array_of(base, length);
+  auto open = consume(TokenKind::open_bracket);
+  switch (next_kind()) {
+  case TokenKind::close_bracket:
+    consume();
+    base = suffix_type(base, nullptr);
+    return context_->array_of(base, -1);
+  case TokenKind::numeric: {
+    auto token = consume();
+    auto text = context_->storage(token->inner);
+    int length;
+    std::from_chars(text.begin(), text.end(), length);
+    consume(TokenKind::close_bracket);
+    base = suffix_type(base, nullptr);
+    return context_->array_of(base, length);
+  }
+  default:
+    context_->fatal(open->location, "");
+  }
 }
 
 auto Parser::function_parameters(Type *base, ParamNames *param_names)

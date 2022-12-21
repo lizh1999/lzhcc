@@ -62,6 +62,9 @@ private:
   auto additive() -> Expr *;
   auto relational() -> Expr *;
   auto equality() -> Expr *;
+  auto bitwise_and() -> Expr *;
+  auto bitwise_xor() -> Expr *;
+  auto bitwise_or() -> Expr *;
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 

@@ -180,7 +180,31 @@ auto SourceCursor::punctuator() -> Token {
     return token(TokenKind::tilde, location);
   case '&':
     advance_current();
-    return token(TokenKind::amp, location);
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::amp_equal, location);
+    default:
+      return token(TokenKind::amp, location);
+    }
+  case '|':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::pipe_equal, location);
+    default:
+      return token(TokenKind::pipe, location);
+    }
+  case '^':
+    advance_current();
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::caret_equal, location);
+    default:
+      return token(TokenKind::caret, location);
+    }
   case ',':
     advance_current();
     return token(TokenKind::comma, location);

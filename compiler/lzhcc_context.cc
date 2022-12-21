@@ -308,6 +308,18 @@ auto Context::comma(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::comma, type, lhs, rhs);
 }
 
+auto Context::bitwise_or(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::bitwise_or, type, lhs, rhs);
+}
+
+auto Context::bitwise_xor(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::bitwise_xor, type, lhs, rhs);
+}
+
+auto Context::bitwise_and(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::bitwise_and, type, lhs, rhs);
+}
+
 auto Context::call(std::string_view name, Type *type, std::vector<Expr *> args)
     -> Expr * {
   return create<CallExpr>(name, type, std::move(args));

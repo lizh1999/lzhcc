@@ -31,13 +31,9 @@ private:
   auto subtract_integer(IntegerType *type) -> void;
 
   auto multiply(Type *type) -> void;
-  auto multiply_integer(IntegerType *type) -> void;
-
   auto divide(Type *type) -> void;
-  auto divide_integer(IntegerType *type) -> void;
-
   auto modulo(Type *type) -> void;
-  auto modulo_integer(IntegerType *type) -> void;
+  auto bitwise_and(Type *type) -> void;
 
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;

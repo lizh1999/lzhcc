@@ -30,7 +30,10 @@ class Context;
 
 enum class TokenKind : uint8_t {
   amp,           // "&"
-  arrow,         // '->'
+  amp_equal,     // "&="
+  arrow,         // "->"
+  caret,         // "^"
+  caret_equal,   // "^="
   comma,         // ","
   dot,           // "."
   equal,         // "="
@@ -46,6 +49,8 @@ enum class TokenKind : uint8_t {
   minus_minus,   // "--"
   percent,       // "%"
   percent_equal, // "%="
+  pipe,          // "|"
+  pipe_equal,    // "|="
   plus,          // "+"
   plus_equal,    // "+="
   plus_plus,     // "++"
@@ -282,6 +287,9 @@ enum class BinaryKind {
   not_equal,
   assign,
   comma,
+  bitwise_or,
+  bitwise_xor,
+  bitwise_and,
 };
 
 struct BinaryExpr : Expr {
@@ -436,6 +444,9 @@ public:
   auto less_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto not_equal(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto bitwise_or(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto bitwise_xor(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto bitwise_and(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto stmt_expr(Type *type, BlockStmt *stmt) -> Expr *;
   auto assign(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;

@@ -15,6 +15,9 @@ static auto low_div_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_mod_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_add_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_sub_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_bitwise_and_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_bitwise_xor_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_bitwise_or_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_member_op(Context *, Expr *, int, int) -> Expr *;
 
 auto Parser::call(Token *token) -> Expr * {
@@ -306,6 +309,30 @@ loop:
   return lhs;
 }
 
+auto Parser::bitwise_and() -> Expr * {
+  auto lhs = equality();
+  while (auto token = consume_if(TokenKind::amp)) {
+    lhs = low_bitwise_and_op(context_, lhs, equality(), token->location);
+  }
+  return lhs;
+}
+
+auto Parser::bitwise_xor() -> Expr * {
+  auto lhs = bitwise_and();
+  while (auto token = consume_if(TokenKind::caret)) {
+    lhs = low_bitwise_xor_op(context_, lhs, bitwise_and(), token->location);
+  }
+  return lhs;
+}
+
+auto Parser::bitwise_or() -> Expr * {
+  auto lhs = bitwise_xor();
+  while (auto token = consume_if(TokenKind::pipe)) {
+    lhs = low_bitwise_or_op(context_, lhs, bitwise_xor(), token->location);
+  }
+  return lhs;
+}
+
 auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
   // decltype(lhs) * tmp;
   auto tmp = create_anon_local(context_->pointer_to(lhs->type));
@@ -324,7 +351,7 @@ auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
 }
 
 auto Parser::assignment() -> Expr * {
-  auto lhs = equality();
+  auto lhs = bitwise_or();
 loop:
   switch (next_kind()) {
   case TokenKind::equal: {
@@ -361,6 +388,24 @@ loop:
     auto token = consume();
     auto rhs = assignment();
     lhs = assign_to(lhs, rhs, low_mod_op, token->location);
+    goto loop;
+  }
+  case TokenKind::amp_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_bitwise_and_op, token->location);
+    goto loop;
+  }
+  case TokenKind::caret_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_bitwise_xor_op, token->location);
+    goto loop;
+  }
+  case TokenKind::pipe_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_bitwise_or_op, token->location);
     goto loop;
   }
   default:
@@ -558,6 +603,24 @@ auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   default:
     context->fatal(loc, "");
   }
+}
+
+auto low_bitwise_and_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, type] = convert(context, lhs, rhs, loc);
+  return context->bitwise_and(type, l, r);
+}
+
+auto low_bitwise_xor_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, type] = convert(context, lhs, rhs, loc);
+  return context->bitwise_xor(type, l, r);
+}
+
+auto low_bitwise_or_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, type] = convert(context, lhs, rhs, loc);
+  return context->bitwise_or(type, l, r);
 }
 
 auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {

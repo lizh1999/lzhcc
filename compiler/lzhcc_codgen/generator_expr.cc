@@ -1,4 +1,5 @@
 #include "lzhcc_codegen.h"
+#include <cassert>
 
 namespace lzhcc {
 
@@ -279,77 +280,38 @@ auto Generator::subtract_integer(IntegerType *type) -> void {
 }
 
 auto Generator::multiply(Type *type) -> void {
-  switch (type->kind) {
-  case TypeKind::integer:
-    return multiply_integer(cast<IntegerType>(type));
-  case TypeKind::boolean:
-  case TypeKind::array:
-  case TypeKind::pointer:
-  case TypeKind::kw_void:
-  case TypeKind::function:
-  case TypeKind::record:
-    std::abort();
-  }
-}
-
-auto Generator::multiply_integer(IntegerType *type) -> void {
-  switch (type->kind) {
-  case IntegerKind::byte:
-  case IntegerKind::half:
+  assert(type->kind == TypeKind::integer);
+  switch (cast<IntegerType>(type)->kind) {
   case IntegerKind::word:
     return println("  mulw a0, a0, a1");
   case IntegerKind::dword:
     return println("  mul a0, a0, a1");
+  default:
+    assert(false);
   }
 }
 
 auto Generator::divide(Type *type) -> void {
-  switch (type->kind) {
-  case TypeKind::integer:
-    return divide_integer(cast<IntegerType>(type));
-  case TypeKind::boolean:
-  case TypeKind::kw_void:
-  case TypeKind::pointer:
-  case TypeKind::function:
-  case TypeKind::array:
-  case TypeKind::record:
-    std::abort();
-  }
-}
-
-auto Generator::divide_integer(IntegerType *type) -> void {
-  switch (type->kind) {
-  case IntegerKind::byte:
-  case IntegerKind::half:
+  assert(type->kind == TypeKind::integer);
+  switch (cast<IntegerType>(type)->kind) {
   case IntegerKind::word:
     return println("  divw a0, a0, a1");
   case IntegerKind::dword:
     return println("  div a0, a0, a1");
+  default:
+    assert(false);
   }
 }
 
 auto Generator::modulo(Type *type) -> void {
-  switch (type->kind) {
-  case TypeKind::integer:
-    return modulo_integer(cast<IntegerType>(type));
-  case TypeKind::boolean:
-  case TypeKind::kw_void:
-  case TypeKind::pointer:
-  case TypeKind::function:
-  case TypeKind::array:
-  case TypeKind::record:
-    std::abort();
-  }
-}
-
-auto Generator::modulo_integer(IntegerType *type) -> void {
-  switch (type->kind) {
-  case IntegerKind::byte:
-  case IntegerKind::half:
+  assert(type->kind == TypeKind::integer);
+  switch (cast<IntegerType>(type)->kind) {
   case IntegerKind::word:
     return println("  remw a0, a0, a1");
   case IntegerKind::dword:
     return println("  rem a0, a0, a1");
+  default:
+    assert(false);
   }
 }
 
@@ -383,6 +345,12 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     return divide(expr->type);
   case BinaryKind::modulo:
     return modulo(expr->type);
+  case BinaryKind::bitwise_and:
+    return println("  and a0, a0, a1");
+  case BinaryKind::bitwise_xor:
+    return println("  xor a0, a0, a1");
+  case BinaryKind::bitwise_or:
+    return println("  or a0, a0, a1");
   case BinaryKind::less_than:
     println("  slt a0, a0, a1");
     break;

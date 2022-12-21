@@ -187,6 +187,9 @@ auto SourceCursor::punctuator() -> Token {
     case '=':
       advance_current();
       return token(TokenKind::plus_equal, location);
+    case '+':
+      advance_current();
+      return token(TokenKind::plus_plus, location);
     default:
       return token(TokenKind::plus, location);
     }
@@ -229,6 +232,9 @@ auto SourceCursor::punctuator() -> Token {
     case '=':
       advance_current();
       return token(TokenKind::minus_equal, location);
+    case '-':
+      advance_current();
+      return token(TokenKind::minus_minus, location);
     default:
       return token(TokenKind::minus, location);
     }

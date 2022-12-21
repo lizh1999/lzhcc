@@ -43,7 +43,9 @@ auto Parser::primary() -> Expr * {
       consume(TokenKind::close_paren);
       return expr;
     } else {
+      entry_scope();
       auto stmt = cast<BlockStmt>(block_stmt());
+      leave_scope();
       consume(TokenKind::close_paren);
       auto &stmts = stmt->stmts;
       if (stmts.empty() || stmts.back()->kind != StmtKind::expr) {

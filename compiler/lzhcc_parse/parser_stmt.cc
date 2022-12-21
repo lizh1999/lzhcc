@@ -2,21 +2,16 @@
 
 namespace lzhcc {
 
-auto Parser::block_stmt(bool is_top) -> Stmt * {
-  if (!is_top) {
-    entry_scope();
-  }
+auto Parser::block_stmt() -> Stmt * {
   consume(TokenKind::open_brace);
   std::vector<Stmt *> stmts;
   while (!consume_if(TokenKind::close_brace)) {
     if (is_typename(position_)) {
-      auto init = declaration();
-      stmts.insert(stmts.end(), init.begin(), init.end());
+      stmts.push_back(declaration());
     } else {
       stmts.push_back(statement());
     }
   }
-  leave_scope();
   return context_->block_stmt(std::move(stmts));
 }
 
@@ -33,7 +28,14 @@ auto Parser::expr_stmt() -> Stmt * {
 auto Parser::for_stmt() -> Stmt * {
   consume(TokenKind::kw_for);
   consume(TokenKind::open_paren);
-  auto init = expr_stmt();
+
+  entry_scope();
+  Stmt *init = nullptr;
+  if (is_typename(position_)) {
+    init = declaration();
+  } else {
+    init = expr_stmt();
+  }
   Expr *cond = nullptr;
   if (!consume_if(TokenKind::semi)) {
     cond = expression();
@@ -44,7 +46,13 @@ auto Parser::for_stmt() -> Stmt * {
     inc = expression();
     consume(TokenKind::close_paren);
   }
-  auto then = statement();
+  Stmt *then = nullptr;
+  if (next_is(TokenKind::open_brace)) {
+    then = block_stmt();
+  } else {
+    then = statement();
+  }
+  leave_scope();
   return context_->for_stmt(init, cond, inc, then);
 }
 
@@ -88,8 +96,12 @@ auto Parser::statement() -> Stmt * {
     return return_stmt();
   case TokenKind::kw_while:
     return while_stmt();
-  case TokenKind::open_brace:
-    return block_stmt();
+  case TokenKind::open_brace: {
+    entry_scope();
+    auto result = block_stmt();
+    leave_scope();
+    return result;
+  }
   default:
     return expr_stmt();
   }

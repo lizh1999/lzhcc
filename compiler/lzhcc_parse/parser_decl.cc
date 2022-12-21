@@ -354,12 +354,12 @@ auto Parser::type_define(Type *base) -> void {
   }
 }
 
-auto Parser::declaration() -> std::vector<Stmt *> {
+auto Parser::declaration() -> Stmt * {
   VarAttr attr{};
   auto base = declspec(&attr);
   if (attr.is_typedef) {
     type_define(base);
-    return {};
+    return context_->block_stmt({});
   }
   std::vector<Stmt *> stmts;
   bool is_first = true;
@@ -377,7 +377,7 @@ auto Parser::declaration() -> std::vector<Stmt *> {
       stmts.push_back(context_->expr_stmt(expr));
     }
   }
-  return stmts;
+  return context_->block_stmt(std::move(stmts));
 }
 
 auto Parser::global(Token *name, Type *base, Type *type) -> void {
@@ -411,7 +411,8 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names, Linkage l
     params.push_back(var);
   }
 
-  auto stmt = block_stmt(/*is_top=*/true);
+  auto stmt = block_stmt();
+  leave_scope();
   create_function(name, type, max_stack_size_, stmt, std::move(params), linkage);
 }
 

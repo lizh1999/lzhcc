@@ -65,7 +65,7 @@ private:
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 
-  auto block_stmt(bool is_top = false) -> Stmt *;
+  auto block_stmt() -> Stmt *;
   auto expr_stmt() -> Stmt *;
   auto for_stmt() -> Stmt *;
   auto if_stmt() -> Stmt *;
@@ -92,7 +92,7 @@ private:
       -> std::pair<Token *, Type *>;
   auto abstract_declarator(Type *base) -> Type *;
   auto type_define(Type *base) -> void;
-  auto declaration() -> std::vector<Stmt *>;
+  auto declaration() -> Stmt *;
   auto global(Token *name, Type *base, Type *type) -> void;
   auto function(Token *name, Type *type, ParamNames param_names,
                 Linkage linkage) -> void;

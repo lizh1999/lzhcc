@@ -23,6 +23,9 @@ loop:
     case '*':
       block_comment();
       goto loop;
+    case '=':
+      advance_current();
+      return token(TokenKind::slash_equal, location);
     default:
       return token(TokenKind::slash, location);
     }
@@ -180,10 +183,22 @@ auto SourceCursor::punctuator() -> Token {
     return token(TokenKind::comma, location);
   case '+':
     advance_current();
-    return token(TokenKind::plus, location);
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::plus_equal, location);
+    default:
+      return token(TokenKind::plus, location);
+    }
   case '*':
     advance_current();
-    return token(TokenKind::star, location);
+    switch (current_) {
+    case '=':
+      advance_current();
+      return token(TokenKind::star_equal, location);
+    default:
+      return token(TokenKind::star, location);
+    }
   case '(':
     advance_current();
     return token(TokenKind::open_paren, location);
@@ -211,6 +226,9 @@ auto SourceCursor::punctuator() -> Token {
     case '>':
       advance_current();
       return token(TokenKind::arrow, location);
+    case '=':
+      advance_current();
+      return token(TokenKind::minus_equal, location);
     default:
       return token(TokenKind::minus, location);
     }

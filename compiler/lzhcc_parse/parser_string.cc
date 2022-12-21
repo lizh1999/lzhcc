@@ -68,7 +68,7 @@ auto Parser::string() -> Expr * {
   auto type = context_->array_of(context_->int8(), init.size());
   int index = context_->push_literal(std::move(init));
   auto init_view = context_->storage(index);
-  auto var = create_anon(type, (uint8_t *)init_view.data());
+  auto var = create_anon_global(type, (uint8_t *)init_view.data());
   return context_->value(var);
 }
 

@@ -171,11 +171,23 @@ auto Parser::create_function(Token *token, Type *type, int stack_size,
   it->second = var;
 }
 
-auto Parser::create_anon(Type *type, uint8_t *init) -> GValue * {
+auto Parser::create_anon_global(Type *type, uint8_t *init) -> GValue * {
   auto &file_scope = scopes_.front();
   auto [name, uid] = unique_name();
   auto var = context_->create_global(type, name, init);
   file_scope.var_map.emplace(uid, var);
+  return var;
+}
+
+auto Parser::create_anon_local(Type *type) -> LValue * {
+  auto &current = scopes_.back();
+  int size = context_->size_of(type);
+  int align = context_->align_of(type);
+  stack_size_ = align_to(stack_size_, align);
+  auto var = context_->create_local(type, stack_size_);
+  stack_size_ += size;
+  max_stack_size_ = std::max(max_stack_size_, stack_size_);
+  current.var_map.emplace(-unique_id_++, var);
   return var;
 }
 

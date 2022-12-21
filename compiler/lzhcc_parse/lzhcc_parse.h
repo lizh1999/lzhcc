@@ -65,6 +65,9 @@ private:
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 
+  using LowFn = Expr *(Context *, Expr *, Expr *, int);
+  auto assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr *;
+
   auto block_stmt() -> Stmt *;
   auto expr_stmt() -> Stmt *;
   auto for_stmt() -> Stmt *;
@@ -112,7 +115,8 @@ private:
   auto create_global(Token *token, Type *type, uint8_t *init = 0) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
                        std::vector<LValue *> params, Linkage linkage) -> void;
-  auto create_anon(Type *type, uint8_t *init = 0) -> GValue *;
+  auto create_anon_global(Type *type, uint8_t *init = 0) -> GValue *;
+  auto create_anon_local(Type *type) -> LValue *;
   auto create_tag(Token *token, Type *type) -> void;
   auto find_var(int name) -> Variable;
   auto find_value(int name) -> Value *;

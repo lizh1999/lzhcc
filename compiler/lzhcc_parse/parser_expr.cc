@@ -127,7 +127,7 @@ static auto low_cast_op(Context *context, Type *type, Expr *operand) -> Expr * {
   return context->cast(type, operand);
 }
 
-static auto convert(Context *context, Expr *lhs, Expr *rhs)
+static auto convert(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> std::tuple<Expr *, Expr *, Type *> {
   if (lhs->type->kind == TypeKind::boolean) {
     lhs = context->cast(context->int32(), lhs);
@@ -135,8 +135,10 @@ static auto convert(Context *context, Expr *lhs, Expr *rhs)
   if (rhs->type->kind == TypeKind::boolean) {
     rhs = context->cast(context->int32(), rhs);
   }
-  assert(lhs->type->kind == TypeKind::integer);
-  assert(rhs->type->kind == TypeKind::integer);
+  if (lhs->type->kind != TypeKind::integer ||
+      rhs->type->kind != TypeKind::integer) {
+    context->fatal(loc, "");
+  }
   auto lhs_type = cast<IntegerType>(lhs->type);
   auto rhs_type = cast<IntegerType>(rhs->type);
   using enum IntegerKind;
@@ -211,22 +213,32 @@ auto Parser::cast() -> Expr * {
   }
 }
 
+static auto low_mul_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, t] = convert(context, lhs, rhs, loc);
+  return context->multiply(t, l, r);
+}
+
+static auto low_div_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, t] = convert(context, lhs, rhs, loc);
+  return context->divide(t, l, r);
+}
+
 auto Parser::multiplicative() -> Expr * {
   auto lhs = cast();
 loop:
   switch (next_kind()) {
   case TokenKind::star: {
-    consume();
+    auto token = consume();
     auto rhs = cast();
-    auto [l, r, t] = convert(context_, lhs, rhs);
-    lhs = context_->multiply(t, l, r);
+    lhs = low_mul_op(context_, lhs, rhs, token->location);
     goto loop;
   }
   case TokenKind::slash: {
-    consume();
+    auto token = consume();
     auto rhs = cast();
-    auto [l, r, t] = convert(context_, lhs, rhs);
-    lhs = context_->divide(t, l, r);
+    lhs = low_div_op(context_, lhs, rhs, token->location);
     goto loop;
   }
   default:
@@ -266,7 +278,7 @@ static auto low_add_op(Context *context, Expr *lhs, Expr *rhs, int loc)
   case pattern(TypeKind::boolean, TypeKind::integer):
   case pattern(TypeKind::integer, TypeKind::boolean):
   case pattern(TypeKind::integer, TypeKind::integer): {
-    auto [l, r, t] = convert(context, lhs, rhs);
+    auto [l, r, t] = convert(context, lhs, rhs, loc);
     return context->add(t, l, r);
   }
   default:
@@ -281,7 +293,7 @@ static auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc)
   case pattern(TypeKind::boolean, TypeKind::integer):
   case pattern(TypeKind::integer, TypeKind::boolean):
   case pattern(TypeKind::integer, TypeKind::integer): {
-    auto [l, r, t] = convert(context, lhs, rhs);
+    auto [l, r, t] = convert(context, lhs, rhs, loc);
     return context->subtract(t, l, r);
   }
   case pattern(TypeKind::pointer, TypeKind::integer): {
@@ -375,30 +387,30 @@ auto Parser::relational() -> Expr * {
 loop:
   switch (next_kind()) {
   case TokenKind::less: {
-    consume();
+    auto token = consume();
     auto rhs = additive();
-    auto [l, r, _] = convert(context_, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_than(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::less_equal: {
-    consume();
+    auto token = consume();
     auto rhs = additive();
-    auto [l, r, _] = convert(context_, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::greater: {
-    consume();
+    auto token = consume();
     auto rhs = additive();
-    auto [l, r, _] = convert(context_, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_than(context_->int32(), r, l);
     goto loop;
   }
   case TokenKind::greater_equal: {
-    consume();
+    auto token = consume();
     auto rhs = additive();
-    auto [l, r, _] = convert(context_, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_equal(context_->int32(), r, l);
     goto loop;
   }
@@ -413,16 +425,16 @@ auto Parser::equality() -> Expr * {
 loop:
   switch (next_kind()) {
   case TokenKind::equal_equal: {
-    consume();
+    auto token = consume();
     auto rhs = relational();
-    auto [l, r, _] = convert(context_, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::exclaim_equal: {
-    consume();
+    auto token = consume();
     auto rhs = relational();
-    auto [l, r, _] = convert(context_, lhs, rhs);
+    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->not_equal(context_->int32(), l, r);
     goto loop;
   }
@@ -456,6 +468,23 @@ auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   }
 }
 
+auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
+  // decltype(lhs) * tmp;
+  auto tmp = create_anon_local(context_->pointer_to(lhs->type));
+  auto ref = context_->value(tmp);
+
+  // tmp = &lhs
+  auto expr1 =
+      context_->assign(tmp->type, ref, context_->refrence(tmp->type, lhs));
+
+  // *tmp = *tmp op rhs
+  auto deref = context_->deref(lhs->type, ref);
+  auto expr2 =
+      low_assign_op(context_, deref, lower(context_, deref, rhs, loc), loc);
+
+  return context_->comma(expr2->type, expr1, expr2);
+}
+
 auto Parser::assignment() -> Expr * {
   auto lhs = equality();
 loop:
@@ -464,6 +493,30 @@ loop:
     auto token = consume();
     auto rhs = assignment();
     lhs = low_assign_op(context_, lhs, rhs, token->location);
+    goto loop;
+  }
+  case TokenKind::plus_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_add_op, token->location);
+    goto loop;
+  }
+  case TokenKind::minus_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_sub_op, token->location);
+    goto loop;
+  }
+  case TokenKind::star_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_mul_op, token->location);
+    goto loop;
+  }
+  case TokenKind::slash_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_div_op, token->location);
     goto loop;
   }
   default:

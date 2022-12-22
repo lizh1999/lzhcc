@@ -33,8 +33,10 @@ private:
 Context::Context() {
   push_identifier("_Bool");
   push_identifier("break");
+  push_identifier("case");
   push_identifier("char");
   push_identifier("continue");
+  push_identifier("default");
   push_identifier("else");
   push_identifier("enum");
   push_identifier("for");
@@ -47,14 +49,17 @@ Context::Context() {
   push_identifier("sizeof");
   push_identifier("static");
   push_identifier("struct");
+  push_identifier("switch");
   push_identifier("typedef");
   push_identifier("union");
   push_identifier("void");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_break);
+  keyword_map_.push_back(TokenKind::kw_case);
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_continue);
+  keyword_map_.push_back(TokenKind::kw_default);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
   keyword_map_.push_back(TokenKind::kw_for);
@@ -67,6 +72,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_static);
   keyword_map_.push_back(TokenKind::kw_struct);
+  keyword_map_.push_back(TokenKind::kw_switch);
   keyword_map_.push_back(TokenKind::kw_typedef);
   keyword_map_.push_back(TokenKind::kw_union);
   keyword_map_.push_back(TokenKind::kw_void);
@@ -377,6 +383,18 @@ auto Context::goto_stmt(Label *label) -> Stmt * {
 
 auto Context::label_stmt(Label *label) -> Stmt * {
   return create<LabelStmt>(label);
+}
+
+auto Context::switch_stmt(Expr *expr, Label *break_label) -> SwitchStmt * {
+  return create<SwitchStmt>(expr, break_label);
+}
+
+auto Context::case_stmt(Stmt *stmt, int64_t value, Label *label) -> CaseStmt * {
+  return create<CaseStmt>(stmt, value, label);
+}
+
+auto Context::default_stmt(Stmt *stmt, Label *label) -> Stmt * {
+  return create<DefaultStmt>(stmt, label);
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

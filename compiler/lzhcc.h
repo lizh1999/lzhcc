@@ -76,8 +76,10 @@ enum class TokenKind : uint8_t {
   eof,           // eof
   kw_bool,       // "_Bool"
   kw_break,      // "break"
+  kw_case,       // "case"
   kw_char,       // "char"
   kw_continue,   // "continue"
+  kw_default,    // "default"
   kw_else,       // "else"
   kw_enum,       // "enum"
   kw_for,        // "for"
@@ -90,6 +92,7 @@ enum class TokenKind : uint8_t {
   kw_sizeof,     // "sizeof"
   kw_static,     // "static"
   kw_struct,     // "struct"
+  kw_switch,     // "switch"
   kw_typedef,    // "typedef"
   kw_union,      // "union"
   kw_void,       // "void"
@@ -336,6 +339,9 @@ enum class StmtKind {
   block,
   kw_goto,
   label,
+  kw_switch,
+  kw_case,
+  kw_default,
 };
 
 struct Stmt {
@@ -395,6 +401,32 @@ struct GotoStmt : Stmt {
 
 struct LabelStmt : Stmt {
   LabelStmt(Label *label) : Stmt(StmtKind::label), label(label) {}
+  Label *label;
+};
+
+struct CaseStmt : Stmt {
+  CaseStmt(Stmt *stmt, int64_t value, Label *label)
+      : Stmt(StmtKind::kw_case), stmt(stmt), value(value), label(label) {}
+  Stmt *stmt;
+  int64_t value;
+  Label *label;
+};
+
+struct SwitchStmt : Stmt {
+  SwitchStmt(Expr *expr, Label *break_label)
+      : Stmt(StmtKind::kw_switch), expr(expr), stmt(nullptr), case_lables(),
+        default_label(nullptr), break_label(break_label) {}
+  Expr *expr;
+  Stmt *stmt;
+  std::vector<CaseStmt *> case_lables;
+  Label *default_label;
+  Label *break_label;
+};
+
+struct DefaultStmt : Stmt {
+  DefaultStmt(Stmt *stmt, Label *label)
+      : Stmt(StmtKind::kw_default), stmt(stmt), label(label) {}
+  Stmt *stmt;
   Label *label;
 };
 
@@ -503,6 +535,9 @@ public:
   auto block_stmt(std::vector<Stmt *> stmts) -> Stmt *;
   auto goto_stmt(Label *label) -> Stmt *;
   auto label_stmt(Label *label) -> Stmt *;
+  auto switch_stmt(Expr *expr, Label *break_label) -> SwitchStmt *;
+  auto case_stmt(Stmt *stmt, int64_t value, Label *label) -> CaseStmt *;
+  auto default_stmt(Stmt *stmt, Label *label) -> Stmt *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 

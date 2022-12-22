@@ -1,4 +1,5 @@
 #include "lzhcc_parse.h"
+#include <charconv>
 
 namespace lzhcc {
 
@@ -140,6 +141,48 @@ auto Parser::label_stmt() -> Stmt * {
   return context_->label_stmt(label);
 }
 
+auto Parser::switch_stmt() -> Stmt * {
+  consume(TokenKind::kw_switch);
+  consume(TokenKind::open_paren);
+  auto expr = expression();
+  consume(TokenKind::close_paren);
+  auto break_name = unique_name().first;
+  auto break_label = context_->create_label(break_name);
+  auto switch_stmt = context_->switch_stmt(expr, break_label);
+  switchs_.push(switch_stmt);
+  breaks_.push(break_label);
+  auto stmt = statement();
+  switch_stmt->stmt = stmt;
+  switchs_.pop();
+  breaks_.pop();
+  return switch_stmt;
+}
+
+auto Parser::case_stmt() -> Stmt * {
+  consume(TokenKind::kw_case);
+  auto token = consume(TokenKind::numeric);
+  consume(TokenKind::colon);
+  auto literal = context_->storage(token->inner);
+  int64_t value;
+  std::from_chars(literal.begin(), literal.end(), value);
+  auto stmt = statement();
+  auto label_name = unique_name().first;
+  auto case_label = context_->create_label(label_name);
+  auto case_stmt = context_->case_stmt(stmt, value, case_label);
+  switchs_.top()->case_lables.push_back(case_stmt);
+  return case_stmt;
+}
+
+auto Parser::default_stmt() -> Stmt * {
+  consume(TokenKind::kw_default);
+  consume(TokenKind::colon);
+  auto label_name = unique_name().first;
+  auto default_label = context_->create_label(label_name);
+  switchs_.top()->default_label = default_label;
+  auto stmt = statement();
+  return context_->default_stmt(stmt, default_label);
+}
+
 auto Parser::statement() -> Stmt * {
   switch (next_kind()) {
   case TokenKind::kw_for:
@@ -160,6 +203,12 @@ auto Parser::statement() -> Stmt * {
     consume();
     consume(TokenKind::semi);
     return context_->goto_stmt(continues_.top());
+  case TokenKind::kw_switch:
+    return switch_stmt();
+  case TokenKind::kw_case:
+    return case_stmt();
+  case TokenKind::kw_default:
+    return default_stmt();
   case TokenKind::open_brace: {
     entry_scope();
     auto result = block_stmt();

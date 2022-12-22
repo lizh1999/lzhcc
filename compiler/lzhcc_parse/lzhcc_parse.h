@@ -83,6 +83,9 @@ private:
   auto while_stmt() -> Stmt *;
   auto goto_stmt() -> Stmt *;
   auto label_stmt() -> Stmt *;
+  auto switch_stmt() -> Stmt *;
+  auto case_stmt() -> Stmt *;
+  auto default_stmt() -> Stmt *;
   auto statement() -> Stmt *;
 
   auto enum_spec() -> Type *;
@@ -141,6 +144,7 @@ private:
   Type *ret_;
   std::stack<Label *> breaks_;
   std::stack<Label *> continues_;
+  std::stack<SwitchStmt *> switchs_;
   std::unordered_map<int, Label *> lable_map_;
 
   int stack_size_;

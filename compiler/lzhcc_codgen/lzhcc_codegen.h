@@ -54,6 +54,9 @@ private:
   auto block_stmt(BlockStmt *stmt) -> void;
   auto goto_stmt(GotoStmt *stmt) -> void;
   auto label_stmt(LabelStmt *stmt) -> void;
+  auto switch_stmt(SwitchStmt *stmt) -> void;
+  auto case_stmt(CaseStmt *stmt) -> void;
+  auto default_stmt(DefaultStmt *stmt) -> void;
   auto stmt_proxy(Stmt *stmt) -> void;
 
   auto push(const char *reg) -> void;

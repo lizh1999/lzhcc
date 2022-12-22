@@ -59,6 +59,37 @@ auto Generator::label_stmt(LabelStmt *stmt) -> void {
   println("%.*s:", (int)name.size(), name.data());
 }
 
+auto Generator::switch_stmt(SwitchStmt *stmt) -> void {
+  expr_proxy(stmt->expr);
+  for (auto *case_stmt : stmt->case_lables) {
+    println("  li a1, %ld", case_stmt->value);
+    auto name = case_stmt->label->name;
+    println("  beq a0, a1, %.*s", (int)name.size(), name.data());
+  }
+  if (stmt->default_label) {
+    auto name = stmt->default_label->name;
+    println("  j %.*s", (int)name.size(), name.data());
+  } else {
+    auto name = stmt->break_label->name;
+    println("  j %.*s", (int)name.size(), name.data());
+  }
+  stmt_proxy(stmt->stmt);
+  auto name = stmt->break_label->name;
+  println("%.*s:", (int)name.size(), name.data());
+}
+
+auto Generator::case_stmt(CaseStmt *stmt) -> void {
+  auto name = stmt->label->name;
+  println("%.*s:", (int)name.size(), name.data());
+  stmt_proxy(stmt->stmt);
+}
+
+auto Generator::default_stmt(DefaultStmt *stmt) -> void {
+  auto name = stmt->label->name;
+  println("%.*s:", (int)name.size(), name.data());
+  stmt_proxy(stmt->stmt);
+}
+
 auto Generator::stmt_proxy(Stmt *stmt) -> void {
   switch (stmt->kind) {
   case StmtKind::empty:
@@ -77,6 +108,12 @@ auto Generator::stmt_proxy(Stmt *stmt) -> void {
     return goto_stmt(cast<GotoStmt>(stmt));
   case StmtKind::label:
     return label_stmt(cast<LabelStmt>(stmt));
+  case StmtKind::kw_switch:
+    return switch_stmt(cast<SwitchStmt>(stmt));
+  case StmtKind::kw_case:
+    return case_stmt(cast<CaseStmt>(stmt));
+  case StmtKind::kw_default:
+    return default_stmt(cast<DefaultStmt>(stmt));
   }
 }
 

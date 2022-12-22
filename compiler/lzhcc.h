@@ -77,6 +77,7 @@ enum class TokenKind : uint8_t {
   kw_bool,       // "_Bool"
   kw_break,      // "break"
   kw_char,       // "char"
+  kw_continue,   // "continue"
   kw_else,       // "else"
   kw_enum,       // "enum"
   kw_for,        // "for"
@@ -356,13 +357,15 @@ struct Label {
 };
 
 struct ForStmt : Stmt {
-  ForStmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then, Label *break_label)
+  ForStmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then, Label *continue_label,
+          Label *break_label)
       : Stmt(StmtKind::kw_for), init(init), cond(cond), inc(inc), then(then),
-        break_label(break_label) {}
+        continue_label(continue_label), break_label(break_label) {}
   Stmt *init;
   Expr *cond;
   Expr *inc;
   Stmt *then;
+  Label *continue_label;
   Label *break_label;
 };
 
@@ -494,7 +497,7 @@ public:
   auto empty_stmt() -> Stmt *;
   auto expr_stmt(Expr *expr) -> Stmt *;
   auto for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then,
-                Label *break_label) -> Stmt *;
+                Label *continue_label, Label *break_label) -> Stmt *;
   auto if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt *;
   auto return_stmt(Expr *expr) -> Stmt *;
   auto block_stmt(std::vector<Stmt *> stmts) -> Stmt *;

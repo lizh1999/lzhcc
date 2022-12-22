@@ -140,6 +140,7 @@ private:
 
   Type *ret_;
   std::stack<Label *> breaks_;
+  std::stack<Label *> continues_;
   std::unordered_map<int, Label *> lable_map_;
 
   int stack_size_;

@@ -29,6 +29,10 @@ auto Parser::for_stmt() -> Stmt * {
   consume(TokenKind::kw_for);
   consume(TokenKind::open_paren);
 
+  auto continue_name = unique_name().first;
+  auto continue_label = context_->create_label(continue_name);
+  continues_.push(continue_label);
+
   auto break_name = unique_name().first;
   auto break_label = context_->create_label(break_name);
   breaks_.push(break_label);
@@ -56,8 +60,9 @@ auto Parser::for_stmt() -> Stmt * {
     then = statement();
   }
   leave_scope();
+  continues_.pop();
   breaks_.pop();
-  return context_->for_stmt(init, cond, inc, then, break_label);
+  return context_->for_stmt(init, cond, inc, then, continue_label, break_label);
 }
 
 auto Parser::if_stmt() -> Stmt * {
@@ -84,14 +89,23 @@ auto Parser::return_stmt() -> Stmt * {
 auto Parser::while_stmt() -> Stmt * {
   consume(TokenKind::kw_while);
   consume(TokenKind::open_paren);
+
+  auto continue_name = unique_name().first;
+  auto continue_label = context_->create_label(continue_name);
+  continues_.push(continue_label);
+
   auto break_name = unique_name().first;
   auto break_label = context_->create_label(break_name);
   breaks_.push(break_label);
+
   auto cond = expression();
   consume(TokenKind::close_paren);
   auto then = statement();
+
+  continues_.pop();
   breaks_.pop();
-  return context_->for_stmt(nullptr, cond, nullptr, then, break_label);
+  return context_->for_stmt(nullptr, cond, nullptr, then, continue_label,
+                            break_label);
 }
 
 auto Parser::goto_stmt() -> Stmt * {
@@ -142,6 +156,10 @@ auto Parser::statement() -> Stmt * {
     consume();
     consume(TokenKind::semi);
     return context_->goto_stmt(breaks_.top());
+  case TokenKind::kw_continue:
+    consume();
+    consume(TokenKind::semi);
+    return context_->goto_stmt(continues_.top());
   case TokenKind::open_brace: {
     entry_scope();
     auto result = block_stmt();

@@ -34,6 +34,7 @@ Context::Context() {
   push_identifier("_Bool");
   push_identifier("break");
   push_identifier("char");
+  push_identifier("continue");
   push_identifier("else");
   push_identifier("enum");
   push_identifier("for");
@@ -53,6 +54,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_break);
   keyword_map_.push_back(TokenKind::kw_char);
+  keyword_map_.push_back(TokenKind::kw_continue);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
   keyword_map_.push_back(TokenKind::kw_for);
@@ -353,8 +355,8 @@ auto Context::empty_stmt() -> Stmt * { return create<EmptyStmt>(); }
 auto Context::expr_stmt(Expr *expr) -> Stmt * { return create<ExprStmt>(expr); }
 
 auto Context::for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then,
-                       Label *break_label) -> Stmt * {
-  return create<ForStmt>(init, cond, inc, then, break_label);
+                       Label *continue_label, Label *break_label) -> Stmt * {
+  return create<ForStmt>(init, cond, inc, then, continue_label, break_label);
 }
 
 auto Context::if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt * {

@@ -211,6 +211,9 @@ auto SourceCursor::punctuator() -> Token {
     default:
       return token(TokenKind::caret, location);
     }
+  case ':':
+    advance_current();
+    return token(TokenKind::colon, location);
   case ',':
     advance_current();
     return token(TokenKind::comma, location);

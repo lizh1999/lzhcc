@@ -6,7 +6,7 @@ auto Parser::block_stmt() -> Stmt * {
   consume(TokenKind::open_brace);
   std::vector<Stmt *> stmts;
   while (!consume_if(TokenKind::close_brace)) {
-    if (is_typename(position_)) {
+    if (is_typename(position_) && position_[1].kind != TokenKind::colon) {
       stmts.push_back(declaration());
     } else {
       stmts.push_back(statement());
@@ -86,6 +86,38 @@ auto Parser::while_stmt() -> Stmt * {
   return context_->for_stmt(nullptr, cond, nullptr, then);
 }
 
+auto Parser::goto_stmt() -> Stmt * {
+  consume(TokenKind::kw_goto);
+  auto token = consume(TokenKind::identifier);
+  Label *label = nullptr;
+  auto it = lable_map_.find(token->inner);
+  if (it != lable_map_.end()) {
+    label = it->second;
+  } else {
+    label = context_->create_label();
+    lable_map_.emplace(token->inner, label);
+  }
+  return context_->goto_stmt(label);
+}
+
+auto Parser::label_stmt() -> Stmt * {
+  auto token = consume(TokenKind::identifier);
+  consume(TokenKind::colon);
+  Label *label = nullptr;
+  auto it = lable_map_.find(token->inner);
+  if (it != lable_map_.end()) {
+    label = it->second;
+  } else {
+    label = context_->create_label();
+    lable_map_.emplace(token->inner, label);
+  }
+  if (!label->name.empty()) {
+    context_->fatal(token->location, "");
+  }
+  label->name = unique_name().first;
+  return context_->label_stmt(label);
+}
+
 auto Parser::statement() -> Stmt * {
   switch (next_kind()) {
   case TokenKind::kw_for:
@@ -96,6 +128,8 @@ auto Parser::statement() -> Stmt * {
     return return_stmt();
   case TokenKind::kw_while:
     return while_stmt();
+  case TokenKind::kw_goto:
+    return goto_stmt();
   case TokenKind::open_brace: {
     entry_scope();
     auto result = block_stmt();
@@ -103,7 +137,7 @@ auto Parser::statement() -> Stmt * {
     return result;
   }
   default:
-    return expr_stmt();
+    return position_[1].kind == TokenKind::colon ? label_stmt() : expr_stmt();
   }
 }
 

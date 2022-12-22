@@ -36,6 +36,7 @@ Context::Context() {
   push_identifier("else");
   push_identifier("enum");
   push_identifier("for");
+  push_identifier("goto");
   push_identifier("if");
   push_identifier("int");
   push_identifier("long");
@@ -53,6 +54,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
   keyword_map_.push_back(TokenKind::kw_for);
+  keyword_map_.push_back(TokenKind::kw_goto);
   keyword_map_.push_back(TokenKind::kw_if);
   keyword_map_.push_back(TokenKind::kw_int);
   keyword_map_.push_back(TokenKind::kw_long);
@@ -225,6 +227,8 @@ auto Context::create_function(Type *type, std::string_view name, int stack_size,
                           linkage);
 }
 
+auto Context::create_label() -> Label * { return create<Label>(); }
+
 auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }
 
 auto Context::integer(int8_t value) -> Expr * {
@@ -359,6 +363,14 @@ auto Context::return_stmt(Expr *expr) -> Stmt * {
 
 auto Context::block_stmt(std::vector<Stmt *> stmts) -> Stmt * {
   return create<BlockStmt>(std::move(stmts));
+}
+
+auto Context::goto_stmt(Label *label) -> Stmt * {
+  return create<GotoStmt>(label);
+}
+
+auto Context::label_stmt(Label *label) -> Stmt * {
+  return create<LabelStmt>(label);
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

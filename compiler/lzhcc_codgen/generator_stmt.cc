@@ -46,6 +46,16 @@ auto Generator::block_stmt(BlockStmt *stmt) -> void {
   }
 }
 
+auto Generator::goto_stmt(GotoStmt *stmt) -> void {
+  auto name = stmt->label->name;
+  println("  j %.*s", (int)name.size(), name.data());
+}
+
+auto Generator::label_stmt(LabelStmt *stmt) -> void {
+  auto name = stmt->label->name;
+  println("%.*s:", (int)name.size(), name.data());
+}
+
 auto Generator::stmt_proxy(Stmt *stmt) -> void {
   switch (stmt->kind) {
   case StmtKind::empty:
@@ -60,6 +70,10 @@ auto Generator::stmt_proxy(Stmt *stmt) -> void {
     return return_stmt(cast<ReturnStmt>(stmt));
   case StmtKind::block:
     return block_stmt(cast<BlockStmt>(stmt));
+  case StmtKind::kw_goto:
+    return goto_stmt(cast<GotoStmt>(stmt));
+  case StmtKind::label:
+    return label_stmt(cast<LabelStmt>(stmt));
   }
 }
 

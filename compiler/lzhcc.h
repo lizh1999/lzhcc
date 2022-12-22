@@ -36,6 +36,7 @@ enum class TokenKind : uint8_t {
   caret,         // "^"
   caret_equal,   // "^="
   comma,         // ","
+  colon,         // ":"
   dot,           // "."
   equal,         // "="
   equal_equal,   // "=="
@@ -78,6 +79,7 @@ enum class TokenKind : uint8_t {
   kw_else,       // "else"
   kw_enum,       // "enum"
   kw_for,        // "for"
+  kw_goto,       // "goto"
   kw_if,         // "if"
   kw_int,        // "int"
   kw_long,       // "long"
@@ -330,6 +332,8 @@ enum class StmtKind {
   kw_if,
   kw_return,
   block,
+  kw_goto,
+  label,
 };
 
 struct Stmt {
@@ -372,6 +376,20 @@ struct BlockStmt : Stmt {
   BlockStmt(std::vector<Stmt *> stmts)
       : Stmt(StmtKind::block), stmts(std::move(stmts)) {}
   std::vector<Stmt *> stmts;
+};
+
+struct Label {
+  std::string_view name;
+};
+
+struct GotoStmt : Stmt {
+  GotoStmt(Label *label) : Stmt(StmtKind::kw_goto), label(label) {}
+  Label *label;
+};
+
+struct LabelStmt : Stmt {
+  LabelStmt(Label *label) : Stmt(StmtKind::label), label(label) {}
+  Label *label;
 };
 
 template <class T, class U> auto cast(U *origin) -> T * {
@@ -432,6 +450,9 @@ public:
                        Stmt *stmt, std::vector<LValue *> params,
                        Linkage linkage) -> Function *;
 
+  // label
+  auto create_label() -> Label *;
+
   // expr
   auto value(Value *value) -> Expr *;
   auto integer(int8_t value) -> Expr *;
@@ -473,6 +494,8 @@ public:
   auto if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt *;
   auto return_stmt(Expr *expr) -> Stmt *;
   auto block_stmt(std::vector<Stmt *> stmts) -> Stmt *;
+  auto goto_stmt(Label *label) -> Stmt *;
+  auto label_stmt(Label *label) -> Stmt *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 

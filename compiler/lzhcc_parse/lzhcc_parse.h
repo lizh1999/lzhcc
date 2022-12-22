@@ -80,6 +80,8 @@ private:
   auto if_stmt() -> Stmt *;
   auto return_stmt() -> Stmt *;
   auto while_stmt() -> Stmt *;
+  auto goto_stmt() -> Stmt *;
+  auto label_stmt() -> Stmt *;
   auto statement() -> Stmt *;
 
   auto enum_spec() -> Type *;
@@ -136,6 +138,7 @@ private:
   Context *context_;
 
   Type *ret_;
+  std::unordered_map<int, Label *> lable_map_;
 
   int stack_size_;
   int max_stack_size_;

@@ -437,6 +437,7 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
 
   stack_size_ = 0;
   max_stack_size_ = 0;
+  lable_map_.clear();
 
   entry_scope();
   for (int i = 0; i < param_types.size(); i++) {

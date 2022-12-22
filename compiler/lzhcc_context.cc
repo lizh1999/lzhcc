@@ -32,6 +32,7 @@ private:
 
 Context::Context() {
   push_identifier("_Bool");
+  push_identifier("break");
   push_identifier("char");
   push_identifier("else");
   push_identifier("enum");
@@ -50,6 +51,7 @@ Context::Context() {
   push_identifier("void");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_bool);
+  keyword_map_.push_back(TokenKind::kw_break);
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
@@ -227,7 +229,9 @@ auto Context::create_function(Type *type, std::string_view name, int stack_size,
                           linkage);
 }
 
-auto Context::create_label() -> Label * { return create<Label>(); }
+auto Context::create_label(std::string_view name) -> Label * {
+  return create<Label>(Label{name});
+}
 
 auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }
 
@@ -348,9 +352,9 @@ auto Context::empty_stmt() -> Stmt * { return create<EmptyStmt>(); }
 
 auto Context::expr_stmt(Expr *expr) -> Stmt * { return create<ExprStmt>(expr); }
 
-auto Context::for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then)
-    -> Stmt * {
-  return create<ForStmt>(init, cond, inc, then);
+auto Context::for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then,
+                       Label *break_label) -> Stmt * {
+  return create<ForStmt>(init, cond, inc, then, break_label);
 }
 
 auto Context::if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt * {

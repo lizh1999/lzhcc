@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lzhcc.h"
+#include <stack>
 
 namespace lzhcc {
 
@@ -138,6 +139,7 @@ private:
   Context *context_;
 
   Type *ret_;
+  std::stack<Label *> breaks_;
   std::unordered_map<int, Label *> lable_map_;
 
   int stack_size_;

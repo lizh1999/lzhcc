@@ -75,6 +75,7 @@ enum class TokenKind : uint8_t {
   identifier,    // identifier
   eof,           // eof
   kw_bool,       // "_Bool"
+  kw_break,      // "break"
   kw_char,       // "char"
   kw_else,       // "else"
   kw_enum,       // "enum"
@@ -350,13 +351,19 @@ struct ExprStmt : Stmt {
   Expr *expr;
 };
 
+struct Label {
+  std::string_view name;
+};
+
 struct ForStmt : Stmt {
-  ForStmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then)
-      : Stmt(StmtKind::kw_for), init(init), cond(cond), inc(inc), then(then) {}
+  ForStmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then, Label *break_label)
+      : Stmt(StmtKind::kw_for), init(init), cond(cond), inc(inc), then(then),
+        break_label(break_label) {}
   Stmt *init;
   Expr *cond;
   Expr *inc;
   Stmt *then;
+  Label *break_label;
 };
 
 struct IfStmt : Stmt {
@@ -376,10 +383,6 @@ struct BlockStmt : Stmt {
   BlockStmt(std::vector<Stmt *> stmts)
       : Stmt(StmtKind::block), stmts(std::move(stmts)) {}
   std::vector<Stmt *> stmts;
-};
-
-struct Label {
-  std::string_view name;
 };
 
 struct GotoStmt : Stmt {
@@ -451,7 +454,7 @@ public:
                        Linkage linkage) -> Function *;
 
   // label
-  auto create_label() -> Label *;
+  auto create_label(std::string_view name = "") -> Label *;
 
   // expr
   auto value(Value *value) -> Expr *;
@@ -490,7 +493,8 @@ public:
   // stmt
   auto empty_stmt() -> Stmt *;
   auto expr_stmt(Expr *expr) -> Stmt *;
-  auto for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then) -> Stmt *;
+  auto for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then,
+                Label *break_label) -> Stmt *;
   auto if_stmt(Expr *cond, Stmt *then, Stmt *else_) -> Stmt *;
   auto return_stmt(Expr *expr) -> Stmt *;
   auto block_stmt(std::vector<Stmt *> stmts) -> Stmt *;

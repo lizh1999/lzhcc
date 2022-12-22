@@ -9,17 +9,18 @@ auto Generator::for_stmt(ForStmt *stmt) -> void {
     stmt_proxy(stmt->init);
   }
   int label = counter++;
+  auto break_name = stmt->break_label->name;
   println(".L.begin.%d:", label);
   if (stmt->cond) {
     expr_proxy(stmt->cond);
-    println("  beqz a0, .L.end.%d", label);
+    println("  beqz a0, %.*s", (int) break_name.size(), break_name.data());
   }
   stmt_proxy(stmt->then);
   if (stmt->inc) {
     expr_proxy(stmt->inc);
   }
   println("  j .L.begin.%d", label);
-  println(".L.end.%d:", label);
+  println("%.*s:", (int) break_name.size(), break_name.data());
 }
 
 auto Generator::if_stmt(IfStmt *stmt) -> void {

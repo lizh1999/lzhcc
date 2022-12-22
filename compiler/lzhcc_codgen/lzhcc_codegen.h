@@ -40,6 +40,7 @@ private:
   auto call_expr(CallExpr *expr) -> void;
   auto stmt_expr(StmtExpr *expr) -> void;
   auto member_expr(MemberExpr *expr) -> void;
+  auto condition_expr(ConditionExpr *expr) -> void;
   auto expr_proxy(Expr *expr) -> void;
 
   auto value_addr(ValueExpr *expr) -> void;

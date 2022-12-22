@@ -323,6 +323,11 @@ auto Context::comma(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::comma, type, lhs, rhs);
 }
 
+auto Context::condition(Type *type, Expr *cond, Expr *then, Expr *else_)
+    -> Expr * {
+  return create<ConditionExpr>(type, cond, then, else_);
+}
+
 auto Context::bitwise_or(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::bitwise_or, type, lhs, rhs);
 }

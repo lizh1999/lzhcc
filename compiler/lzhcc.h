@@ -61,6 +61,7 @@ enum class TokenKind : uint8_t {
   plus,                  // "+"
   plus_equal,            // "+="
   plus_plus,             // "++"
+  question,              // "?"
   semi,                  // ";"
   slash,                 // "/"
   slash_equal,           // "/="
@@ -252,6 +253,7 @@ enum class ExperKind {
   call,
   stmt,
   member,
+  condition,
 };
 
 struct Expr {
@@ -334,6 +336,15 @@ struct MemberExpr : Expr {
       : Expr(ExperKind::member, type), record(record), offset(offset) {}
   Expr *record;
   int offset;
+};
+
+struct ConditionExpr : Expr {
+  ConditionExpr(Type *type, Expr *cond, Expr *then, Expr *else_)
+      : Expr(ExperKind::condition, type), cond(cond), then(then), else_(else_) {
+  }
+  Expr *cond;
+  Expr *then;
+  Expr *else_;
 };
 
 enum class StmtKind {
@@ -527,6 +538,7 @@ public:
   auto stmt_expr(Type *type, BlockStmt *stmt) -> Expr *;
   auto assign(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto condition(Type *type, Expr *cond, Expr *then, Expr *else_) -> Expr *;
 
   auto call(std::string_view name, Type *type, std::vector<Expr *> args)
       -> Expr *;

@@ -70,6 +70,7 @@ private:
   auto bitwise_or() -> Expr *;
   auto logical_and() -> Expr *;
   auto logical_or() -> Expr *;
+  auto condition() -> Expr *;
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 

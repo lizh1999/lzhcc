@@ -175,6 +175,9 @@ auto SourceCursor::identifier() -> Token {
 auto SourceCursor::punctuator() -> Token {
   int location = location_;
   switch (current_) {
+  case '?':
+    advance_current();
+    return token(TokenKind::question, location);
   case '~':
     advance_current();
     return token(TokenKind::tilde, location);

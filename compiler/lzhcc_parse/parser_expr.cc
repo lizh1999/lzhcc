@@ -394,6 +394,24 @@ auto Parser::logical_or() -> Expr * {
   return lhs;
 }
 
+auto Parser::condition() -> Expr * {
+  auto cond = logical_or();
+  auto token = consume_if(TokenKind::question);
+  if (!token) {
+    return cond;
+  }
+  auto *then = expression();
+  consume(TokenKind::colon);
+  auto *else_ = condition();
+  if (then->type->kind == TypeKind::kw_void ||
+      else_->type->kind == TypeKind::kw_void) {
+    return context_->condition(context_->void_type(), cond, then, else_);
+  } else {
+    auto [lhs, rhs, type] = convert(context_, then, else_, token->location);
+    return context_->condition(type, cond, lhs, rhs);
+  }
+}
+
 auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
   // decltype(lhs) * tmp;
   auto tmp = create_anon_local(context_->pointer_to(lhs->type));
@@ -412,7 +430,7 @@ auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
 }
 
 auto Parser::assignment() -> Expr * {
-  auto lhs = logical_or();
+  auto lhs = condition();
 loop:
   switch (next_kind()) {
   case TokenKind::equal: {
@@ -654,13 +672,15 @@ auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   }
 }
 
-auto low_shift_left_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
-   auto [l, r, type] = convert(context, lhs, rhs, loc);
+auto low_shift_left_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, type] = convert(context, lhs, rhs, loc);
   return context->shift_left(type, l, r);
 }
 
-auto low_shift_right_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
-   auto [l, r, type] = convert(context, lhs, rhs, loc);
+auto low_shift_right_op(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> Expr * {
+  auto [l, r, type] = convert(context, lhs, rhs, loc);
   return context->shift_right(type, l, r);
 }
 

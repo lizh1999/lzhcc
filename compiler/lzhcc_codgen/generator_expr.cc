@@ -447,6 +447,17 @@ auto Generator::member_expr(MemberExpr *expr) -> void {
   load(expr->type);
 }
 
+auto Generator::condition_expr(ConditionExpr *expr) -> void {
+  expr_proxy(expr->cond);
+  int label = counter++;
+  println("  beqz a0, .L.else.%d", label);
+  expr_proxy(expr->then);
+  println("  j .L.end.%d", label);
+  println(".L.else.%d:", label);
+  expr_proxy(expr->else_);
+  println(".L.end.%d:", label);
+}
+
 auto Generator::push(const char *reg) -> void {
   println("  addi sp, sp, -8");
   println("  sd %s, 0(sp)", reg);
@@ -473,6 +484,8 @@ auto Generator::expr_proxy(Expr *expr) -> void {
     return stmt_expr(cast<StmtExpr>(expr));
   case ExperKind::member:
     return member_expr(cast<MemberExpr>(expr));
+  case ExperKind::condition:
+    return condition_expr(cast<ConditionExpr>(expr));
   }
 }
 

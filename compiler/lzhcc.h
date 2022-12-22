@@ -29,74 +29,78 @@ struct Diagnostic {
 class Context;
 
 enum class TokenKind : uint8_t {
-  amp,           // "&"
-  amp_amp,       // "&&"
-  amp_equal,     // "&="
-  arrow,         // "->"
-  caret,         // "^"
-  caret_equal,   // "^="
-  comma,         // ","
-  colon,         // ":"
-  dot,           // "."
-  equal,         // "="
-  equal_equal,   // "=="
-  exclaim,       // "!"
-  exclaim_equal, // "!="
-  greater,       // ">"
-  greater_equal, // ">="
-  less,          // "<"
-  less_equal,    // "<="
-  minus,         // "-"
-  minus_equal,   // "-="
-  minus_minus,   // "--"
-  percent,       // "%"
-  percent_equal, // "%="
-  pipe,          // "|"
-  pipe_equal,    // "|="
-  pipe_pipe,     // "||"
-  plus,          // "+"
-  plus_equal,    // "+="
-  plus_plus,     // "++"
-  semi,          // ";"
-  slash,         // "/"
-  slash_equal,   // "/="
-  star,          // "*"
-  star_equal,    // "*="
-  tilde,         // "~"
-  open_paren,    // "("
-  close_paren,   // ")"
-  open_bracket,  // "["
-  close_bracket, // "]"
-  open_brace,    // "{"
-  close_brace,   // "}"
-  string,        // string literal
-  character,     // character literal
-  numeric,       // numeric literal
-  identifier,    // identifier
-  eof,           // eof
-  kw_bool,       // "_Bool"
-  kw_break,      // "break"
-  kw_case,       // "case"
-  kw_char,       // "char"
-  kw_continue,   // "continue"
-  kw_default,    // "default"
-  kw_else,       // "else"
-  kw_enum,       // "enum"
-  kw_for,        // "for"
-  kw_goto,       // "goto"
-  kw_if,         // "if"
-  kw_int,        // "int"
-  kw_long,       // "long"
-  kw_return,     // "return"
-  kw_short,      // "short"
-  kw_sizeof,     // "sizeof"
-  kw_static,     // "static"
-  kw_struct,     // "struct"
-  kw_switch,     // "switch"
-  kw_typedef,    // "typedef"
-  kw_union,      // "union"
-  kw_void,       // "void"
-  kw_while,      // "while"
+  amp,                   // "&"
+  amp_amp,               // "&&"
+  amp_equal,             // "&="
+  arrow,                 // "->"
+  caret,                 // "^"
+  caret_equal,           // "^="
+  comma,                 // ","
+  colon,                 // ":"
+  dot,                   // "."
+  equal,                 // "="
+  equal_equal,           // "=="
+  exclaim,               // "!"
+  exclaim_equal,         // "!="
+  greater,               // ">"
+  greater_equal,         // ">="
+  greater_greater,       // ">>"
+  greater_greater_equal, // ">>="
+  less,                  // "<"
+  less_equal,            // "<="
+  less_less,             // "<<"
+  less_less_equal,       // "<<="
+  minus,                 // "-"
+  minus_equal,           // "-="
+  minus_minus,           // "--"
+  percent,               // "%"
+  percent_equal,         // "%="
+  pipe,                  // "|"
+  pipe_equal,            // "|="
+  pipe_pipe,             // "||"
+  plus,                  // "+"
+  plus_equal,            // "+="
+  plus_plus,             // "++"
+  semi,                  // ";"
+  slash,                 // "/"
+  slash_equal,           // "/="
+  star,                  // "*"
+  star_equal,            // "*="
+  tilde,                 // "~"
+  open_paren,            // "("
+  close_paren,           // ")"
+  open_bracket,          // "["
+  close_bracket,         // "]"
+  open_brace,            // "{"
+  close_brace,           // "}"
+  string,                // string literal
+  character,             // character literal
+  numeric,               // numeric literal
+  identifier,            // identifier
+  eof,                   // eof
+  kw_bool,               // "_Bool"
+  kw_break,              // "break"
+  kw_case,               // "case"
+  kw_char,               // "char"
+  kw_continue,           // "continue"
+  kw_default,            // "default"
+  kw_else,               // "else"
+  kw_enum,               // "enum"
+  kw_for,                // "for"
+  kw_goto,               // "goto"
+  kw_if,                 // "if"
+  kw_int,                // "int"
+  kw_long,               // "long"
+  kw_return,             // "return"
+  kw_short,              // "short"
+  kw_sizeof,             // "sizeof"
+  kw_static,             // "static"
+  kw_struct,             // "struct"
+  kw_switch,             // "switch"
+  kw_typedef,            // "typedef"
+  kw_union,              // "union"
+  kw_void,               // "void"
+  kw_while,              // "while"
 };
 
 struct Token {
@@ -306,6 +310,8 @@ enum class BinaryKind {
   bitwise_and,
   logical_and,
   logical_or,
+  shift_left,
+  shift_right,
 };
 
 struct BinaryExpr : Expr {
@@ -516,6 +522,8 @@ public:
   auto bitwise_and(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto logical_and(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto logical_or(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto shift_left(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
+  auto shift_right(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto stmt_expr(Type *type, BlockStmt *stmt) -> Expr *;
   auto assign(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;

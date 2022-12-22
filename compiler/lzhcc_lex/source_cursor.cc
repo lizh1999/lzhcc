@@ -298,6 +298,15 @@ auto SourceCursor::punctuator() -> Token {
     case '=':
       advance_current();
       return token(TokenKind::less_equal, location);
+    case '<':
+      advance_current();
+      switch (current_) {
+      case '=':
+        advance_current();
+        return token(TokenKind::less_less_equal, location);
+      default:
+        return token(TokenKind::less_less, location);
+      }
     default:
       return token(TokenKind::less, location);
     }
@@ -307,6 +316,15 @@ auto SourceCursor::punctuator() -> Token {
     case '=':
       advance_current();
       return token(TokenKind::greater_equal, location);
+    case '>':
+      advance_current();
+      switch (current_) {
+      case '=':
+        advance_current();
+        return token(TokenKind::greater_greater_equal, location);
+      default:
+        return token(TokenKind::greater_greater, location);
+      }
     default:
       return token(TokenKind::greater, location);
     }

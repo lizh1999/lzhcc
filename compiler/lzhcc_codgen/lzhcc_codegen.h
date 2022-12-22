@@ -33,7 +33,8 @@ private:
   auto multiply(Type *type) -> void;
   auto divide(Type *type) -> void;
   auto modulo(Type *type) -> void;
-  auto bitwise_and(Type *type) -> void;
+  auto shift_left(Type *type) -> void;
+  auto shift_right(Type *type) -> void;
 
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;

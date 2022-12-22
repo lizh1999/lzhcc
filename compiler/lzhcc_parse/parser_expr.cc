@@ -15,6 +15,8 @@ static auto low_div_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_mod_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_add_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_sub_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_shift_left_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_shift_right_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_and_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_xor_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_or_op(Context *, Expr *, Expr *, int) -> Expr *;
@@ -216,6 +218,28 @@ loop:
   return lhs;
 }
 
+auto Parser::shift() -> Expr * {
+  auto lhs = additive();
+loop:
+  switch (next_kind()) {
+  case TokenKind::less_less: {
+    auto token = consume();
+    auto rhs = additive();
+    lhs = low_shift_left_op(context_, lhs, rhs, token->location);
+    goto loop;
+  }
+  case TokenKind::greater_greater: {
+    auto token = consume();
+    auto rhs = additive();
+    lhs = low_shift_right_op(context_, lhs, rhs, token->location);
+    goto loop;
+  }
+  default:
+    break;
+  }
+  return lhs;
+}
+
 auto Parser::post_inc(Expr *lhs, Expr *rhs, int loc) -> Expr * {
   // (decltype(lhs)) ((lhs += rhs) - rhs)
   auto add = assign_to(lhs, rhs, low_add_op, loc);
@@ -265,33 +289,33 @@ loop:
 }
 
 auto Parser::relational() -> Expr * {
-  auto lhs = additive();
+  auto lhs = shift();
 loop:
   switch (next_kind()) {
   case TokenKind::less: {
     auto token = consume();
-    auto rhs = additive();
+    auto rhs = shift();
     auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_than(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::less_equal: {
     auto token = consume();
-    auto rhs = additive();
+    auto rhs = shift();
     auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::greater: {
     auto token = consume();
-    auto rhs = additive();
+    auto rhs = shift();
     auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_than(context_->int32(), r, l);
     goto loop;
   }
   case TokenKind::greater_equal: {
     auto token = consume();
-    auto rhs = additive();
+    auto rhs = shift();
     auto [l, r, _] = convert(context_, lhs, rhs, token->location);
     lhs = context_->less_equal(context_->int32(), r, l);
     goto loop;
@@ -443,6 +467,18 @@ loop:
     auto token = consume();
     auto rhs = assignment();
     lhs = assign_to(lhs, rhs, low_bitwise_or_op, token->location);
+    goto loop;
+  }
+  case TokenKind::less_less_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_shift_left_op, token->location);
+    goto loop;
+  }
+  case TokenKind::greater_greater_equal: {
+    auto token = consume();
+    auto rhs = assignment();
+    lhs = assign_to(lhs, rhs, low_shift_right_op, token->location);
     goto loop;
   }
   default:
@@ -616,6 +652,16 @@ auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   default:
     context->fatal(loc, "");
   }
+}
+
+auto low_shift_left_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
+   auto [l, r, type] = convert(context, lhs, rhs, loc);
+  return context->shift_left(type, l, r);
+}
+
+auto low_shift_right_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
+   auto [l, r, type] = convert(context, lhs, rhs, loc);
+  return context->shift_right(type, l, r);
 }
 
 auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {

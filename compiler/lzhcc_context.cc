@@ -343,6 +343,14 @@ auto Context::logical_or(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::logical_or, type, lhs, rhs);
 }
 
+auto Context::shift_left(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::shift_left, type, lhs, rhs);
+}
+
+auto Context::shift_right(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
+  return create<BinaryExpr>(BinaryKind::shift_right, type, lhs, rhs);
+}
+
 auto Context::call(std::string_view name, Type *type, std::vector<Expr *> args)
     -> Expr * {
   return create<CallExpr>(name, type, std::move(args));

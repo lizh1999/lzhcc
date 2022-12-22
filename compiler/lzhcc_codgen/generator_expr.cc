@@ -315,6 +315,30 @@ auto Generator::modulo(Type *type) -> void {
   }
 }
 
+auto Generator::shift_left(Type *type) -> void {
+  assert(type->kind == TypeKind::integer);
+  switch (cast<IntegerType>(type)->kind) {
+  case IntegerKind::word:
+    return println("  sllw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  sll a0, a0, a1");
+  default:
+    assert(false);
+  }
+}
+
+auto Generator::shift_right(Type *type) -> void {
+  assert(type->kind == TypeKind::integer);
+  switch (cast<IntegerType>(type)->kind) {
+  case IntegerKind::word:
+    return println("  sraw a0, a0, a1");
+  case IntegerKind::dword:
+    return println("  sra a0, a0, a1");
+  default:
+    assert(false);
+  }
+}
+
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
 #define rvalue()                                                               \
   expr_proxy(expr->rhs);                                                       \
@@ -362,6 +386,12 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     rvalue();
     println("  xor a0, a0, a1");
     return println("  snez a0, a0");
+  case BinaryKind::shift_left:
+    rvalue();
+    return shift_left(expr->type);
+  case BinaryKind::shift_right:
+    rvalue();
+    return shift_right(expr->type);
   case BinaryKind::assign:
     expr_proxy(expr->rhs);
     push("a0");

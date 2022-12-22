@@ -62,6 +62,7 @@ private:
   auto postfix() -> Expr *;
   auto multiplicative() -> Expr *;
   auto additive() -> Expr *;
+  auto shift() -> Expr *;
   auto relational() -> Expr *;
   auto equality() -> Expr *;
   auto bitwise_and() -> Expr *;

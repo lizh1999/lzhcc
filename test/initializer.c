@@ -18,6 +18,8 @@ int main() {
   ASSERT(0, ({ int x[2][3] = {{1, 2}}; x[1][0]; }));
   ASSERT(0, ({ int x[2][3] = {{1, 2}}; x[1][2]; }));
 
+  int x[2] = {1, 2, 3, 4, 5, 6};
+
   printf("OK\n");
   return 0;
 }

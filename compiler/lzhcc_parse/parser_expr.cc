@@ -30,17 +30,16 @@ auto Parser::scalar_init() -> Init * {
 auto Parser::array_init(ArrayType *array) -> Init * {
   std::vector<Init *> children;
   consume(TokenKind::open_brace);
-  for (int i = 0; i < array->length; i++) {
-    if (consume_if(TokenKind::close_brace)) {
-      return context_->array_init(std::move(children));
+  for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
+    auto init = this->init(array->base);
+    if (children.size() < array->length) {
+      children.push_back(init);
     }
-    if (i != 0) {
-      consume(TokenKind::comma);
+    if (!consume_if(TokenKind::comma)) {
+      consume(TokenKind::close_brace);
+      break;
     }
-    children.push_back(init(array->base));
   }
-  consume_if(TokenKind::comma);
-  consume(TokenKind::close_brace);
   return context_->array_init(std::move(children));
 }
 

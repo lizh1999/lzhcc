@@ -78,8 +78,8 @@ auto Generator::codegen(Function *function) -> void {
   }
 
   println("%.*s:", (int)name.size(), name.data());
-  println("  addi sp, sp, -8");
-  println("  sd fp, 0(sp)");
+  push("fp");
+  push("ra");
   println("  addi sp, sp, -%d", function->stack_size);
   println("  mv fp, sp");
 
@@ -91,8 +91,8 @@ auto Generator::codegen(Function *function) -> void {
   stmt_proxy(function->stmt);
   println(".L.return.%d:", return_label);
   println("  addi sp, sp, %d", function->stack_size);
-  println("  ld fp, 0(sp)");
-  println("  addi sp, sp, 8");
+  pop("ra");
+  pop("fp");
   println("  ret");
 }
 

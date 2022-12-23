@@ -23,6 +23,7 @@ auto const_int(int64_t *value, Expr *expr) -> bool {
     return const_binary_int(value, cast<BinaryExpr>(expr));
   case ExperKind::condition:
     return const_condition_int(value, cast<ConditionExpr>(expr));
+  case ExperKind::zero:
   case ExperKind::value:
   case ExperKind::call:
   case ExperKind::stmt:

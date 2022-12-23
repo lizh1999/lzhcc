@@ -31,6 +31,9 @@ auto Parser::array_init(ArrayType *array) -> Init * {
   std::vector<Init *> children;
   consume(TokenKind::open_brace);
   for (int i = 0; i < array->length; i++) {
+    if (consume_if(TokenKind::close_brace)) {
+      return context_->array_init(std::move(children));
+    }
     if (i != 0) {
       consume(TokenKind::comma);
     }

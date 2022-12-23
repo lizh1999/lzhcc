@@ -246,6 +246,7 @@ struct Declaration : Value {
 };
 
 enum class ExperKind {
+  zero,
   value,
   integer,
   unary,
@@ -260,6 +261,13 @@ struct Expr {
   Expr(ExperKind kind, Type *type) : kind(kind), type(type) {}
   const ExperKind kind;
   Type *type;
+};
+
+struct ZeroExpr : Expr {
+  ZeroExpr(Type *type, Expr *expr, int64_t size)
+      : Expr(ExperKind::zero, type), expr(expr), size(size) {}
+  Expr *expr;
+  int64_t size;
 };
 
 struct ValueExpr : Expr {
@@ -530,6 +538,7 @@ public:
   auto create_label(std::string_view name = "") -> Label *;
 
   // expr
+  auto zero(Expr *expr, int64_t size) -> Expr *;
   auto value(Value *value) -> Expr *;
   auto integer(int8_t value) -> Expr *;
   auto integer(int32_t value) -> Expr *;

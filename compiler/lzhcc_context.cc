@@ -241,6 +241,10 @@ auto Context::create_label(std::string_view name) -> Label * {
   return create<Label>(Label{name});
 }
 
+auto Context::zero(Expr *expr, int64_t size) -> Expr * {
+  return create<ZeroExpr>(void_type(), expr, size);
+}
+
 auto Context::value(Value *value) -> Expr * { return create<ValueExpr>(value); }
 
 auto Context::integer(int8_t value) -> Expr * {

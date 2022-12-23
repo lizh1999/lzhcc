@@ -399,6 +399,9 @@ auto Parser::declaration() -> Stmt * {
     auto var = create_local(name, type);
     if (auto token = consume_if(TokenKind::equal)) {
       auto lhs = context_->value(var);
+      int64_t size_bytes = context_->size_of(var->type);
+      auto zero_expr = context_->zero(lhs, size_bytes);
+      stmts.push_back(context_->expr_stmt(zero_expr));
       auto rhs = init(var->type);
       if (auto expr = init(lhs, rhs, token->location)) {
         stmts.push_back(context_->expr_stmt(expr));

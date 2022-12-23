@@ -99,6 +99,13 @@ auto Generator::load(Type *type) -> void {
   }
 }
 
+auto Generator::zero_expr(ZeroExpr *expr) -> void {
+  addr_proxy(expr->expr);
+  println("  li a1, 0");
+  println("  li a2, %ld", expr->size);
+  println("  call memset");
+}
+
 auto Generator::value_expr(ValueExpr *expr) -> void {
   value_addr(expr);
   load(expr->type);
@@ -432,10 +439,7 @@ auto Generator::call_expr(CallExpr *expr) -> void {
     pop(reg);
     reg[1] -= i;
   }
-
-  push("ra");
   println("  call %.*s", (int)expr->name.size(), expr->name.data());
-  pop("ra");
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {
@@ -470,6 +474,8 @@ auto Generator::pop(const char *reg) -> void {
 
 auto Generator::expr_proxy(Expr *expr) -> void {
   switch (expr->kind) {
+  case ExperKind::zero:
+    return zero_expr(cast<ZeroExpr>(expr));
   case ExperKind::value:
     return value_expr(cast<ValueExpr>(expr));
   case ExperKind::integer:

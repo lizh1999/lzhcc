@@ -18,6 +18,9 @@ private:
   auto store_record(RecordType *type) -> void;
   auto load(Type *type) -> void;
   auto load_integer(IntegerType *type) -> void;
+
+
+  auto zero_expr(ZeroExpr *expr) -> void;
   auto value_expr(ValueExpr *expr) -> void;
   auto integer_expr(IntegerExpr *expr) -> void;
 

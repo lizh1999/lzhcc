@@ -57,6 +57,11 @@ int main() {
   ASSERT(5, ({ typedef struct { int a, b, c, d, e, f; } T; T x = {1, 2, 3, 4, 5, 6}; T y; y = x; y.e; }));
   ASSERT(2, ({ typedef struct { int a, b; } T; T x = {1, 2}; T y, z; z = y = x; z.b; }));
 
+  ASSERT(4, ({ union { int a; char b[4]; } x = {0x01020304}; x.b[0]; }));
+  ASSERT(3, ({ union { int a; char b[4]; } x = {0x01020304}; x.b[1]; }));
+
+  ASSERT(0x01020304, ({ union { struct { char a, b, c, d; } e; int f; } x = {{4, 3, 2, 1}}; x.f; }));
+
   printf("OK\n");
   return 0;
 }

@@ -1,5 +1,4 @@
 #include "lzhcc_parse.h"
-#include <charconv>
 
 namespace lzhcc {
 
@@ -159,18 +158,35 @@ auto Parser::switch_stmt() -> Stmt * {
 }
 
 auto Parser::case_stmt() -> Stmt * {
-  consume(TokenKind::kw_case);
-  auto token = consume(TokenKind::numeric);
-  consume(TokenKind::colon);
-  auto literal = context_->storage(token->inner);
-  int64_t value;
-  std::from_chars(literal.begin(), literal.end(), value);
-  auto stmt = statement();
-  auto label_name = unique_name().first;
-  auto case_label = context_->create_label(label_name);
-  auto case_stmt = context_->case_stmt(stmt, value, case_label);
-  switchs_.top()->case_lables.push_back(case_stmt);
-  return case_stmt;
+  auto token = consume(TokenKind::kw_case);
+  if (int64_t value; !const_int(&value)) {
+    context_->fatal(token->location, "");
+  } else {
+    consume(TokenKind::colon);
+    auto stmt = statement();
+    auto label_name = unique_name().first;
+    auto case_label = context_->create_label(label_name);
+    auto current_switch = switchs_.top();
+    if (current_switch->expr->type->kind == TypeKind::integer) {
+      switch (cast<IntegerType>(current_switch->expr->type)->kind) {
+      case IntegerKind::byte:
+        value = static_cast<int8_t>(value);
+        break;
+      case IntegerKind::half:
+        value = static_cast<int16_t>(value);
+        break;
+      case IntegerKind::word:
+        value = static_cast<int32_t>(value);
+        break;
+      case IntegerKind::dword:
+        value = static_cast<int64_t>(value);
+        break;
+      }
+    }
+    auto case_stmt = context_->case_stmt(stmt, value, case_label);
+    current_switch->case_lables.push_back(case_stmt);
+    return case_stmt;
+  }
 }
 
 auto Parser::default_stmt() -> Stmt * {

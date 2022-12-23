@@ -1,6 +1,5 @@
 #include "lzhcc_parse.h"
 #include <cassert>
-#include <charconv>
 
 namespace lzhcc {
 
@@ -23,10 +22,12 @@ auto Parser::enum_spec() -> Type * {
     }
     is_first = false;
     auto ident = consume(TokenKind::identifier);
-    if (consume_if(TokenKind::equal)) {
-      auto token = consume(TokenKind::numeric);
-      auto text = context_->storage(token->inner);
-      std::from_chars(text.begin(), text.end(), value);
+    if (auto token = consume_if(TokenKind::equal)) {
+      if (int64_t tmp; !const_int(&tmp)) {
+        context_->fatal(token->location, "");
+      } else {
+        value = static_cast<int>(tmp);
+      }
     }
     create_enum(ident, value++);
   }
@@ -272,22 +273,16 @@ auto Parser::pointers(Type *base) -> Type * {
 
 auto Parser::array_dimensions(Type *base) -> Type * {
   auto open = consume(TokenKind::open_bracket);
-  switch (next_kind()) {
-  case TokenKind::close_bracket:
-    consume();
+  if (consume_if(TokenKind::close_bracket)) {
     base = suffix_type(base, nullptr);
     return context_->array_of(base, -1);
-  case TokenKind::numeric: {
-    auto token = consume();
-    auto text = context_->storage(token->inner);
-    int length;
-    std::from_chars(text.begin(), text.end(), length);
+  } else if (int64_t tmp; !const_int(&tmp)) {
+    context_->fatal(open->location, "");
+  } else {
+    int length = static_cast<int>(tmp);
     consume(TokenKind::close_bracket);
     base = suffix_type(base, nullptr);
     return context_->array_of(base, length);
-  }
-  default:
-    context_->fatal(open->location, "");
   }
 }
 

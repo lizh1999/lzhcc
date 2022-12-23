@@ -74,6 +74,8 @@ private:
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 
+  auto const_int(int64_t *value) -> bool;
+
   using LowFn = Expr *(Context *, Expr *, Expr *, int);
   auto assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr *;
 

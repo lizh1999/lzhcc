@@ -418,6 +418,10 @@ auto Context::array_init(std::vector<Init *> children) -> Init * {
   return create<ArrayInit>(std::move(children));
 }
 
+auto Context::record_init(RecordInit::Children children) -> Init * {
+  return create<RecordInit>(std::move(children));
+}
+
 auto Context::scalar_init(Expr *expr) -> Init * {
   return create<ScalarInit>(expr);
 }

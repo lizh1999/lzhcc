@@ -89,7 +89,7 @@ auto Parser::struct_decl(RecordType *type) -> void {
   consume(TokenKind::open_brace);
   int offset = 0;
   int align_bytes = 1;
-  std::unordered_map<int, Member> member_map;
+  std::vector<Member> members;
   while (!consume_if(TokenKind::close_brace)) {
     auto base = declspec();
     bool is_first = true;
@@ -102,13 +102,13 @@ auto Parser::struct_decl(RecordType *type) -> void {
       int size = context_->size_of(type);
       int align = context_->align_of(type);
       offset = align_to(offset, align);
-      member_map.emplace(name->inner, Member{type, offset});
+      members.push_back(Member{type, name->inner, offset});
       offset += size;
       align_bytes = std::max(align_bytes, align);
     }
   }
   int size_bytes = align_to(offset, align_bytes);
-  type->member_map = std::move(member_map);
+  type->members = std::move(members);
   type->size_bytes = size_bytes;
   type->align_bytes = align_bytes;
 }
@@ -117,7 +117,7 @@ auto Parser::union_decl(RecordType *type) -> void {
   consume(TokenKind::open_brace);
   int size_bytes = 0;
   int align_bytes = 1;
-  std::unordered_map<int, Member> member_map;
+  std::vector<Member> members;
   while (!consume_if(TokenKind::close_brace)) {
     auto base = declspec();
     bool is_first = true;
@@ -129,12 +129,12 @@ auto Parser::union_decl(RecordType *type) -> void {
       auto [name, type] = declarator(base);
       int size = context_->size_of(type);
       int align = context_->align_of(type);
-      member_map.emplace(name->inner, Member{type, 0});
+      members.push_back(Member{type, name->inner, 0});
       size_bytes = std::max(size_bytes, size);
       align_bytes = std::max(align_bytes, align);
     }
   }
-  type->member_map = std::move(member_map);
+  type->members = std::move(members);
   type->size_bytes = align_to(size_bytes, align_bytes);
   type->align_bytes = align_bytes;
 }

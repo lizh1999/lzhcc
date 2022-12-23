@@ -69,6 +69,23 @@ auto Parser::array_init(ArrayType *array) -> Init * {
   }
 }
 
+auto Parser::record_init(RecordType *record) -> Init * {
+  RecordInit::Children children;
+  consume(TokenKind::open_brace);
+  for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
+    if (i == record->members.size()) {
+      context_->fatal(position_->location, "");
+    }
+    auto init = this->init(record->members[i].type);
+    children.emplace_back(&record->members[i], init);
+    if (!consume_if(TokenKind::comma)) {
+      consume(TokenKind::close_brace);
+      break;
+    }
+  }
+  return context_->record_init(std::move(children));
+}
+
 auto Parser::init(Type *type) -> Init * {
   switch (type->kind) {
   case TypeKind::array:
@@ -79,6 +96,7 @@ auto Parser::init(Type *type) -> Init * {
   case TypeKind::function:
     return scalar_init();
   case TypeKind::record:
+    return record_init(cast<RecordType>(type));
   case TypeKind::kw_void:
     assert(false);
   }
@@ -105,12 +123,29 @@ auto Parser::init_array(Expr *expr, ArrayInit *init, int loc) -> Expr * {
   return result;
 }
 
+auto Parser::init_record(Expr *expr, RecordInit *init, int loc) -> Expr * {
+  Expr *result = nullptr;
+  auto &children = init->children;
+  for (auto [member, init] : init->children) {
+    auto base = context_->member(member->type, expr, member->offset);
+    auto rhs = this->init(base, init, loc);
+    if (!result) {
+      result = rhs;
+    } else if (rhs) {
+      result = context_->comma(rhs->type, result, rhs);
+    }
+  }
+  return result;
+}
+
 auto Parser::init(Expr *expr, Init *init, int loc) -> Expr * {
   switch (init->kind) {
   case InitKind::array:
     return init_array(expr, cast<ArrayInit>(init), loc);
   case InitKind::scalar:
     return init_scalar(expr, cast<ScalarInit>(init), loc);
+  case InitKind::record:
+    return init_record(expr, cast<RecordInit>(init), loc);
   }
 }
 
@@ -823,11 +858,16 @@ auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {
     context->fatal(loc, "");
   }
   auto record = cast<RecordType>(lhs->type);
-  auto it = record->member_map.find(rhs);
-  if (it == record->member_map.end()) {
+  size_t i = 0;
+  for (; i < record->members.size(); i++) {
+    if (record->members[i].name == rhs) {
+      break;
+    }
+  }
+  if (i == record->members.size()) {
     context->fatal(loc, "");
   }
-  auto &member = it->second;
+  auto &member = record->members[i];
   return context->member(member.type, lhs, member.offset);
 }
 

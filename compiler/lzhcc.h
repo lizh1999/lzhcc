@@ -178,20 +178,20 @@ struct ArrayType : Type {
 
 struct Member {
   Type *type;
+  int name;
   int offset;
 };
 
 struct RecordType : Type {
-  RecordType(std::unordered_map<int, Member> member_map, int size_bytes,
-             int align_bytes)
-      : Type(TypeKind::record), member_map(std::move(member_map)),
+  RecordType(std::vector<Member> members, int size_bytes, int align_bytes)
+      : Type(TypeKind::record), members(std::move(members)),
         size_bytes(size_bytes), align_bytes(align_bytes) {}
   static auto dummy() -> RecordType { return RecordType({}, -1, -1); }
   auto is_dummy() -> bool {
-    return member_map.empty() && size_bytes == -1 && align_bytes == -1;
+    return members.empty() && size_bytes == -1 && align_bytes == -1;
   }
 
-  std::unordered_map<int, Member> member_map;
+  std::vector<Member> members;
   int size_bytes;
   int align_bytes;
 };
@@ -457,6 +457,7 @@ struct DefaultStmt : Stmt {
 
 enum class InitKind {
   array,
+  record,
   scalar,
 };
 
@@ -469,6 +470,13 @@ struct ArrayInit : Init {
   ArrayInit(std::vector<Init *> children)
       : Init(InitKind::array), children(std::move(children)) {}
   std::vector<Init *> children;
+};
+
+struct RecordInit : Init {
+  using Children = std::vector<std::pair<Member *, Init *>>;
+  RecordInit(Children children)
+      : Init(InitKind::record), children(std::move(children)) {}
+  Children children;
 };
 
 struct ScalarInit : Init {
@@ -591,6 +599,7 @@ public:
 
   // init
   auto array_init(std::vector<Init *> children) -> Init *;
+  auto record_init(RecordInit::Children children) -> Init *;
   auto scalar_init(Expr *expr) -> Init *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);

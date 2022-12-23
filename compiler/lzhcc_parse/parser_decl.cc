@@ -396,13 +396,24 @@ auto Parser::declaration() -> Stmt * {
     }
     is_first = false;
     auto [name, type] = declarator(base);
-    auto var = create_local(name, type);
+    auto value = create_local(name, type);
     if (auto token = consume_if(TokenKind::equal)) {
-      auto lhs = context_->value(var);
-      int64_t size_bytes = context_->size_of(var->type);
+      auto lhs = context_->value(value);
+
+      auto rhs = init(value->type);
+      if (value->type->kind == TypeKind::array) {
+        auto array_type = cast<ArrayType>(value->type);
+        auto array_init = cast<ArrayInit>(rhs);
+        if (array_type->length == -1) {
+          int length = array_init->children.size();
+          value->type = context_->array_of(array_type->base, length);
+        }
+      }
+
+      int64_t size_bytes = context_->size_of(value->type);
       auto zero_expr = context_->zero(lhs, size_bytes);
       stmts.push_back(context_->expr_stmt(zero_expr));
-      auto rhs = init(var->type);
+
       if (auto expr = init(lhs, rhs, token->location)) {
         stmts.push_back(context_->expr_stmt(expr));
       }

@@ -20,6 +20,7 @@ static auto low_shift_right_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_and_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_xor_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_or_op(Context *, Expr *, Expr *, int) -> Expr *;
+static auto low_assign_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_member_op(Context *, Expr *, int, int) -> Expr *;
 
 auto Parser::scalar_init() -> Init * {
@@ -37,7 +38,10 @@ auto Parser::array_init(ArrayType *array) -> Init * {
       context_->fatal(position_->location, "");
     }
     auto str = cook_string();
-    int n = std::min<int>(str.size(), array->length);
+    int n = str.size();
+    if (array->length != -1 && array->length < n) {
+      n = array->length;
+    }
     for (int i = 0; i < n; i++) {
       auto expr = context_->integer(str[i]);
       auto init = context_->scalar_init(expr);
@@ -45,11 +49,12 @@ auto Parser::array_init(ArrayType *array) -> Init * {
     }
     return context_->array_init(std::move(children));
   }
-  case TokenKind::open_brace:
+  case TokenKind::open_brace: {
     consume();
+    int length = array->length == -1 ? INT_MAX : array->length;
     for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
       auto init = this->init(array->base);
-      if (children.size() < array->length) {
+      if (children.size() < length) {
         children.push_back(init);
       }
       if (!consume_if(TokenKind::comma)) {
@@ -58,6 +63,7 @@ auto Parser::array_init(ArrayType *array) -> Init * {
       }
     }
     return context_->array_init(std::move(children));
+  }
   default:
     context_->fatal(position_->location, "");
   }

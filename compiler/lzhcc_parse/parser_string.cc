@@ -51,7 +51,7 @@ static auto from_escape(const char *&ptr) -> char {
 #undef case_return
 }
 
-auto Parser::string() -> Expr * {
+auto Parser::cook_string() -> std::string {
   auto token = consume(TokenKind::string);
   auto raw = context_->storage(token->inner);
   assert(raw.front() == '"' && raw.back() == '"');
@@ -65,6 +65,11 @@ auto Parser::string() -> Expr * {
     }
   }
   init.push_back('\0');
+  return init;
+}
+
+auto Parser::string() -> Expr * {
+  auto init = cook_string();
   auto type = context_->array_of(context_->int8(), init.size());
   int index = context_->push_literal(std::move(init));
   auto init_view = context_->storage(index);

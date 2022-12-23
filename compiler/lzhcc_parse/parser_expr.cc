@@ -29,18 +29,38 @@ auto Parser::scalar_init() -> Init * {
 
 auto Parser::array_init(ArrayType *array) -> Init * {
   std::vector<Init *> children;
-  consume(TokenKind::open_brace);
-  for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
-    auto init = this->init(array->base);
-    if (children.size() < array->length) {
+  switch (next_kind()) {
+  case TokenKind::string: {
+    auto base = array->base;
+    if (base->kind != TypeKind::integer ||
+        cast<IntegerType>(base)->kind != IntegerKind::byte) {
+      context_->fatal(position_->location, "");
+    }
+    auto str = cook_string();
+    int n = std::min<int>(str.size(), array->length);
+    for (int i = 0; i < n; i++) {
+      auto expr = context_->integer(str[i]);
+      auto init = context_->scalar_init(expr);
       children.push_back(init);
     }
-    if (!consume_if(TokenKind::comma)) {
-      consume(TokenKind::close_brace);
-      break;
-    }
+    return context_->array_init(std::move(children));
   }
-  return context_->array_init(std::move(children));
+  case TokenKind::open_brace:
+    consume();
+    for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
+      auto init = this->init(array->base);
+      if (children.size() < array->length) {
+        children.push_back(init);
+      }
+      if (!consume_if(TokenKind::comma)) {
+        consume(TokenKind::close_brace);
+        break;
+      }
+    }
+    return context_->array_init(std::move(children));
+  default:
+    context_->fatal(position_->location, "");
+  }
 }
 
 auto Parser::init(Type *type) -> Init * {
@@ -67,7 +87,8 @@ auto Parser::init_array(Expr *expr, ArrayInit *init, int loc) -> Expr * {
   auto &children = init->children;
   for (int64_t i = 0; i < children.size(); i++) {
     auto index = context_->integer(i);
-    auto base = low_deref_op(context_, low_add_op(context_, expr, index, loc), loc) ;
+    auto base =
+        low_deref_op(context_, low_add_op(context_, expr, index, loc), loc);
     auto rhs = this->init(base, children[i], loc);
     if (!result) {
       result = rhs;

@@ -60,6 +60,7 @@ private:
   auto init(Expr *value, Init *init, int loc) -> Expr *;
 
   auto integer() -> Expr *;
+  auto cook_string() -> std::string;
   auto string() -> Expr *;
   auto character() -> Expr *;
   auto call(Token *name) -> Expr *;

@@ -410,6 +410,14 @@ auto Context::default_stmt(Stmt *stmt, Label *label) -> Stmt * {
   return create<DefaultStmt>(stmt, label);
 }
 
+auto Context::array_init(std::vector<Init *> children) -> Init * {
+  return create<ArrayInit>(std::move(children));
+}
+
+auto Context::scalar_init(Expr *expr) -> Init * {
+  return create<ScalarInit>(expr);
+}
+
 auto Context::fatal(int loc, const char *fmt, ...) -> void {
   int file_id = 0;
   while (file_id < text_.size() && text_[file_id].size() <= loc) {

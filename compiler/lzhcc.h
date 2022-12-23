@@ -447,6 +447,27 @@ struct DefaultStmt : Stmt {
   Label *label;
 };
 
+enum class InitKind {
+  array,
+  scalar,
+};
+
+struct Init {
+  Init(InitKind kind) : kind(kind) {}
+  const InitKind kind;
+};
+
+struct ArrayInit : Init {
+  ArrayInit(std::vector<Init *> children)
+      : Init(InitKind::array), children(std::move(children)) {}
+  std::vector<Init *> children;
+};
+
+struct ScalarInit : Init {
+  ScalarInit(Expr *expr) : Init(InitKind::scalar), expr(expr) {}
+  Expr *expr;
+};
+
 template <class T, class U> auto cast(U *origin) -> T * {
   return reinterpret_cast<T *>(origin);
 }
@@ -558,6 +579,10 @@ public:
   auto switch_stmt(Expr *expr, Label *break_label) -> SwitchStmt *;
   auto case_stmt(Stmt *stmt, int64_t value, Label *label) -> CaseStmt *;
   auto default_stmt(Stmt *stmt, Label *label) -> Stmt *;
+
+  // init
+  auto array_init(std::vector<Init *> children) -> Init *;
+  auto scalar_init(Expr *expr) -> Init *;
 
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 

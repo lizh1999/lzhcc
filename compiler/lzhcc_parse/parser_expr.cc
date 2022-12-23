@@ -22,6 +22,69 @@ static auto low_bitwise_xor_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_bitwise_or_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_member_op(Context *, Expr *, int, int) -> Expr *;
 
+auto Parser::scalar_init() -> Init * {
+  auto expr = assignment();
+  return context_->scalar_init(expr);
+}
+
+auto Parser::array_init(ArrayType *array) -> Init * {
+  std::vector<Init *> children;
+  consume(TokenKind::open_brace);
+  for (int i = 0; i < array->length; i++) {
+    if (i != 0) {
+      consume(TokenKind::comma);
+    }
+    children.push_back(init(array->base));
+  }
+  consume_if(TokenKind::comma);
+  consume(TokenKind::close_brace);
+  return context_->array_init(std::move(children));
+}
+
+auto Parser::init(Type *type) -> Init * {
+  switch (type->kind) {
+  case TypeKind::array:
+    return array_init(cast<ArrayType>(type));
+  case TypeKind::boolean:
+  case TypeKind::integer:
+  case TypeKind::pointer:
+  case TypeKind::function:
+    return scalar_init();
+  case TypeKind::record:
+  case TypeKind::kw_void:
+    assert(false);
+  }
+}
+
+auto Parser::init_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr * {
+  return low_assign_op(context_, expr, init->expr, loc);
+}
+
+auto Parser::init_array(Expr *expr, ArrayInit *init, int loc) -> Expr * {
+  Expr *result = nullptr;
+  auto &children = init->children;
+  for (int64_t i = 0; i < children.size(); i++) {
+    auto index = context_->integer(i);
+    auto base = low_deref_op(context_, low_add_op(context_, expr, index, loc), loc) ;
+    auto rhs = this->init(base, children[i], loc);
+    if (!result) {
+      result = rhs;
+    } else if (rhs) {
+      result = context_->comma(rhs->type, result, rhs);
+    }
+  }
+  return result;
+}
+
+auto Parser::init(Expr *expr, Init *init, int loc) -> Expr * {
+  switch (init->kind) {
+  case InitKind::array:
+    return init_array(expr, cast<ArrayInit>(init), loc);
+  case InitKind::scalar:
+    return init_scalar(expr, cast<ScalarInit>(init), loc);
+  }
+}
+
 auto Parser::call(Token *token) -> Expr * {
   auto name = context_->storage(token->inner);
   consume(TokenKind::open_paren);

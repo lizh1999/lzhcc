@@ -397,11 +397,12 @@ auto Parser::declaration() -> Stmt * {
     is_first = false;
     auto [name, type] = declarator(base);
     auto var = create_local(name, type);
-    if (consume_if(TokenKind::equal)) {
+    if (auto token = consume_if(TokenKind::equal)) {
       auto lhs = context_->value(var);
-      auto rhs = assignment();
-      auto expr = low_assign_op(context_, lhs, rhs, name->location);
-      stmts.push_back(context_->expr_stmt(expr));
+      auto rhs = init(var->type);
+      if (auto expr = init(lhs, rhs, token->location)) {
+        stmts.push_back(context_->expr_stmt(expr));
+      }
     }
   }
   return context_->block_stmt(std::move(stmts));

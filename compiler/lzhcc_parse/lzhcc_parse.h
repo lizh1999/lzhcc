@@ -51,6 +51,14 @@ public:
   auto operator()() -> Module;
 
 private:
+  auto scalar_init() -> Init *;
+  auto array_init(ArrayType *array) -> Init *;
+  auto init(Type *type) -> Init *;
+
+  auto init_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr *;
+  auto init_array(Expr *expr, ArrayInit *init, int loc) -> Expr *;
+  auto init(Expr *value, Init *init, int loc) -> Expr *;
+
   auto integer() -> Expr *;
   auto string() -> Expr *;
   auto character() -> Expr *;

@@ -414,8 +414,8 @@ auto Context::default_stmt(Stmt *stmt, Label *label) -> Stmt * {
   return create<DefaultStmt>(stmt, label);
 }
 
-auto Context::array_init(std::vector<Init *> children) -> Init * {
-  return create<ArrayInit>(std::move(children));
+auto Context::array_init(std::vector<Init *> children, Type *base) -> Init * {
+  return create<ArrayInit>(std::move(children), base);
 }
 
 auto Context::record_init(RecordInit::Children children) -> Init * {

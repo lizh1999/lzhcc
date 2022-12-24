@@ -467,9 +467,10 @@ struct Init {
 };
 
 struct ArrayInit : Init {
-  ArrayInit(std::vector<Init *> children)
-      : Init(InitKind::array), children(std::move(children)) {}
+  ArrayInit(std::vector<Init *> children, Type *base)
+      : Init(InitKind::array), children(std::move(children)), base(base) {}
   std::vector<Init *> children;
+  Type *base;
 };
 
 struct RecordInit : Init {
@@ -598,7 +599,7 @@ public:
   auto default_stmt(Stmt *stmt, Label *label) -> Stmt *;
 
   // init
-  auto array_init(std::vector<Init *> children) -> Init *;
+  auto array_init(std::vector<Init *> children, Type *base) -> Init *;
   auto record_init(RecordInit::Children children) -> Init *;
   auto scalar_init(Expr *expr) -> Init *;
 

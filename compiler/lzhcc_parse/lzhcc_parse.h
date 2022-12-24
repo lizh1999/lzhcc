@@ -54,10 +54,18 @@ private:
   auto record_init(RecordType *record) -> Init *;
   auto init(Type *type) -> Init *;
 
-  auto init_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr *;
-  auto init_array(Expr *expr, ArrayInit *init, int loc) -> Expr *;
-  auto init_record(Expr *expr, RecordInit *init, int loc) -> Expr *;
-  auto init(Expr *value, Init *init, int loc) -> Expr *;
+  auto init_local_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr *;
+  auto init_local_array(Expr *expr, ArrayInit *init, int loc) -> Expr *;
+  auto init_local_record(Expr *expr, RecordInit *init, int loc) -> Expr *;
+  auto init_local(Expr *value, Init *init, int loc) -> Expr *;
+
+  auto init_global_scalar(ScalarInit *init, std::span<uint8_t> out, int loc)
+      -> void;
+  auto init_global_array(ArrayInit *init, std::span<uint8_t> out, int loc)
+      -> void;
+  auto init_global_record(RecordInit *init, std::span<uint8_t> out, int loc)
+      -> void;
+  auto init_global(Init *init, std::span<uint8_t> out, int loc) -> void;
 
   auto integer() -> Expr *;
   auto cook_string() -> std::string;
@@ -84,6 +92,7 @@ private:
   auto expression() -> Expr *;
 
   auto const_int(int64_t *value) -> bool;
+  auto const_int(Expr *expr, int64_t *value) -> bool;
 
   using LowFn = Expr *(Context *, Expr *, Expr *, int);
   auto assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr *;

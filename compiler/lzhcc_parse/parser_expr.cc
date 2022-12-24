@@ -47,7 +47,7 @@ auto Parser::array_init(ArrayType *array) -> Init * {
       auto init = context_->scalar_init(expr);
       children.push_back(init);
     }
-    return context_->array_init(std::move(children));
+    return context_->array_init(std::move(children), base);
   }
   case TokenKind::open_brace: {
     consume();
@@ -62,7 +62,7 @@ auto Parser::array_init(ArrayType *array) -> Init * {
         break;
       }
     }
-    return context_->array_init(std::move(children));
+    return context_->array_init(std::move(children), array->base);
   }
   default:
     context_->fatal(position_->location, "");
@@ -102,18 +102,19 @@ auto Parser::init(Type *type) -> Init * {
   }
 }
 
-auto Parser::init_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr * {
+auto Parser::init_local_scalar(Expr *expr, ScalarInit *init, int loc)
+    -> Expr * {
   return low_assign_op(context_, expr, init->expr, loc);
 }
 
-auto Parser::init_array(Expr *expr, ArrayInit *init, int loc) -> Expr * {
+auto Parser::init_local_array(Expr *expr, ArrayInit *init, int loc) -> Expr * {
   Expr *result = nullptr;
   auto &children = init->children;
   for (int64_t i = 0; i < children.size(); i++) {
     auto index = context_->integer(i);
     auto base =
         low_deref_op(context_, low_add_op(context_, expr, index, loc), loc);
-    auto rhs = this->init(base, children[i], loc);
+    auto rhs = this->init_local(base, children[i], loc);
     if (!result) {
       result = rhs;
     } else if (rhs) {
@@ -123,12 +124,13 @@ auto Parser::init_array(Expr *expr, ArrayInit *init, int loc) -> Expr * {
   return result;
 }
 
-auto Parser::init_record(Expr *expr, RecordInit *init, int loc) -> Expr * {
+auto Parser::init_local_record(Expr *expr, RecordInit *init, int loc)
+    -> Expr * {
   Expr *result = nullptr;
   auto &children = init->children;
   for (auto [member, init] : init->children) {
     auto base = context_->member(member->type, expr, member->offset);
-    auto rhs = this->init(base, init, loc);
+    auto rhs = this->init_local(base, init, loc);
     if (!result) {
       result = rhs;
     } else if (rhs) {
@@ -138,14 +140,68 @@ auto Parser::init_record(Expr *expr, RecordInit *init, int loc) -> Expr * {
   return result;
 }
 
-auto Parser::init(Expr *expr, Init *init, int loc) -> Expr * {
+auto Parser::init_local(Expr *expr, Init *init, int loc) -> Expr * {
   switch (init->kind) {
   case InitKind::array:
-    return init_array(expr, cast<ArrayInit>(init), loc);
+    return init_local_array(expr, cast<ArrayInit>(init), loc);
   case InitKind::scalar:
-    return init_scalar(expr, cast<ScalarInit>(init), loc);
+    return init_local_scalar(expr, cast<ScalarInit>(init), loc);
   case InitKind::record:
-    return init_record(expr, cast<RecordInit>(init), loc);
+    return init_local_record(expr, cast<RecordInit>(init), loc);
+  }
+}
+
+auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
+                                int loc) -> void {
+  int64_t value;
+  if (!const_int(init->expr, &value)) {
+    context_->fatal(loc, "");
+  }
+  auto write = [&](auto value) mutable {
+    using T = decltype(value);
+    *reinterpret_cast<T *>(&out[0]) = value;
+  };
+  switch (out.size()) {
+  case 1:
+    return write(static_cast<uint8_t>(value));
+  case 2:
+    return write(static_cast<uint16_t>(value));
+  case 4:
+    return write(static_cast<uint32_t>(value));
+  case 8:
+    return write(static_cast<uint64_t>(value));
+  default:
+    assert(false);
+  }
+}
+
+auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out,
+                                int loc) -> void {
+  auto &children = init->children;
+  for (auto [member, init] : init->children) {
+    int start = member->offset;
+    int count = context_->size_of(member->type);
+    init_global(init, out.subspan(start, count), loc);
+  }
+}
+
+auto Parser::init_global_array(ArrayInit *init, std::span<uint8_t> out, int loc)
+    -> void {
+  auto &children = init->children;
+  int size = context_->size_of(init->base);
+  for (int i = 0; i < children.size(); i++) {
+    init_global(children[i], out.subspan(i * size, size), loc);
+  }
+}
+
+auto Parser::init_global(Init *init, std::span<uint8_t> out, int loc) -> void {
+  switch (init->kind) {
+  case InitKind::array:
+    return init_global_array(cast<ArrayInit>(init), out, loc);
+  case InitKind::scalar:
+    return init_global_scalar(cast<ScalarInit>(init), out, loc);
+  case InitKind::record:
+    return init_global_record(cast<RecordInit>(init), out, loc);
   }
 }
 

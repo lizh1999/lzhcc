@@ -414,7 +414,7 @@ auto Parser::declaration() -> Stmt * {
       auto zero_expr = context_->zero(lhs, size_bytes);
       stmts.push_back(context_->expr_stmt(zero_expr));
 
-      if (auto expr = init(lhs, rhs, token->location)) {
+      if (auto expr = init_local(lhs, rhs, token->location)) {
         stmts.push_back(context_->expr_stmt(expr));
       }
     }
@@ -423,14 +423,40 @@ auto Parser::declaration() -> Stmt * {
 }
 
 auto Parser::global(Token *name, Type *base, Type *type) -> void {
-  create_global(name, type);
+  if (name->kind != TokenKind::identifier) {
+    return;
+  }
   while (true) {
-    if (consume_if(TokenKind::comma)) {
-      std::tie(name, type) = declarator(base);
-      create_global(name, type);
-    } else {
+    uint8_t *init_data = 0;
+    if (auto token = consume_if(TokenKind::equal)) {
+      auto init = this->init(type);
+
+      if (type->kind == TypeKind::array) {
+        auto array_type = cast<ArrayType>(type);
+        auto array_init = cast<ArrayInit>(init);
+        if (array_type->length == -1) {
+          int length = array_init->children.size();
+          type = context_->array_of(array_type->base, length);
+        }
+      }
+
+      std::string buffer;
+      buffer.resize(context_->size_of(type));
+      auto data = (uint8_t *) &buffer[0];
+      init_global(init, {data, buffer.size()}, token->location);
+
+      auto index = context_->push_literal(std::move(buffer));
+      auto view = context_->storage(index);
+      init_data = (uint8_t *) &view[0];
+    }
+    create_global(name, type, init_data);
+    if (!consume_if(TokenKind::comma)) {
       consume(TokenKind::semi);
       break;
+    } else if (consume_if(TokenKind::semi)) {
+      break;
+    } else {
+      std::tie(name, type) = declarator(base);
     }
   }
 }

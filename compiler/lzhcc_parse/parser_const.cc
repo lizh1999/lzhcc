@@ -12,6 +12,10 @@ auto Parser::const_int(int64_t *value) -> bool {
   return lzhcc::const_int(value, expr);
 }
 
+auto Parser::const_int(Expr *expr, int64_t *value) -> bool {
+  return lzhcc::const_int(value, expr);
+}
+
 auto const_int(int64_t *value, Expr *expr) -> bool {
   switch (expr->kind) {
   case ExperKind::integer:

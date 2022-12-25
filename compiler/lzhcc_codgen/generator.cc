@@ -29,8 +29,17 @@ auto Generator::codegen(GValue *gvalue) -> void {
   } else {
     println("  .globl %.*s", (int)name.size(), name.data());
     println("%.*s:", (int)name.size(), name.data());
-    for (int i = 0; i < size; i++) {
-      println("  .byte %d", (int)gvalue->init[i]);
+
+    auto &rel = gvalue->relocations;
+    for (int i = 0, j = 0; i < size;) {
+      if (j < rel.size() && rel[j].index == i) {
+        auto name = rel[j].name;
+        println("  .dword %.*s + %ld", (int)name.size(), name.data(), rel[j].offset);
+        i += 8;
+        j++;
+      } else {
+        println("  .byte %d", (int)gvalue->init[i++]);
+      }
     }
   }
 }

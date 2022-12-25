@@ -215,11 +215,20 @@ struct LValue : Value {
   int offset;
 };
 
+struct Relocation {
+  int64_t index;
+  std::string_view name;
+  int64_t offset;
+};
+
 struct GValue : Value {
-  GValue(Type *type, std::string_view name, uint8_t *init)
-      : Value(ValueKind::global, type), name(name), init(init) {}
+  GValue(Type *type, std::string_view name, uint8_t *init,
+         std::vector<Relocation> relocations)
+      : Value(ValueKind::global, type), name(name), init(init),
+        relocations(std::move(relocations)) {}
   std::string_view name;
   uint8_t *init;
+  std::vector<Relocation> relocations;
 };
 
 enum class Linkage {
@@ -537,8 +546,8 @@ public:
   // value
   auto create_declaration(Type *type, std::string_view name) -> Declaration *;
   auto create_local(Type *type, int offset) -> LValue *;
-  auto create_global(Type *type, std::string_view name, uint8_t *init)
-      -> GValue *;
+  auto create_global(Type *type, std::string_view name, uint8_t *init,
+                     std::vector<Relocation> relocations) -> GValue *;
   auto create_function(Type *type, std::string_view name, int stack_size,
                        Stmt *stmt, std::vector<LValue *> params,
                        Linkage linkage) -> Function *;

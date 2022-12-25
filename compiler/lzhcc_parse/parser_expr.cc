@@ -152,10 +152,17 @@ auto Parser::init_local(Expr *expr, Init *init, int loc) -> Expr * {
 }
 
 auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
-                                int loc) -> void {
+                               std::vector<Relocation> &relocations,  int loc) -> void {
   int64_t value;
-  if (!const_int(init->expr, &value)) {
+  std::string_view *label = nullptr;
+  if (!const_int(init->expr, &value, &label)) {
     context_->fatal(loc, "");
+  }
+  if (label) {
+    assert(out.size() == 8);
+    int64_t index = reinterpret_cast<int64_t>(&out[0]) ;
+    relocations.push_back({index, *label, value});
+    return;
   }
   auto write = [&](auto value) mutable {
     using T = decltype(value);
@@ -175,33 +182,33 @@ auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
   }
 }
 
-auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out,
+auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out, std::vector<Relocation> &relocations,
                                 int loc) -> void {
   auto &children = init->children;
   for (auto [member, init] : init->children) {
     int start = member->offset;
     int count = context_->size_of(member->type);
-    init_global(init, out.subspan(start, count), loc);
+    init_global(init, out.subspan(start, count), relocations, loc);
   }
 }
 
-auto Parser::init_global_array(ArrayInit *init, std::span<uint8_t> out, int loc)
+auto Parser::init_global_array(ArrayInit *init, std::span<uint8_t> out, std::vector<Relocation> &relocations, int loc)
     -> void {
   auto &children = init->children;
   int size = context_->size_of(init->base);
   for (int i = 0; i < children.size(); i++) {
-    init_global(children[i], out.subspan(i * size, size), loc);
+    init_global(children[i], out.subspan(i * size, size), relocations, loc);
   }
 }
 
-auto Parser::init_global(Init *init, std::span<uint8_t> out, int loc) -> void {
+auto Parser::init_global(Init *init, std::span<uint8_t> out, std::vector<Relocation> &relocations, int loc) -> void {
   switch (init->kind) {
   case InitKind::array:
-    return init_global_array(cast<ArrayInit>(init), out, loc);
+    return init_global_array(cast<ArrayInit>(init), out, relocations, loc);
   case InitKind::scalar:
-    return init_global_scalar(cast<ScalarInit>(init), out, loc);
+    return init_global_scalar(cast<ScalarInit>(init), out, relocations, loc);
   case InitKind::record:
-    return init_global_record(cast<RecordInit>(init), out, loc);
+    return init_global_record(cast<RecordInit>(init), out, relocations, loc);
   }
 }
 
@@ -836,6 +843,7 @@ auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
     auto [l, r, t] = convert(context, lhs, rhs, loc);
     return context->subtract(t, l, r);
   }
+  case pattern(TypeKind::array, TypeKind::integer):
   case pattern(TypeKind::pointer, TypeKind::integer): {
     auto ptr = cast<PointerType>(lhs->type);
     int64_t size_bytes = context->size_of(ptr->base);

@@ -59,13 +59,16 @@ private:
   auto init_local_record(Expr *expr, RecordInit *init, int loc) -> Expr *;
   auto init_local(Expr *value, Init *init, int loc) -> Expr *;
 
-  auto init_global_scalar(ScalarInit *init, std::span<uint8_t> out, int loc)
+  auto init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
+                          std::vector<Relocation> &relocations, int loc)
       -> void;
-  auto init_global_array(ArrayInit *init, std::span<uint8_t> out, int loc)
+  auto init_global_array(ArrayInit *init, std::span<uint8_t> out,
+                         std::vector<Relocation> &relocations, int loc) -> void;
+  auto init_global_record(RecordInit *init, std::span<uint8_t> out,
+                          std::vector<Relocation> &relocations, int loc)
       -> void;
-  auto init_global_record(RecordInit *init, std::span<uint8_t> out, int loc)
-      -> void;
-  auto init_global(Init *init, std::span<uint8_t> out, int loc) -> void;
+  auto init_global(Init *init, std::span<uint8_t> out,
+                   std::vector<Relocation> &relocations, int loc) -> void;
 
   auto integer() -> Expr *;
   auto cook_string() -> std::string;
@@ -92,7 +95,7 @@ private:
   auto expression() -> Expr *;
 
   auto const_int(int64_t *value) -> bool;
-  auto const_int(Expr *expr, int64_t *value) -> bool;
+  auto const_int(Expr *expr, int64_t *value, std::string_view **lable) -> bool;
 
   using LowFn = Expr *(Context *, Expr *, Expr *, int);
   auto assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr *;
@@ -147,7 +150,8 @@ private:
   auto create_typedef(Token *token, Type *type) -> void;
   auto create_enum(Token *token, int value) -> void;
   auto create_local(Token *token, Type *type) -> LValue *;
-  auto create_global(Token *token, Type *type, uint8_t *init = 0) -> void;
+  auto create_global(Token *token, Type *type, uint8_t *init = 0,
+                     std::vector<Relocation> relocations = {}) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
                        std::vector<LValue *> params, Linkage linkage) -> void;
   auto create_anon_global(Type *type, uint8_t *init = 0) -> GValue *;

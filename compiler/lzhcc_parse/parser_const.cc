@@ -2,41 +2,75 @@
 
 namespace lzhcc {
 
-static auto const_int(int64_t *value, Expr *expr) -> bool;
-static auto const_unary_int(int64_t *value, UnaryExpr *expr) -> bool;
-static auto const_binary_int(int64_t *value, BinaryExpr *expr) -> bool;
-static auto const_condition_int(int64_t *value, ConditionExpr *expr) -> bool;
+using LabelRef = std::string_view **;
+
+static auto const_addr(Expr *, int64_t *, LabelRef) -> bool;
+
+static auto const_int(Expr *, int64_t *, LabelRef) -> bool;
+static auto const_value_int(ValueExpr *, int64_t *, LabelRef) -> bool;
+static auto const_member_int(MemberExpr *, int64_t *, LabelRef) -> bool;
+static auto const_unary_int(UnaryExpr *, int64_t *, LabelRef) -> bool;
+static auto const_binary_int(BinaryExpr *, int64_t *, LabelRef) -> bool;
+static auto const_condition_int(ConditionExpr *, int64_t *, LabelRef) -> bool;
 
 auto Parser::const_int(int64_t *value) -> bool {
   auto expr = condition();
-  return lzhcc::const_int(value, expr);
+  return lzhcc::const_int(expr, value, nullptr);
 }
 
-auto Parser::const_int(Expr *expr, int64_t *value) -> bool {
-  return lzhcc::const_int(value, expr);
+auto Parser::const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
+  return lzhcc::const_int(expr, value, label);
 }
 
-auto const_int(int64_t *value, Expr *expr) -> bool {
+auto const_int(Expr *expr, int64_t *value,LabelRef label) -> bool {
   switch (expr->kind) {
   case ExperKind::integer:
     *value = cast<IntegerExpr>(expr)->value;
     return true;
   case ExperKind::unary:
-    return const_unary_int(value, cast<UnaryExpr>(expr));
+    return const_unary_int(cast<UnaryExpr>(expr), value, label);
   case ExperKind::binary:
-    return const_binary_int(value, cast<BinaryExpr>(expr));
+    return const_binary_int(cast<BinaryExpr>(expr), value, label);
   case ExperKind::condition:
-    return const_condition_int(value, cast<ConditionExpr>(expr));
-  case ExperKind::zero:
+    return const_condition_int(cast<ConditionExpr>(expr), value, label);
   case ExperKind::value:
+    return const_value_int(cast<ValueExpr>(expr), value, label);
+  case ExperKind::member:
+    return const_member_int(cast<MemberExpr>(expr), value, label);
+  case ExperKind::zero:
   case ExperKind::call:
   case ExperKind::stmt:
-  case ExperKind::member:
     return false;
   }
 }
 
-auto const_cast_int(int64_t *value, Type *type) -> bool {
+auto const_value_int(ValueExpr *expr, int64_t *offset, LabelRef label) -> bool {
+  auto value = expr->value;
+  if (value->kind != ValueKind::global) {
+    return false;
+  }
+  auto type_kind = value->type->kind;
+  if (!label || type_kind != TypeKind::array &&
+      type_kind != TypeKind::function) {
+    return false;
+  }
+  *offset = 0;
+  *label = &cast<GValue>(value)->name;
+  return true;
+}
+
+auto const_member_int(MemberExpr *expr, int64_t *offset, LabelRef label) -> bool {
+  if (!label || expr->type->kind != TypeKind::array) {
+    return false;
+  } else if (const_addr(expr->record, offset, label)) {
+    offset += expr->offset;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+static auto const_cast_int(int64_t *value, Type *type) -> bool {
   if (type->kind == TypeKind::pointer) {
     return true;
   } else if (type->kind != TypeKind::integer) {
@@ -58,35 +92,37 @@ auto const_cast_int(int64_t *value, Type *type) -> bool {
   }
 }
 
-auto const_unary_int(int64_t *value, UnaryExpr *expr) -> bool {
+auto const_unary_int(UnaryExpr *expr, int64_t *value, LabelRef label) -> bool {
   switch (expr->kind) {
   case UnaryKind::negative:
-    const_int(value, expr->operand);
+    const_int(expr->operand, value, nullptr);
     *value = -*value;
     return true;
   case UnaryKind::cast:
-    const_int(value, expr->operand);
+    const_int(expr->operand, value, label);
     return const_cast_int(value, expr->type);
   case UnaryKind::logical_not:
-    const_int(value, expr->operand);
+    const_int(expr->operand, value, nullptr);
     *value = !*value;
     return true;
   case UnaryKind::bitwise_not:
-    const_int(value, expr->operand);
+    const_int(expr->operand, value, nullptr);
     *value = ~*value;
     return true;
   case UnaryKind::refrence:
+    return label ? const_addr(expr->operand, value, label) : false;
   case UnaryKind::deref:
     return false;
   }
 }
 
-auto const_binary_int(int64_t *value, BinaryExpr *expr) -> bool {
-#define eval(op)                                                               \
+auto const_binary_int(BinaryExpr *expr, int64_t *value, LabelRef label)
+    -> bool {
+#define eval(op, x)                                                            \
   ({                                                                           \
     bool success = false;                                                      \
     int64_t lhs, rhs;                                                          \
-    if (const_int(&lhs, expr->lhs) && const_int(&rhs, expr->rhs)) {            \
+    if (const_int(expr->lhs, &lhs, x) && const_int(expr->rhs, &rhs, 0)) {      \
       *value = lhs op rhs;                                                     \
       success = true;                                                          \
     }                                                                          \
@@ -94,51 +130,84 @@ auto const_binary_int(int64_t *value, BinaryExpr *expr) -> bool {
   })
   switch (expr->kind) {
   case BinaryKind::add:
-    return eval(+);
+    return eval(+, label);
   case BinaryKind::subtract:
-    return eval(-);
+    return eval(-, label);
   case BinaryKind::multiply:
-    return eval(*);
+    return eval(*, nullptr);
   case BinaryKind::divide:
-    return eval(/);
+    return eval(/, nullptr);
   case BinaryKind::modulo:
-    return eval(%);
+    return eval(%, nullptr);
   case BinaryKind::less_than:
-    return eval(<);
+    return eval(<, nullptr);
   case BinaryKind::less_equal:
-    return eval(<=);
+    return eval(<=, nullptr);
   case BinaryKind::equal:
-    return eval(==);
+    return eval(==, nullptr);
   case BinaryKind::not_equal:
-    return eval(!=);
+    return eval(!=, nullptr);
   case BinaryKind::bitwise_or:
-    return eval(|);
+    return eval(|, nullptr);
   case BinaryKind::bitwise_xor:
-    return eval(^);
+    return eval(^, nullptr);
   case BinaryKind::bitwise_and:
-    return eval(&);
+    return eval(&, nullptr);
   case BinaryKind::logical_and:
-    return eval(&&);
+    return eval(&&, nullptr);
   case BinaryKind::logical_or:
-    return eval(||);
+    return eval(||, nullptr);
   case BinaryKind::shift_left:
-    return eval(<<);
+    return eval(<<, nullptr);
   case BinaryKind::shift_right:
-    return eval(>>);
+    return eval(>>, nullptr);
   case BinaryKind::comma:
-    return const_int(value, expr->rhs);
+    return const_int(expr->rhs, value, label);
   case BinaryKind::assign:
     return false;
   }
 }
 
-auto const_condition_int(int64_t *value, ConditionExpr *expr) -> bool {
-  if (!const_int(value, expr->cond)) {
+auto const_condition_int(ConditionExpr *expr, int64_t *value, LabelRef label)
+    -> bool {
+  if (!const_int(expr->cond, value, nullptr)) {
     return false;
   } else {
-    return *value ? const_int(value, expr->then)
-                  : const_int(value, expr->else_);
+    return *value ? const_int(expr->then, value, label)
+                  : const_int(expr->else_, value, label);
   }
+}
+
+auto const_addr(Expr *expr, int64_t *offset, LabelRef label) -> bool {
+  if (expr->kind == ExperKind::value) {
+    auto value = cast<ValueExpr>(expr)->value;
+    if (value->kind != ValueKind::global) {
+      return false;
+    }
+    *label = &cast<GValue>(value)->name;
+    *offset = 0;
+    return true;
+  }
+  if (expr->kind == ExperKind::unary) {
+    auto unary = cast<UnaryExpr>(expr);
+    if (unary->kind == UnaryKind::deref) {
+      return const_int(unary->operand, offset, label);
+    } else {
+      return false;
+    }
+  }
+
+  if (expr->kind == ExperKind::member) {
+    auto member = cast<MemberExpr>(expr);
+    if (const_addr(member->record, offset, label)) {
+      *offset += member->offset;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  return false;
 }
 
 } // namespace lzhcc

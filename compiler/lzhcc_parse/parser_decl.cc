@@ -428,6 +428,7 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
   }
   while (true) {
     uint8_t *init_data = 0;
+    std::vector<Relocation> relocations;
     if (auto token = consume_if(TokenKind::equal)) {
       auto init = this->init(type);
 
@@ -443,13 +444,17 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
       std::string buffer;
       buffer.resize(context_->size_of(type));
       auto data = (uint8_t *) &buffer[0];
-      init_global(init, {data, buffer.size()}, token->location);
+      init_global(init, {data, buffer.size()}, relocations, token->location);
+
+      for (auto &rel : relocations) {
+        rel.index = reinterpret_cast<uint8_t *>(rel.index) - data;
+      }
 
       auto index = context_->push_literal(std::move(buffer));
       auto view = context_->storage(index);
       init_data = (uint8_t *) &view[0];
     }
-    create_global(name, type, init_data);
+    create_global(name, type, init_data, std::move(relocations));
     if (!consume_if(TokenKind::comma)) {
       consume(TokenKind::semi);
       break;

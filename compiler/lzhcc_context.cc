@@ -225,9 +225,9 @@ auto Context::create_local(Type *type, int offset) -> LValue * {
   return create<LValue>(type, offset);
 }
 
-auto Context::create_global(Type *type, std::string_view name, uint8_t *init)
-    -> GValue * {
-  return create<GValue>(type, name, init);
+auto Context::create_global(Type *type, std::string_view name, uint8_t *init,
+                            std::vector<Relocation> relocations) -> GValue * {
+  return create<GValue>(type, name, init, std::move(relocations));
 }
 
 auto Context::create_function(Type *type, std::string_view name, int stack_size,

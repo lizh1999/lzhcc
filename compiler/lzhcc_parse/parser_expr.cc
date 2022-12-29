@@ -65,25 +65,40 @@ auto Parser::array_init(ArrayType *array) -> Init * {
     return context_->array_init(std::move(children), array->base);
   }
   default:
-    context_->fatal(position_->location, "");
+    return array_init2(array);
   }
 }
 
 auto Parser::record_init(RecordType *record) -> Init * {
-  RecordInit::Children children;
-  consume(TokenKind::open_brace);
-  for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
-    if (i == record->members.size()) {
-      context_->fatal(position_->location, "");
+  if (next_is(TokenKind::open_brace)) {
+    RecordInit::Children children;
+    consume(TokenKind::open_brace);
+    auto &members = record->members;
+    int member_size = 0;
+    if (!members.empty()) {
+      member_size = members.back().offset ? members.size() : 1;
     }
-    auto init = this->init(record->members[i].type);
-    children.emplace_back(&record->members[i], init);
-    if (!consume_if(TokenKind::comma)) {
-      consume(TokenKind::close_brace);
-      break;
+    for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
+      if (i == member_size) {
+        context_->fatal(position_->location, "");
+      }
+      auto init = this->init(members[i].type);
+      children.emplace_back(&members[i], init);
+      if (!consume_if(TokenKind::comma)) {
+        consume(TokenKind::close_brace);
+        break;
+      }
     }
+    return context_->record_init(std::move(children));
+  } else {
+    auto origin = position_;
+    auto expr = assignment();
+    if (expr->type == record) {
+      return context_->scalar_init(expr);
+    }
+    position_ = origin;
+    return record_init2(record);
   }
-  return context_->record_init(std::move(children));
 }
 
 auto Parser::init(Type *type) -> Init * {
@@ -97,6 +112,58 @@ auto Parser::init(Type *type) -> Init * {
     return scalar_init();
   case TypeKind::record:
     return record_init(cast<RecordType>(type));
+  case TypeKind::kw_void:
+    assert(false);
+  }
+}
+
+auto Parser::array_init2(ArrayType *array) -> Init * {
+  std::vector<Init *> children;
+  int length = array->length;
+  for (int i = 0; i < length; i++) {
+    if (next_is(TokenKind::close_brace)) {
+      break;
+    }
+    if (i != 0 && !consume_if(TokenKind::comma)) {
+      break;
+    }
+    auto init = this->init2(array->base);
+    children.push_back(init);
+  }
+  return context_->array_init(children, array->base);
+}
+
+auto Parser::record_init2(RecordType *record) -> Init * {
+  RecordInit::Children children;
+  auto &members = record->members;
+  int member_size = 0;
+  if (!members.empty()) {
+    member_size = member_size = members.back().offset ? members.size() : 1;
+  }
+  for (int i = 0; i < member_size; i++) {
+    if (next_is(TokenKind::close_brace)) {
+      break;
+    }
+    if (i != 0 && !consume_if(TokenKind::comma)) {
+      break;
+    }
+    auto init = this->init2(members[i].type);
+    children.emplace_back(&members[i], init);
+  }
+  return context_->record_init(std::move(children));
+}
+
+auto Parser::init2(Type *type) -> Init * {
+  switch (type->kind) {
+  case TypeKind::array:
+    return array_init2(cast<ArrayType>(type));
+  case TypeKind::boolean:
+  case TypeKind::integer:
+  case TypeKind::pointer:
+  case TypeKind::function:
+    return scalar_init();
+  case TypeKind::record:
+    return record_init2(cast<RecordType>(type));
   case TypeKind::kw_void:
     assert(false);
   }
@@ -152,7 +219,8 @@ auto Parser::init_local(Expr *expr, Init *init, int loc) -> Expr * {
 }
 
 auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
-                               std::vector<Relocation> &relocations,  int loc) -> void {
+                                std::vector<Relocation> &relocations, int loc)
+    -> void {
   int64_t value;
   std::string_view *label = nullptr;
   if (!const_int(init->expr, &value, &label)) {
@@ -160,7 +228,7 @@ auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
   }
   if (label) {
     assert(out.size() == 8);
-    int64_t index = reinterpret_cast<int64_t>(&out[0]) ;
+    int64_t index = reinterpret_cast<int64_t>(&out[0]);
     relocations.push_back({index, *label, value});
     return;
   }
@@ -182,8 +250,9 @@ auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
   }
 }
 
-auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out, std::vector<Relocation> &relocations,
-                                int loc) -> void {
+auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out,
+                                std::vector<Relocation> &relocations, int loc)
+    -> void {
   auto &children = init->children;
   for (auto [member, init] : init->children) {
     int start = member->offset;
@@ -192,7 +261,8 @@ auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out, std::v
   }
 }
 
-auto Parser::init_global_array(ArrayInit *init, std::span<uint8_t> out, std::vector<Relocation> &relocations, int loc)
+auto Parser::init_global_array(ArrayInit *init, std::span<uint8_t> out,
+                               std::vector<Relocation> &relocations, int loc)
     -> void {
   auto &children = init->children;
   int size = context_->size_of(init->base);
@@ -201,7 +271,9 @@ auto Parser::init_global_array(ArrayInit *init, std::span<uint8_t> out, std::vec
   }
 }
 
-auto Parser::init_global(Init *init, std::span<uint8_t> out, std::vector<Relocation> &relocations, int loc) -> void {
+auto Parser::init_global(Init *init, std::span<uint8_t> out,
+                         std::vector<Relocation> &relocations, int loc)
+    -> void {
   switch (init->kind) {
   case InitKind::array:
     return init_global_array(cast<ArrayInit>(init), out, relocations, loc);

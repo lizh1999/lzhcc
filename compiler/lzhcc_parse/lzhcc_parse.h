@@ -54,6 +54,10 @@ private:
   auto record_init(RecordType *record) -> Init *;
   auto init(Type *type) -> Init *;
 
+  auto array_init2(ArrayType *array) -> Init *;
+  auto record_init2(RecordType *record) -> Init *;
+  auto init2(Type *type) -> Init *;
+
   auto init_local_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr *;
   auto init_local_array(Expr *expr, ArrayInit *init, int loc) -> Expr *;
   auto init_local_record(Expr *expr, RecordInit *init, int loc) -> Expr *;

@@ -22,13 +22,14 @@ Generator::Generator(Context *context)
 auto Generator::codegen(GValue *gvalue) -> void {
   auto name = gvalue->name;
   int size = context_->size_of(gvalue->type);
+  println("  .globl %.*s", (int)name.size(), name.data());
+  println("  .align %d", context_->align_of(gvalue->type));
   if (gvalue->init == 0) {
     println("  .bss");
     println("%.*s:", (int)name.size(), name.data());
     println("  .zero %d", size);
   } else {
     println("  .data");
-    println("  .globl %.*s", (int)name.size(), name.data());
     println("%.*s:", (int)name.size(), name.data());
 
     auto &rel = gvalue->relocations;

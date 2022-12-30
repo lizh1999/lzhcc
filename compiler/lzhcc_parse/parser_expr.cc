@@ -24,7 +24,11 @@ static auto low_assign_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_member_op(Context *, Expr *, int, int) -> Expr *;
 
 auto Parser::scalar_init() -> Init * {
+  auto open = consume_if(TokenKind::open_brace);
   auto expr = assignment();
+  if (open) {
+    consume(TokenKind::close_brace);
+  }
   return context_->scalar_init(expr);
 }
 

@@ -305,6 +305,12 @@ auto Parser::function_parameters(Type *base, ParamNames *param_names)
     param_names->clear();
   }
   consume(TokenKind::open_paren);
+  if (next_is(TokenKind::kw_void) &&
+      position_[1].kind == TokenKind::close_paren) {
+    position_ += 2;
+    return context_->function_type(base, {});
+  }
+
   std::vector<Type *> params;
 
   while (!consume_if(TokenKind::close_paren)) {

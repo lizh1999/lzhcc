@@ -417,6 +417,15 @@ auto Parser::declaration() -> Stmt * {
     }
     is_first = false;
     auto [name, type] = declarator(base);
+    if (type->kind == TypeKind::function) {
+      create_declaration(name, type);
+      consume(TokenKind::semi);
+      break;
+    }
+    if (attr.is_extern) {
+      create_declaration(name, type);
+      continue;
+    }
     auto value = create_local(name, type);
     if (auto token = consume_if(TokenKind::equal)) {
       auto lhs = context_->value(value);

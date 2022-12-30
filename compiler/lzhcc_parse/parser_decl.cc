@@ -102,11 +102,10 @@ auto Parser::struct_decl(RecordType *type) -> void {
       if (type->kind == TypeKind::array) {
         auto array = cast<ArrayType>(type);
         if (array->length == -1) {
-          array->length = 0;
           is_flexible = true;
         }
       }
-      int size = context_->size_of(type);
+      int size = is_flexible ? 0 : context_->size_of(type);
       int align = context_->align_of(type);
       offset = align_to(offset, align);
       members.push_back(Member{type, name->inner, offset});
@@ -456,9 +455,48 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
         }
       }
 
+      do {
+        if (type->kind != TypeKind::record) {
+          break;
+        }
+        auto record_type = cast<RecordType>(type);
+        auto record_init = cast<RecordInit>(init);
+        if (record_type->members.empty()) {
+          break;
+        }
+        auto last_type = record_type->members.back().type;
+        if (last_type->kind != TypeKind::array) {
+          break;
+        }
+        auto array_type = cast<ArrayType>(last_type);
+        if (array_type->length != -1) {
+          break;
+        }
+        auto &list = record_init->children;
+        auto it = std::find_if(list.begin(), list.end(), [&](auto &&arg) {
+          return arg.first == &record_type->members.back();
+        });
+        if (it == list.end()) {
+          break;
+        }
+        auto array_init = cast<ArrayInit>(it->second);
+        auto new_type = context_->record_type();
+        new_type->members = record_type->members;
+        new_type->size_bytes = record_type->size_bytes;
+        new_type->align_bytes = record_type->align_bytes;
+
+        int length = array_init->children.size();
+        auto new_last = context_->array_of(array_type->base, length);
+
+        new_type->members.back().type = new_last;
+        new_type->size_bytes += context_->size_of(new_last);
+
+        type = new_type;
+      } while (false);
+
       std::string buffer;
       buffer.resize(context_->size_of(type));
-      auto data = (uint8_t *) &buffer[0];
+      auto data = (uint8_t *)&buffer[0];
       init_global(init, {data, buffer.size()}, relocations, token->location);
 
       for (auto &rel : relocations) {
@@ -467,7 +505,7 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
 
       auto index = context_->push_literal(std::move(buffer));
       auto view = context_->storage(index);
-      init_data = (uint8_t *) &view[0];
+      init_data = (uint8_t *)&view[0];
     }
     create_global(name, type, init_data, std::move(relocations));
     if (!consume_if(TokenKind::comma)) {

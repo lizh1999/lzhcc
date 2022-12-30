@@ -123,7 +123,7 @@ auto Parser::init(Type *type) -> Init * {
 
 auto Parser::array_init2(ArrayType *array) -> Init * {
   std::vector<Init *> children;
-  int length = array->length;
+  int length = array->length == -1 ? INT_MAX : array->length;
   for (int i = 0; i < length; i++) {
     if (next_is(TokenKind::close_brace)) {
       break;

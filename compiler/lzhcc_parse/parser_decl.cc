@@ -15,12 +15,7 @@ auto Parser::enum_spec() -> Type * {
   }
   consume(TokenKind::open_brace);
   int value = 0;
-  bool is_first = true;
-  while (!consume_if(TokenKind ::close_brace)) {
-    if (!is_first) {
-      consume(TokenKind::comma);
-    }
-    is_first = false;
+  while (!consume_if(TokenKind::close_brace)) {
     auto ident = consume(TokenKind::identifier);
     if (auto token = consume_if(TokenKind::equal)) {
       if (int64_t tmp; !const_int(&tmp)) {
@@ -30,6 +25,10 @@ auto Parser::enum_spec() -> Type * {
       }
     }
     create_enum(ident, value++);
+    if (!consume_if(TokenKind::comma)) {
+      consume(TokenKind::close_brace);
+      break;
+    }
   }
   auto type = context_->int32();
   if (name) {
@@ -424,6 +423,7 @@ auto Parser::declaration() -> Stmt * {
 
 auto Parser::global(Token *name, Type *base, Type *type) -> void {
   if (name->kind != TokenKind::identifier) {
+    consume(TokenKind::semi);
     return;
   }
   while (true) {

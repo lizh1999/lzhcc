@@ -98,12 +98,27 @@ auto Parser::struct_decl(RecordType *type) -> void {
       }
       is_first = false;
       auto [name, type] = declarator(base);
+      bool is_flexible = false;
+      if (type->kind == TypeKind::array) {
+        auto array = cast<ArrayType>(type);
+        if (array->length == -1) {
+          array->length = 0;
+          is_flexible = true;
+        }
+      }
       int size = context_->size_of(type);
       int align = context_->align_of(type);
       offset = align_to(offset, align);
       members.push_back(Member{type, name->inner, offset});
       offset += size;
       align_bytes = std::max(align_bytes, align);
+      if (is_flexible) {
+        consume(TokenKind::semi);
+        if (!next_is(TokenKind::close_brace)) {
+          context_->fatal(position_->location, "");
+        }
+        break;
+      }
     }
   }
   int size_bytes = align_to(offset, align_bytes);

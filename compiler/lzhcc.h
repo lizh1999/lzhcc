@@ -87,6 +87,7 @@ enum class TokenKind : uint8_t {
   kw_default,            // "default"
   kw_else,               // "else"
   kw_enum,               // "enum"
+  kw_extern,             // "extern"
   kw_for,                // "for"
   kw_goto,               // "goto"
   kw_if,                 // "if"

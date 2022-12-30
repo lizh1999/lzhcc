@@ -19,7 +19,7 @@ auto Parser::operator()() -> Module {
       function(name, type, std::move(param_names),
                attr.is_static ? Linkage::internal : Linkage::external);
     } else {
-      global(name, base, type);
+      global(name, base, type, &attr);
     }
   }
   std::vector<GValue *> gvalues;

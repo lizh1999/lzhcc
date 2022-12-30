@@ -125,6 +125,7 @@ private:
   struct VarAttr {
     bool is_typedef;
     bool is_static;
+    bool is_extern;
   };
 
   auto is_typename(Token *token) -> bool;
@@ -138,7 +139,7 @@ private:
   auto abstract_declarator(Type *base) -> Type *;
   auto type_define(Type *base) -> void;
   auto declaration() -> Stmt *;
-  auto global(Token *name, Type *base, Type *type) -> void;
+  auto global(Token *name, Type *base, Type *type, VarAttr *attr) -> void;
   auto function(Token *name, Type *type, ParamNames param_names,
                 Linkage linkage) -> void;
 

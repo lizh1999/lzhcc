@@ -200,6 +200,7 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_union:
   case TokenKind::kw_typedef:
   case TokenKind::kw_static:
+  case TokenKind::kw_extern:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -239,6 +240,7 @@ loop:
 
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
     attr_goto(TokenKind::kw_static, is_static, consume());
+    attr_goto(TokenKind::kw_extern, is_extern, consume());
 
   case TokenKind::identifier: {
     auto type = find_type(position_->inner);
@@ -441,14 +443,13 @@ auto Parser::declaration() -> Stmt * {
   return context_->block_stmt(std::move(stmts));
 }
 
-auto Parser::global(Token *name, Type *base, Type *type) -> void {
+auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
+    -> void {
   if (name->kind != TokenKind::identifier) {
     consume(TokenKind::semi);
     return;
   }
   while (true) {
-    uint8_t *init_data = 0;
-    std::vector<Relocation> relocations;
     if (auto token = consume_if(TokenKind::equal)) {
       auto init = this->init(type);
 
@@ -503,6 +504,8 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
       std::string buffer;
       buffer.resize(context_->size_of(type));
       auto data = (uint8_t *)&buffer[0];
+
+      std::vector<Relocation> relocations;
       init_global(init, {data, buffer.size()}, relocations, token->location);
 
       for (auto &rel : relocations) {
@@ -511,9 +514,14 @@ auto Parser::global(Token *name, Type *base, Type *type) -> void {
 
       auto index = context_->push_literal(std::move(buffer));
       auto view = context_->storage(index);
-      init_data = (uint8_t *)&view[0];
+      auto init_data = (uint8_t *)&view[0];
+      create_global(name, type, init_data, std::move(relocations));
+    } else if (attr->is_extern) {
+      create_declaration(name, type);
+    } else {
+      create_global(name, type, 0, {});
     }
-    create_global(name, type, init_data, std::move(relocations));
+
     if (!consume_if(TokenKind::comma)) {
       consume(TokenKind::semi);
       break;

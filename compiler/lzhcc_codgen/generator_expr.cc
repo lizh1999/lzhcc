@@ -22,8 +22,12 @@ auto Generator::value_addr(ValueExpr *expr) -> void {
     println("  la a0, %.*s", (int)name.size(), name.data());
     break;
   }
-  case ValueKind::declaraion:
-    std::abort();
+  case ValueKind::declaraion: {
+    auto declaration = cast<Declaration>(expr->value);
+    auto name = declaration->name;
+    println("  la a0, %.*s", (int)name.size(), name.data());
+    break;
+  }
   }
 }
 

@@ -39,6 +39,7 @@ Context::Context() {
   push_identifier("default");
   push_identifier("else");
   push_identifier("enum");
+  push_identifier("extern");
   push_identifier("for");
   push_identifier("goto");
   push_identifier("if");
@@ -62,6 +63,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_default);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
+  keyword_map_.push_back(TokenKind::kw_extern);
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_goto);
   keyword_map_.push_back(TokenKind::kw_if);

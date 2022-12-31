@@ -431,7 +431,8 @@ auto Parser::unary() -> Expr * {
 }
 
 auto Parser::cast() -> Expr * {
-  if (!next_is(TokenKind::open_paren) || !is_typename(position_ + 1)) {
+  if (!next_is(TokenKind::open_paren) || !is_typename(position_ + 1) ||
+      position_[position_->inner + 1].kind == TokenKind::open_brace) {
     return unary();
   } else {
     consume(TokenKind::open_paren);
@@ -522,6 +523,47 @@ auto Parser::post_inc(Expr *lhs, Expr *rhs, int loc) -> Expr * {
 }
 
 auto Parser::postfix() -> Expr * {
+  if (next_is(TokenKind::open_paren) && is_typename(position_ + 1)) {
+    auto token = consume();
+    auto type = abstract_declarator(declspec());
+    consume(TokenKind::close_paren);
+    auto init = this->init(type);
+    if (type->kind == TypeKind::array) {
+      auto array_type = cast<ArrayType>(type);
+      auto array_init = cast<ArrayInit>(init);
+      if (array_type->length == -1) {
+        int length = array_init->children.size();
+        type = context_->array_of(array_type->base, length);
+      }
+    }
+    if (scopes_.size() == 1) {
+      std::string buffer;
+      buffer.resize(context_->size_of(type));
+      auto data = (uint8_t *)&buffer[0];
+
+      std::vector<Relocation> relocations;
+      init_global(init, {data, buffer.size()}, relocations, token->location);
+
+      for (auto &rel : relocations) {
+        rel.index = reinterpret_cast<uint8_t *>(rel.index) - data;
+      }
+
+      auto index = context_->push_literal(std::move(buffer));
+      auto view = context_->storage(index);
+      auto init_data = (uint8_t *)&view[0];
+      auto gvalue = create_anon_global(type, init_data, std::move(relocations));
+      return context_->value(gvalue);
+    } else {
+      auto value = create_anon_local(type);
+      auto result = context_->value(value);
+      int64_t size_bytes = context_->size_of(value->type);
+      auto expr = context_->zero(result, size_bytes);
+      if (auto rhs = init_local(result, init, token->location)) {
+        expr = context_->comma(rhs->type, expr, rhs);
+      }
+      return context_->comma(result->type, expr, result);
+    }
+  }
   auto lhs = primary();
 loop:
   switch (next_kind()) {

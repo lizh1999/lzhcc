@@ -173,11 +173,13 @@ auto Parser::create_function(Token *token, Type *type, int stack_size,
   it->second = var;
 }
 
-auto Parser::create_anon_global(Type *type, uint8_t *init) -> GValue * {
+auto Parser::create_anon_global(Type *type, uint8_t *init,
+                                std::vector<Relocation> r) -> GValue * {
   auto &file_scope = scopes_.front();
   auto [name, uid] = unique_name();
   int align_bytes = context_->align_of(type);
-  auto var = context_->create_global(type, name, init, {}, align_bytes);
+  auto var =
+      context_->create_global(type, name, init, std::move(r), align_bytes);
   file_scope.var_map.emplace(uid, var);
   return var;
 }

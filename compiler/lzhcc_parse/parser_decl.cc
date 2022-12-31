@@ -90,7 +90,8 @@ auto Parser::struct_decl(RecordType *type) -> void {
   int align_bytes = 1;
   std::vector<Member> members;
   while (!consume_if(TokenKind::close_brace)) {
-    auto base = declspec();
+    VarAttr attr{};
+    auto base = declspec(&attr);
     bool is_first = true;
     while (!consume_if(TokenKind::semi)) {
       if (!is_first) {
@@ -106,7 +107,7 @@ auto Parser::struct_decl(RecordType *type) -> void {
         }
       }
       int size = is_flexible ? 0 : context_->size_of(type);
-      int align = context_->align_of(type);
+      int align = attr.align_bytes ?: context_->align_of(type);
       offset = align_to(offset, align);
       members.push_back(Member{type, name->inner, offset});
       offset += size;
@@ -201,6 +202,7 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_typedef:
   case TokenKind::kw_static:
   case TokenKind::kw_extern:
+  case TokenKind::kw_alignas:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -241,6 +243,23 @@ loop:
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
     attr_goto(TokenKind::kw_static, is_static, consume());
     attr_goto(TokenKind::kw_extern, is_extern, consume());
+
+  case TokenKind::kw_alignas: {
+    auto token = consume();
+    consume(TokenKind::open_paren);
+    int align_bytes;
+    if (is_typename(position_)) {
+      auto type = abstract_declarator(declspec());
+      align_bytes = context_->align_of(type);
+    } else if (int64_t tmp; const_int(&tmp)) {
+      align_bytes = tmp;
+    } else {
+      context_->fatal(token->location, "");
+    }
+    attr->align_bytes = align_bytes;
+    consume(TokenKind::close_paren);
+    goto loop;
+  }
 
   case TokenKind::identifier: {
     auto type = find_type(position_->inner);
@@ -426,7 +445,14 @@ auto Parser::declaration() -> Stmt * {
       create_declaration(name, type);
       continue;
     }
-    auto value = create_local(name, type);
+    int align_bytes = context_->align_of(type);
+    if (attr.align_bytes != 0) {
+      if (attr.align_bytes < 0 || attr.align_bytes % align_bytes != 0) {
+        context_->fatal(position_->location, "");
+      }
+      align_bytes = attr.align_bytes;
+    }
+    auto value = create_local(name, type, align_bytes);
     if (auto token = consume_if(TokenKind::equal)) {
       auto lhs = context_->value(value);
 
@@ -459,6 +485,7 @@ auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
     return;
   }
   while (true) {
+    int align_bytes = attr->align_bytes ?: context_->align_of(type);
     if (auto token = consume_if(TokenKind::equal)) {
       auto init = this->init(type);
 
@@ -524,11 +551,11 @@ auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
       auto index = context_->push_literal(std::move(buffer));
       auto view = context_->storage(index);
       auto init_data = (uint8_t *)&view[0];
-      create_global(name, type, init_data, std::move(relocations));
+      create_global(name, type, init_data, std::move(relocations), align_bytes);
     } else if (attr->is_extern) {
       create_declaration(name, type);
     } else {
-      create_global(name, type, 0, {});
+      create_global(name, type, 0, {}, align_bytes);
     }
 
     if (!consume_if(TokenKind::comma)) {
@@ -558,7 +585,8 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
 
   entry_scope();
   for (int i = 0; i < param_types.size(); i++) {
-    auto var = create_local(param_names[i], param_types[i]);
+    int align = context_->align_of(param_types[i]);
+    auto var = create_local(param_names[i], param_types[i], align);
     params.push_back(var);
   }
 

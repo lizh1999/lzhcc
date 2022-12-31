@@ -133,13 +133,12 @@ auto Parser::create_enum(Token *token, int value) -> void {
   current.var_map.emplace(token->inner, value);
 }
 
-auto Parser::create_local(Token *token, Type *type) -> LValue * {
+auto Parser::create_local(Token *token, Type *type, int align) -> LValue * {
   auto &current = scopes_.back();
   if (current.var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
   }
   int size = context_->size_of(type);
-  int align = context_->align_of(type);
   stack_size_ = align_to(stack_size_, align);
   auto var = context_->create_local(type, stack_size_);
   stack_size_ += size;
@@ -149,13 +148,15 @@ auto Parser::create_local(Token *token, Type *type) -> LValue * {
 }
 
 auto Parser::create_global(Token *token, Type *type, uint8_t *init,
-                           std::vector<Relocation> relocations) -> void {
+                           std::vector<Relocation> relocations, int align_bytes)
+    -> void {
   auto &file_scope = scopes_.front();
   if (file_scope.var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
   }
   auto name = context_->storage(token->inner);
-  auto var = context_->create_global(type, name, init, std::move(relocations));
+  auto var = context_->create_global(type, name, init, std::move(relocations),
+                                     align_bytes);
   file_scope.var_map.emplace(token->inner, var);
 }
 
@@ -175,7 +176,8 @@ auto Parser::create_function(Token *token, Type *type, int stack_size,
 auto Parser::create_anon_global(Type *type, uint8_t *init) -> GValue * {
   auto &file_scope = scopes_.front();
   auto [name, uid] = unique_name();
-  auto var = context_->create_global(type, name, init, {});
+  int align_bytes = context_->align_of(type);
+  auto var = context_->create_global(type, name, init, {}, align_bytes);
   file_scope.var_map.emplace(uid, var);
   return var;
 }

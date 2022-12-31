@@ -23,9 +23,9 @@ auto Generator::codegen(GValue *gvalue) -> void {
   auto name = gvalue->name;
   int size = context_->size_of(gvalue->type);
   println("  .globl %.*s", (int)name.size(), name.data());
-  println("  .align %d", context_->align_of(gvalue->type));
+  println("  .balign %d", gvalue->align_bytes);
   if (gvalue->init == 0) {
-    println("  .bss");
+    println("  .data");
     println("%.*s:", (int)name.size(), name.data());
     println("  .zero %d", size);
   } else {
@@ -36,7 +36,8 @@ auto Generator::codegen(GValue *gvalue) -> void {
     for (int i = 0, j = 0; i < size;) {
       if (j < rel.size() && rel[j].index == i) {
         auto name = rel[j].name;
-        println("  .dword %.*s + %ld", (int)name.size(), name.data(), rel[j].offset);
+        println("  .dword %.*s + %ld", (int)name.size(), name.data(),
+                rel[j].offset);
         i += 8;
         j++;
       } else {

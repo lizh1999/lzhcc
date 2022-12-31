@@ -369,6 +369,14 @@ auto Parser::primary() -> Expr * {
     int size = context_->size_of(type);
     return context_->integer(size);
   }
+  case TokenKind::kw_alignof: {
+    consume();
+    consume(TokenKind::open_paren);
+    auto type = abstract_declarator(declspec());
+    consume(TokenKind::close_paren);
+    int size = context_->align_of(type);
+    return context_->integer(size);
+  }
   default:
     context_->fatal(position_->location, "");
   }

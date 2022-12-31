@@ -31,6 +31,8 @@ private:
 };
 
 Context::Context() {
+  push_identifier("_Alignas");
+  push_identifier("_Alignof");
   push_identifier("_Bool");
   push_identifier("break");
   push_identifier("case");
@@ -55,6 +57,8 @@ Context::Context() {
   push_identifier("union");
   push_identifier("void");
   push_identifier("while");
+  keyword_map_.push_back(TokenKind::kw_alignas);
+  keyword_map_.push_back(TokenKind::kw_alignof);
   keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_break);
   keyword_map_.push_back(TokenKind::kw_case);
@@ -228,8 +232,9 @@ auto Context::create_local(Type *type, int offset) -> LValue * {
 }
 
 auto Context::create_global(Type *type, std::string_view name, uint8_t *init,
-                            std::vector<Relocation> relocations) -> GValue * {
-  return create<GValue>(type, name, init, std::move(relocations));
+                            std::vector<Relocation> relocations,
+                            int align_bytes) -> GValue * {
+  return create<GValue>(type, name, init, std::move(relocations), align_bytes);
 }
 
 auto Context::create_function(Type *type, std::string_view name, int stack_size,

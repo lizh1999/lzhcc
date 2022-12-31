@@ -126,6 +126,7 @@ private:
     bool is_typedef;
     bool is_static;
     bool is_extern;
+    int align_bytes;
   };
 
   auto is_typename(Token *token) -> bool;
@@ -154,9 +155,9 @@ private:
   auto create_declaration(Token *token, Type *type) -> void;
   auto create_typedef(Token *token, Type *type) -> void;
   auto create_enum(Token *token, int value) -> void;
-  auto create_local(Token *token, Type *type) -> LValue *;
-  auto create_global(Token *token, Type *type, uint8_t *init = 0,
-                     std::vector<Relocation> relocations = {}) -> void;
+  auto create_local(Token *token, Type *type, int align) -> LValue *;
+  auto create_global(Token *token, Type *type, uint8_t *init,
+                     std::vector<Relocation> relocations, int align_bytes) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
                        std::vector<LValue *> params, Linkage linkage) -> void;
   auto create_anon_global(Type *type, uint8_t *init = 0) -> GValue *;

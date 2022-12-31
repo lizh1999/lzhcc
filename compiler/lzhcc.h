@@ -79,6 +79,8 @@ enum class TokenKind : uint8_t {
   numeric,               // numeric literal
   identifier,            // identifier
   eof,                   // eof
+  kw_alignas,            // "_Alignas"
+  kw_alignof,            // "_Alignof"
   kw_bool,               // "_Bool"
   kw_break,              // "break"
   kw_case,               // "case"
@@ -224,12 +226,13 @@ struct Relocation {
 
 struct GValue : Value {
   GValue(Type *type, std::string_view name, uint8_t *init,
-         std::vector<Relocation> relocations)
+         std::vector<Relocation> relocations, int align_bytes)
       : Value(ValueKind::global, type), name(name), init(init),
-        relocations(std::move(relocations)) {}
+        relocations(std::move(relocations)), align_bytes(align_bytes) {}
   std::string_view name;
   uint8_t *init;
   std::vector<Relocation> relocations;
+  int align_bytes;
 };
 
 enum class Linkage {
@@ -548,7 +551,7 @@ public:
   auto create_declaration(Type *type, std::string_view name) -> Declaration *;
   auto create_local(Type *type, int offset) -> LValue *;
   auto create_global(Type *type, std::string_view name, uint8_t *init,
-                     std::vector<Relocation> relocations) -> GValue *;
+                     std::vector<Relocation> relocations, int align_bytes) -> GValue *;
   auto create_function(Type *type, std::string_view name, int stack_size,
                        Stmt *stmt, std::vector<LValue *> params,
                        Linkage linkage) -> Function *;

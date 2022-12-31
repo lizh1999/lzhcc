@@ -445,6 +445,10 @@ auto Parser::declaration() -> Stmt * {
       create_declaration(name, type);
       continue;
     }
+    if (attr.is_static) {
+      global(name, base, type, &attr);
+      break;
+    }
     int align_bytes = context_->align_of(type);
     if (attr.align_bytes != 0) {
       if (attr.align_bytes < 0 || attr.align_bytes % align_bytes != 0) {

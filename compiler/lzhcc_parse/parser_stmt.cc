@@ -80,10 +80,14 @@ auto Parser::if_stmt() -> Stmt * {
 
 auto Parser::return_stmt() -> Stmt * {
   consume(TokenKind::kw_return);
-  auto expr = expression();
-  expr = context_->cast(ret_, expr);
-  consume(TokenKind::semi);
-  return context_->return_stmt(expr);
+  if (consume_if(TokenKind::semi)) {
+    return context_->return_stmt(nullptr);
+  } else {
+    auto expr = expression();
+    expr = context_->cast(ret_, expr);
+    consume(TokenKind::semi);
+    return context_->return_stmt(expr);
+  }
 }
 
 auto Parser::while_stmt() -> Stmt * {

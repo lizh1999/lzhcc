@@ -39,7 +39,9 @@ auto Generator::if_stmt(IfStmt *stmt) -> void {
 }
 
 auto Generator::return_stmt(ReturnStmt *stmt) -> void {
-  expr_proxy(stmt->expr);
+  if (stmt->expr) {
+    expr_proxy(stmt->expr);
+  }
   println("  j .L.return.%d", return_label);
 }
 

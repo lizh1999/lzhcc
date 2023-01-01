@@ -148,15 +148,15 @@ auto Parser::create_local(Token *token, Type *type, int align) -> LValue * {
 }
 
 auto Parser::create_global(Token *token, Type *type, uint8_t *init,
-                           std::vector<Relocation> relocations, int align_bytes)
-    -> void {
+                           std::vector<Relocation> relocations, int align_bytes,
+                           Linkage linkage) -> void {
   auto &file_scope = scopes_.front();
   if (file_scope.var_map.contains(token->inner)) {
     context_->fatal(token->location, "");
   }
   auto name = context_->storage(token->inner);
   auto var = context_->create_global(type, name, init, std::move(relocations),
-                                     align_bytes);
+                                     align_bytes, linkage);
   file_scope.var_map.emplace(token->inner, var);
 }
 
@@ -178,8 +178,8 @@ auto Parser::create_anon_global(Type *type, uint8_t *init,
   auto &file_scope = scopes_.front();
   auto [name, uid] = unique_name();
   int align_bytes = context_->align_of(type);
-  auto var =
-      context_->create_global(type, name, init, std::move(r), align_bytes);
+  auto var = context_->create_global(type, name, init, std::move(r),
+                                     align_bytes, Linkage::internal);
   file_scope.var_map.emplace(uid, var);
   return var;
 }

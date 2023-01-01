@@ -488,6 +488,7 @@ auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
     consume(TokenKind::semi);
     return;
   }
+  auto linkage = attr->is_static ? Linkage::internal : Linkage::external;
   while (true) {
     int align_bytes = attr->align_bytes ?: context_->align_of(type);
     if (auto token = consume_if(TokenKind::equal)) {
@@ -555,11 +556,12 @@ auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
       auto index = context_->push_literal(std::move(buffer));
       auto view = context_->storage(index);
       auto init_data = (uint8_t *)&view[0];
-      create_global(name, type, init_data, std::move(relocations), align_bytes);
+      create_global(name, type, init_data, std::move(relocations), align_bytes,
+                    linkage);
     } else if (attr->is_extern) {
       create_declaration(name, type);
     } else {
-      create_global(name, type, 0, {}, align_bytes);
+      create_global(name, type, 0, {}, align_bytes, linkage);
     }
 
     if (!consume_if(TokenKind::comma)) {

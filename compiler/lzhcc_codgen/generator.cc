@@ -22,7 +22,11 @@ Generator::Generator(Context *context)
 auto Generator::codegen(GValue *gvalue) -> void {
   auto name = gvalue->name;
   int size = context_->size_of(gvalue->type);
-  println("  .globl %.*s", (int)name.size(), name.data());
+  if (gvalue->linkage == Linkage::external) {
+    println("  .globl %.*s", (int)name.size(), name.data());
+  } else {
+    println("  .local %.*s", (int)name.size(), name.data());
+  }
   println("  .balign %d", gvalue->align_bytes);
   if (gvalue->init == 0) {
     println("  .data");

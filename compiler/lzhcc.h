@@ -38,6 +38,7 @@ enum class TokenKind : uint8_t {
   comma,                 // ","
   colon,                 // ":"
   dot,                   // "."
+  dotdotdot,             // "..."
   equal,                 // "="
   equal_equal,           // "=="
   exclaim,               // "!"
@@ -167,10 +168,12 @@ struct PointerType : Type {
 };
 
 struct FunctionType : Type {
-  FunctionType(Type *ret, std::vector<Type *> params)
-      : Type(TypeKind::function), ret(ret), params(params) {}
+  FunctionType(Type *ret, std::vector<Type *> params, bool is_variadic)
+      : Type(TypeKind::function), ret(ret), params(params),
+        is_variadic(is_variadic) {}
   Type *ret;
   std::vector<Type *> params;
+  bool is_variadic;
 };
 
 struct ArrayType : Type {
@@ -556,7 +559,7 @@ public:
   auto int64() -> Type *;
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
-  auto function_type(Type *ret, std::vector<Type *> params) -> Type *;
+  auto function_type(Type *ret, std::vector<Type *> params, bool) -> Type *;
   auto record_type() -> RecordType *;
   auto size_of(Type *type) -> int;
   auto align_of(Type *type) -> int;

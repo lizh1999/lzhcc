@@ -55,6 +55,8 @@ void ret_none() {
   return;
 }
 
+int add_all(int n, ...);
+
 int main() {
   ASSERT(3, ret3());
   ASSERT(8, add2(3, 5));
@@ -96,6 +98,11 @@ int main() {
   ASSERT(6, counter());
 
   ret_none();
+
+  ASSERT(6, add_all(3,1,2,3));
+  ASSERT(5, add_all(4,1,2,3,-1));
+
+  ASSERT(0, ({ char buf[100]; sprintf(buf, "%d %d %s", 1, 2, "foo"); strcmp("1 2 foo", buf); }));
 
   printf("OK\n");
   return 0;

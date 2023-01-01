@@ -303,12 +303,14 @@ auto Parser::call(Token *token) -> Expr * {
     context_->fatal(token->inner, "");
   }
   auto function_type = cast<FunctionType>(var->type);
-  int n = args.size();
   auto &params = function_type->params;
-  if (n != params.size()) {
+  if (args.size() < params.size()) {
     context_->fatal(token->location, "");
   }
-  for (int i = 0; i < n; i++) {
+  if (args.size() > params.size() && !function_type->is_variadic) {
+    context_->fatal(token->location, "");
+  }
+  for (int i = 0; i < params.size(); i++) {
     args[i] = context_->cast(params[i], args[i]);
   }
   return context_->call(name, function_type->ret, std::move(args));

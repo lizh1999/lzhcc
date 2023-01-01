@@ -329,14 +329,20 @@ auto Parser::function_parameters(Type *base, ParamNames *param_names)
   if (next_is(TokenKind::kw_void) &&
       position_[1].kind == TokenKind::close_paren) {
     position_ += 2;
-    return context_->function_type(base, {});
+    return context_->function_type(base, {}, false);
   }
 
   std::vector<Type *> params;
+  bool is_variadic = false;
 
   while (!consume_if(TokenKind::close_paren)) {
     if (!params.empty()) {
       consume(TokenKind::comma);
+    }
+    if (consume_if(TokenKind::dotdotdot)) {
+      is_variadic = true;
+      consume(TokenKind::close_paren);
+      break;
     }
     auto base = declspec();
     auto [name, param] = declarator(base);
@@ -349,7 +355,7 @@ auto Parser::function_parameters(Type *base, ParamNames *param_names)
     }
     params.push_back(param);
   }
-  return context_->function_type(base, std::move(params));
+  return context_->function_type(base, std::move(params), is_variadic);
 }
 
 auto Parser::suffix_type(Type *base, ParamNames *param_names) -> Type * {

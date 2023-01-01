@@ -47,7 +47,14 @@ loop:
   case '.': {
     int location = location_;
     advance_current();
-    return token(TokenKind::dot, location);
+    switch (current_) {
+      case '.':
+        advance_current();
+        advance_current();
+        return token(TokenKind::dotdotdot, location);
+      default:
+        return token(TokenKind::dot, location);
+    }
   }
   case '0' ... '9':
     return numeric();

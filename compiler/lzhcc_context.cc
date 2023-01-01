@@ -174,8 +174,9 @@ auto Context::array_of(Type *base, int length) -> Type * {
   return create<ArrayType>(base, length);
 }
 
-auto Context::function_type(Type *ret, std::vector<Type *> params) -> Type * {
-  return create<FunctionType>(ret, std::move(params));
+auto Context::function_type(Type *ret, std::vector<Type *> params,
+                            bool is_variadic) -> Type * {
+  return create<FunctionType>(ret, std::move(params), is_variadic);
 }
 
 auto Context::record_type() -> RecordType * {

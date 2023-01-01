@@ -6,7 +6,7 @@
 namespace lzhcc {
 
 Generator::Generator(Context *context)
-    : counter(0), return_label(0), context_(context) {
+    : depth_(0), counter_(0), return_label_(0), context_(context) {
   using namespace std::string_view_literals;
   const char *path = context_->arg.opt_o;
   if (!path || path == "-"sv) {
@@ -82,7 +82,7 @@ auto Generator::store(Type *type, int src, int offset) -> void {
 
 auto Generator::codegen(Function *function) -> void {
   auto name = function->name;
-  return_label = counter++;
+  return_label_ = counter_++;
   println("  .text");
   switch (function->linkage) {
   case Linkage::external:
@@ -105,7 +105,7 @@ auto Generator::codegen(Function *function) -> void {
   }
 
   stmt_proxy(function->stmt);
-  println(".L.return.%d:", return_label);
+  println(".L.return.%d:", return_label_);
   println("  addi sp, sp, %d", function->stack_size);
   pop("ra");
   pop("fp");

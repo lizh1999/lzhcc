@@ -8,7 +8,7 @@ auto Generator::for_stmt(ForStmt *stmt) -> void {
   if (stmt->init) {
     stmt_proxy(stmt->init);
   }
-  int label = counter++;
+  int label = counter_++;
   auto break_name = stmt->break_label->name;
   auto continue_name = stmt->continue_label->name;
   println(".L.begin.%d:", label);
@@ -27,7 +27,7 @@ auto Generator::for_stmt(ForStmt *stmt) -> void {
 
 auto Generator::if_stmt(IfStmt *stmt) -> void {
   expr_proxy(stmt->cond);
-  int label = counter++;
+  int label = counter_++;
   println("  beqz a0, .L.else.%d", label);
   stmt_proxy(stmt->then);
   println("  j .L.end.%d", label);
@@ -42,7 +42,7 @@ auto Generator::return_stmt(ReturnStmt *stmt) -> void {
   if (stmt->expr) {
     expr_proxy(stmt->expr);
   }
-  println("  j .L.return.%d", return_label);
+  println("  j .L.return.%d", return_label_);
 }
 
 auto Generator::block_stmt(BlockStmt *stmt) -> void {
@@ -93,7 +93,7 @@ auto Generator::default_stmt(DefaultStmt *stmt) -> void {
 }
 
 auto Generator::do_stmt(DoStmt *stmt) -> void {
-  int label = counter++;
+  int label = counter_++;
   auto break_name = stmt->break_label->name;
   auto continue_name = stmt->continue_label->name;
   println("%.*s:", (int)continue_name.size(), continue_name.data());

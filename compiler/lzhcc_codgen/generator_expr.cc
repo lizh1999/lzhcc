@@ -414,7 +414,7 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     expr_proxy(expr->lhs);
     return expr_proxy(expr->rhs);
   case BinaryKind::logical_and: {
-    int label = counter++;
+    int label = counter_++;
     expr_proxy(expr->lhs);
     println("  beq a0, zero, .L.and.%d", label);
     expr_proxy(expr->rhs);
@@ -422,7 +422,7 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     return println("  snez a0, a0");
   }
   case BinaryKind::logical_or: {
-    int label = counter++;
+    int label = counter_++;
     expr_proxy(expr->lhs);
     println("  bne a0, zero, .L.or.%d", label);
     expr_proxy(expr->rhs);
@@ -443,7 +443,13 @@ auto Generator::call_expr(CallExpr *expr) -> void {
     pop(reg);
     reg[1] -= i;
   }
-  println("  call %.*s", (int)expr->name.size(), expr->name.data());
+  if (depth_ % 2 != 0) {
+    println("  addi sp, sp, -8");
+    println("  call %.*s", (int)expr->name.size(), expr->name.data());
+    println("  addi sp, sp, 8");
+  } else {
+    println("  call %.*s", (int)expr->name.size(), expr->name.data());
+  }
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {
@@ -457,7 +463,7 @@ auto Generator::member_expr(MemberExpr *expr) -> void {
 
 auto Generator::condition_expr(ConditionExpr *expr) -> void {
   expr_proxy(expr->cond);
-  int label = counter++;
+  int label = counter_++;
   println("  beqz a0, .L.else.%d", label);
   expr_proxy(expr->then);
   println("  j .L.end.%d", label);
@@ -467,11 +473,13 @@ auto Generator::condition_expr(ConditionExpr *expr) -> void {
 }
 
 auto Generator::push(const char *reg) -> void {
+  depth_++;
   println("  addi sp, sp, -8");
   println("  sd %s, 0(sp)", reg);
 }
 
 auto Generator::pop(const char *reg) -> void {
+  depth_--;
   println("  ld %s, 0(sp)", reg);
   println("  addi sp, sp, 8");
 }

@@ -72,8 +72,9 @@ private:
 
   [[noreturn]] auto expect_lvalue() -> void { std::abort(); }
 
-  int counter;
-  int return_label;
+  int depth_;
+  int counter_;
+  int return_label_;
 
   FILE *out_;
   Context *context_;

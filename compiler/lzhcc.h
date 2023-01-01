@@ -87,6 +87,7 @@ enum class TokenKind : uint8_t {
   kw_char,               // "char"
   kw_continue,           // "continue"
   kw_default,            // "default"
+  kw_do,                 // "do"
   kw_else,               // "else"
   kw_enum,               // "enum"
   kw_extern,             // "extern"
@@ -382,6 +383,7 @@ enum class StmtKind {
   kw_switch,
   kw_case,
   kw_default,
+  kw_do,
 };
 
 struct Stmt {
@@ -468,6 +470,16 @@ struct DefaultStmt : Stmt {
       : Stmt(StmtKind::kw_default), stmt(stmt), label(label) {}
   Stmt *stmt;
   Label *label;
+};
+
+struct DoStmt : Stmt {
+  DoStmt(Stmt *then, Expr *cond, Label *continue_label, Label *break_label)
+      : Stmt(StmtKind::kw_do), then(then), cond(cond),
+        continue_label(continue_label), break_label(break_label) {}
+  Stmt *then;
+  Expr *cond;
+  Label *continue_label;
+  Label *break_label;
 };
 
 enum class InitKind {
@@ -613,6 +625,8 @@ public:
   auto switch_stmt(Expr *expr, Label *break_label) -> SwitchStmt *;
   auto case_stmt(Stmt *stmt, int64_t value, Label *label) -> CaseStmt *;
   auto default_stmt(Stmt *stmt, Label *label) -> Stmt *;
+  auto do_stmt(Stmt *stmt, Expr *cond, Label *continue_label,
+               Label *break_label) -> Stmt *;
 
   // init
   auto array_init(std::vector<Init *> children, Type *base) -> Init *;

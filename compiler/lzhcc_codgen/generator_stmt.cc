@@ -92,6 +92,18 @@ auto Generator::default_stmt(DefaultStmt *stmt) -> void {
   stmt_proxy(stmt->stmt);
 }
 
+auto Generator::do_stmt(DoStmt *stmt) -> void {
+  int label = counter++;
+  auto break_name = stmt->break_label->name;
+  auto continue_name = stmt->continue_label->name;
+  println("%.*s:", (int)continue_name.size(), continue_name.data());
+  stmt_proxy(stmt->then);
+  expr_proxy(stmt->cond);
+  println("  bne a0, zero, %.*s", (int)continue_name.size(),
+          continue_name.data());
+  println("%.*s:", (int)break_name.size(), break_name.data());
+}
+
 auto Generator::stmt_proxy(Stmt *stmt) -> void {
   switch (stmt->kind) {
   case StmtKind::empty:
@@ -116,6 +128,8 @@ auto Generator::stmt_proxy(Stmt *stmt) -> void {
     return case_stmt(cast<CaseStmt>(stmt));
   case StmtKind::kw_default:
     return default_stmt(cast<DefaultStmt>(stmt));
+  case StmtKind::kw_do:
+    return do_stmt(cast<DoStmt>(stmt));
   }
 }
 

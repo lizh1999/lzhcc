@@ -115,6 +115,7 @@ private:
   auto switch_stmt() -> Stmt *;
   auto case_stmt() -> Stmt *;
   auto default_stmt() -> Stmt *;
+  auto do_stmt() -> Stmt *;
   auto statement() -> Stmt *;
 
   auto enum_spec() -> Type *;

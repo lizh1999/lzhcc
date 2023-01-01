@@ -203,6 +203,30 @@ auto Parser::default_stmt() -> Stmt * {
   return context_->default_stmt(stmt, default_label);
 }
 
+auto Parser::do_stmt() -> Stmt * {
+  consume(TokenKind::kw_do);
+
+  auto continue_name = unique_name().first;
+  auto continue_label = context_->create_label(continue_name);
+  continues_.push(continue_label);
+
+  auto break_name = unique_name().first;
+  auto break_label = context_->create_label(break_name);
+  breaks_.push(break_label);
+
+  auto then = statement();
+  consume(TokenKind::kw_while);
+  consume(TokenKind::open_paren);
+  auto cond = expression();
+  consume(TokenKind::close_paren);
+  consume(TokenKind::semi);
+
+  continues_.pop();
+  breaks_.pop();
+
+  return context_->do_stmt(then, cond, continue_label, break_label);
+}
+
 auto Parser::statement() -> Stmt * {
   switch (next_kind()) {
   case TokenKind::kw_for:
@@ -229,6 +253,8 @@ auto Parser::statement() -> Stmt * {
     return case_stmt();
   case TokenKind::kw_default:
     return default_stmt();
+  case TokenKind::kw_do:
+    return do_stmt();
   case TokenKind::open_brace: {
     entry_scope();
     auto result = block_stmt();

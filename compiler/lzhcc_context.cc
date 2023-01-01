@@ -39,6 +39,7 @@ Context::Context() {
   push_identifier("char");
   push_identifier("continue");
   push_identifier("default");
+  push_identifier("do");
   push_identifier("else");
   push_identifier("enum");
   push_identifier("extern");
@@ -65,6 +66,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_char);
   keyword_map_.push_back(TokenKind::kw_continue);
   keyword_map_.push_back(TokenKind::kw_default);
+  keyword_map_.push_back(TokenKind::kw_do);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
   keyword_map_.push_back(TokenKind::kw_extern);
@@ -420,6 +422,11 @@ auto Context::case_stmt(Stmt *stmt, int64_t value, Label *label) -> CaseStmt * {
 
 auto Context::default_stmt(Stmt *stmt, Label *label) -> Stmt * {
   return create<DefaultStmt>(stmt, label);
+}
+
+auto Context::do_stmt(Stmt *stmt, Expr *cond, Label *continue_label,
+                      Label *break_label) -> Stmt * {
+  return create<DoStmt>(stmt, cond, continue_label, break_label);
 }
 
 auto Context::array_init(std::vector<Init *> children, Type *base) -> Init * {

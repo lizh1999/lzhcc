@@ -62,6 +62,7 @@ private:
   auto switch_stmt(SwitchStmt *stmt) -> void;
   auto case_stmt(CaseStmt *stmt) -> void;
   auto default_stmt(DefaultStmt *stmt) -> void;
+  auto do_stmt(DoStmt *stmt) -> void;
   auto stmt_proxy(Stmt *stmt) -> void;
 
   auto push(const char *reg) -> void;

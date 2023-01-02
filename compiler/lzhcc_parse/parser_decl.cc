@@ -161,6 +161,7 @@ enum {
   kw_short = 1 << 8,
   kw_long = 1 << 10,
   other = 1 << 12,
+  kw_signed = 1 << 14,
 };
 
 static auto is_valid(int mask) -> bool {
@@ -170,16 +171,26 @@ static auto is_valid(int mask) -> bool {
   case kw_bool:
 
   case kw_char:
+  case kw_signed + kw_char:
 
   case kw_short:
   case kw_short + kw_int:
+  case kw_signed + kw_short:
+  case kw_signed + kw_short + kw_int:
 
   case kw_int:
+  case kw_signed:
+  case kw_signed + kw_int:
 
   case kw_long:
   case kw_long + kw_int:
   case kw_long + kw_long:
   case kw_long + kw_long + kw_int:
+
+  case kw_signed + kw_long:
+  case kw_signed + kw_long + kw_int:
+  case kw_signed + kw_long + kw_long:
+  case kw_signed + kw_long + kw_long + kw_int:
 
   case other:
     return true;
@@ -203,6 +214,7 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_static:
   case TokenKind::kw_extern:
   case TokenKind::kw_alignas:
+  case TokenKind::kw_signed:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -212,9 +224,9 @@ auto Parser::is_typename(Token *token) -> bool {
 }
 
 auto Parser::declspec(VarAttr *attr) -> Type * {
-#define case_goto(value, target, update)                                       \
+#define case_goto(value, op, target, update)                                   \
   case value:                                                                  \
-    mask += target;                                                            \
+    mask op target;                                                            \
     if (!is_valid(mask))                                                       \
       context_->fatal(position_->location, "");                                \
     update;                                                                    \
@@ -230,15 +242,16 @@ auto Parser::declspec(VarAttr *attr) -> Type * {
   int mask = 0;
 loop:
   switch (next_kind()) {
-    case_goto(TokenKind::kw_void, kw_void, consume());
-    case_goto(TokenKind::kw_bool, kw_bool, consume());
-    case_goto(TokenKind::kw_char, kw_char, consume());
-    case_goto(TokenKind::kw_short, kw_short, consume());
-    case_goto(TokenKind::kw_int, kw_int, consume());
-    case_goto(TokenKind::kw_long, kw_long, consume());
-    case_goto(TokenKind::kw_struct, other, result = struct_or_union_decl());
-    case_goto(TokenKind::kw_union, other, result = struct_or_union_decl());
-    case_goto(TokenKind::kw_enum, other, result = enum_spec());
+    case_goto(TokenKind::kw_void, +=, kw_void, consume());
+    case_goto(TokenKind::kw_bool, +=, kw_bool, consume());
+    case_goto(TokenKind::kw_char, +=, kw_char, consume());
+    case_goto(TokenKind::kw_short, +=, kw_short, consume());
+    case_goto(TokenKind::kw_int, +=, kw_int, consume());
+    case_goto(TokenKind::kw_long, +=, kw_long, consume());
+    case_goto(TokenKind::kw_signed, |=, kw_signed, consume());
+    case_goto(TokenKind::kw_struct, +=, other, result = struct_or_union_decl());
+    case_goto(TokenKind::kw_union, +=, other, result = struct_or_union_decl());
+    case_goto(TokenKind::kw_enum, +=, other, result = enum_spec());
 
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
     attr_goto(TokenKind::kw_static, is_static, consume());
@@ -281,16 +294,25 @@ loop:
   case kw_bool:
     return context_->boolean();
   case kw_char:
+  case kw_signed + kw_char:
     return context_->int8();
   case kw_short:
   case kw_short + kw_int:
+  case kw_signed + kw_short:
+  case kw_signed + kw_short + kw_int:
     return context_->int16();
   case kw_int:
+  case kw_signed:
+  case kw_signed + kw_int:
     return context_->int32();
   case kw_long:
   case kw_long + kw_int:
   case kw_long + kw_long:
   case kw_long + kw_long + kw_int:
+  case kw_signed + kw_long:
+  case kw_signed + kw_long + kw_int:
+  case kw_signed + kw_long + kw_long:
+  case kw_signed + kw_long + kw_long + kw_int:
     return context_->int64();
   default:
     assert(result);
@@ -610,8 +632,8 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
 
   auto stmt = block_stmt();
   leave_scope();
-  create_function(name, type, max_stack_size_, stmt, std::move(params),
-                  va_area, linkage);
+  create_function(name, type, max_stack_size_, stmt, std::move(params), va_area,
+                  linkage);
 }
 
 } // namespace lzhcc

@@ -99,6 +99,7 @@ enum class TokenKind : uint8_t {
   kw_long,               // "long"
   kw_return,             // "return"
   kw_short,              // "short"
+  kw_signed,             // "signed"
   kw_sizeof,             // "sizeof"
   kw_static,             // "static"
   kw_struct,             // "struct"

@@ -50,6 +50,7 @@ Context::Context() {
   push_identifier("long");
   push_identifier("return");
   push_identifier("short");
+  push_identifier("signed");
   push_identifier("sizeof");
   push_identifier("static");
   push_identifier("struct");
@@ -77,6 +78,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_long);
   keyword_map_.push_back(TokenKind::kw_return);
   keyword_map_.push_back(TokenKind::kw_short);
+  keyword_map_.push_back(TokenKind::kw_signed);
   keyword_map_.push_back(TokenKind::kw_sizeof);
   keyword_map_.push_back(TokenKind::kw_static);
   keyword_map_.push_back(TokenKind::kw_struct);

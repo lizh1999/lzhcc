@@ -147,6 +147,19 @@ auto Parser::create_local(Token *token, Type *type, int align) -> LValue * {
   return var;
 }
 
+auto Parser::create_local(std::string name, Type *type) -> LValue * {
+  auto &current = scopes_.back();
+  auto ident = context_->push_identifier(name);
+  int size = context_->size_of(type);
+  int align = context_->align_of(type);
+  stack_size_ = align_to(stack_size_, align);
+  auto var = context_->create_local(type, stack_size_);
+  stack_size_ += size;
+  max_stack_size_ = std::max(max_stack_size_, stack_size_);
+  current.var_map.emplace(ident, var);
+  return var;
+}
+
 auto Parser::create_global(Token *token, Type *type, uint8_t *init,
                            std::vector<Relocation> relocations, int align_bytes,
                            Linkage linkage) -> void {
@@ -162,14 +175,14 @@ auto Parser::create_global(Token *token, Type *type, uint8_t *init,
 
 auto Parser::create_function(Token *token, Type *type, int stack_size,
                              Stmt *stmt, std::vector<LValue *> params,
-                             Linkage linkage) -> void {
+                             LValue *va_area, Linkage linkage) -> void {
   auto &file_scope = scopes_.front();
   auto it = file_scope.var_map.find(token->inner);
   assert(it != file_scope.var_map.end());
 
   auto name = context_->storage(token->inner);
   auto var = context_->create_function(type, name, stack_size, stmt,
-                                       std::move(params), linkage);
+                                       std::move(params), va_area, linkage);
   it->second = var;
 }
 

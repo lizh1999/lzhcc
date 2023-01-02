@@ -602,10 +602,16 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
     params.push_back(var);
   }
 
+  LValue *va_area = nullptr;
+  if (function_type->is_variadic) {
+    auto type = context_->array_of(context_->int8(), 64);
+    va_area = create_local("__va_area__", type);
+  }
+
   auto stmt = block_stmt();
   leave_scope();
   create_function(name, type, max_stack_size_, stmt, std::move(params),
-                  linkage);
+                  va_area, linkage);
 }
 
 } // namespace lzhcc

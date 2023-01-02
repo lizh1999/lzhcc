@@ -100,8 +100,14 @@ auto Generator::codegen(Function *function) -> void {
   println("  mv fp, sp");
 
   auto &params = function->params;
-  for (int i = 0; i < params.size(); i++) {
+  int i = 0;
+  for (; i < params.size(); i++) {
     store(params[i]->type, i, params[i]->offset);
+  }
+  if (function->va_area) {
+    for (int j = 0; i < 8; i++, j += 8) {
+      println("  sd a%d, %d(sp)", i, function->va_area->offset + j);
+    }
   }
 
   stmt_proxy(function->stmt);

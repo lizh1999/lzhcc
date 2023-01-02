@@ -157,11 +157,13 @@ private:
   auto create_typedef(Token *token, Type *type) -> void;
   auto create_enum(Token *token, int value) -> void;
   auto create_local(Token *token, Type *type, int align) -> LValue *;
+  auto create_local(std::string name, Type *type) -> LValue *;
   auto create_global(Token *token, Type *type, uint8_t *init,
                      std::vector<Relocation> relocations, int align_bytes,
                      Linkage linkage) -> void;
   auto create_function(Token *token, Type *type, int stack_size, Stmt *stmt,
-                       std::vector<LValue *> params, Linkage linkage) -> void;
+                       std::vector<LValue *> params, LValue *va_area,
+                       Linkage linkage) -> void;
   auto create_anon_global(Type *type, uint8_t *init, std::vector<Relocation> r)
       -> GValue *;
   auto create_anon_local(Type *type) -> LValue *;

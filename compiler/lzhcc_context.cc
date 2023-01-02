@@ -243,9 +243,9 @@ auto Context::create_global(Type *type, std::string_view name, uint8_t *init,
 
 auto Context::create_function(Type *type, std::string_view name, int stack_size,
                               Stmt *stmt, std::vector<LValue *> params,
-                              Linkage linkage) -> Function * {
+                              LValue *va_area, Linkage linkage) -> Function * {
   return create<Function>(type, name, stack_size, stmt, std::move(params),
-                          linkage);
+                          va_area, linkage);
 }
 
 auto Context::create_label(std::string_view name) -> Label * {

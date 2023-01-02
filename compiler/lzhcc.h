@@ -248,13 +248,14 @@ struct GValue : Value {
 
 struct Function : Value {
   Function(Type *type, std::string_view name, int stack_size, struct Stmt *stmt,
-           std::vector<LValue *> params, Linkage linkage)
+           std::vector<LValue *> params, LValue *va_area, Linkage linkage)
       : Value(ValueKind::function, type), name(name), stack_size(stack_size),
-        stmt(stmt), params(std::move(params)), linkage(linkage) {}
+        stmt(stmt), params(std::move(params)), va_area(va_area), linkage(linkage) {}
   std::string_view name;
   int stack_size;
   struct Stmt *stmt;
   std::vector<LValue *> params;
+  LValue *va_area;
   Linkage linkage;
 };
 
@@ -572,7 +573,7 @@ public:
                      Linkage linkage) -> GValue *;
   auto create_function(Type *type, std::string_view name, int stack_size,
                        Stmt *stmt, std::vector<LValue *> params,
-                       Linkage linkage) -> Function *;
+                       LValue *va_area, Linkage linkage) -> Function *;
 
   // label
   auto create_label(std::string_view name = "") -> Label *;

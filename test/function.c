@@ -57,6 +57,16 @@ void ret_none() {
 
 int add_all(int n, ...);
 
+typedef void *va_list;
+
+int sprintf(char *buf, char *fmt, ...);
+int vsprintf(char *buf, char *fmt, va_list ap);
+
+char *fmt(char *buf, char *fmt, ...) {
+  va_list ap = __va_area__;
+  vsprintf(buf, fmt, ap);
+}
+
 int main() {
   ASSERT(3, ret3());
   ASSERT(8, add2(3, 5));
@@ -103,6 +113,8 @@ int main() {
   ASSERT(5, add_all(4,1,2,3,-1));
 
   ASSERT(0, ({ char buf[100]; sprintf(buf, "%d %d %s", 1, 2, "foo"); strcmp("1 2 foo", buf); }));
+
+  ASSERT(0, ({ char buf[100]; fmt(buf, "%d %d %s", 1, 2, "foo"); strcmp("1 2 foo", buf); }));
 
   printf("OK\n");
   return 0;

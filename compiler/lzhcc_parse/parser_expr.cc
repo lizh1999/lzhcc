@@ -889,14 +889,25 @@ auto convert(Context *context, Expr *lhs, Expr *rhs, int loc)
   auto rhs_type = cast<IntegerType>(rhs->type);
   using enum IntegerKind;
 
-  auto target = std::max({lhs_type->kind, rhs_type->kind, word});
-  auto type = target == word ? context->int32() : context->int64();
-  if (target != lhs_type->kind) {
-    lhs = low_cast_op(context, type, lhs);
+  if (lhs_type->kind < IntegerKind::word) {
+    lhs_type = cast<IntegerType>(context->int32());
   }
-  if (target != rhs_type->kind) {
-    rhs = low_cast_op(context, type, rhs);
+
+  if (rhs_type->kind < IntegerKind::word) {
+    rhs_type = cast<IntegerType>(context->int32());
   }
+
+  Type *type = nullptr;
+  if (lhs_type->kind != rhs_type->kind) {
+    type = lhs_type->kind < rhs_type->kind ? rhs_type : lhs_type;
+  } else if (rhs_type->sign == Sign::unsign) {
+    type = rhs_type;
+  } else {
+    type = lhs_type;
+  }
+
+  lhs = low_cast_op(context, type, lhs);
+  rhs = low_cast_op(context, type, rhs);
   return std::tuple(lhs, rhs, type);
 }
 
@@ -993,14 +1004,12 @@ auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
 
 auto low_shift_left_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
-  auto [l, r, type] = convert(context, lhs, rhs, loc);
-  return context->shift_left(type, l, r);
+  return context->shift_left(lhs->type, lhs, rhs);
 }
 
 auto low_shift_right_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
-  auto [l, r, type] = convert(context, lhs, rhs, loc);
-  return context->shift_right(type, l, r);
+  return context->shift_right(lhs->type, lhs, rhs);
 }
 
 auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {

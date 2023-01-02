@@ -106,6 +106,7 @@ enum class TokenKind : uint8_t {
   kw_switch,             // "switch"
   kw_typedef,            // "typedef"
   kw_union,              // "union"
+  kw_unsigned,           // "unsigned"
   kw_void,               // "void"
   kw_while,              // "while"
 };
@@ -156,11 +157,16 @@ enum class IntegerKind {
   dword = 8,
 };
 
+enum class Sign {
+  sign,
+  unsign,
+};
+
 struct IntegerType : Type {
-  IntegerType(IntegerKind kind, bool is_unsigned)
-      : Type(TypeKind::integer), kind(kind), is_unsigned(is_unsigned) {}
+  IntegerType(IntegerKind kind, Sign sign)
+      : Type(TypeKind::integer), kind(kind), sign(sign) {}
   IntegerKind kind;
-  bool is_unsigned;
+  Sign sign;
 };
 
 struct PointerType : Type {
@@ -251,7 +257,8 @@ struct Function : Value {
   Function(Type *type, std::string_view name, int stack_size, struct Stmt *stmt,
            std::vector<LValue *> params, LValue *va_area, Linkage linkage)
       : Value(ValueKind::function, type), name(name), stack_size(stack_size),
-        stmt(stmt), params(std::move(params)), va_area(va_area), linkage(linkage) {}
+        stmt(stmt), params(std::move(params)), va_area(va_area),
+        linkage(linkage) {}
   std::string_view name;
   int stack_size;
   struct Stmt *stmt;
@@ -559,6 +566,14 @@ public:
   auto int16() -> Type *;
   auto int32() -> Type *;
   auto int64() -> Type *;
+
+  auto uint8() -> Type *;
+  auto uint16() -> Type *;
+  auto uint32() -> Type *;
+  auto uint64() -> Type *;
+
+  auto integer(IntegerKind kind, Sign sign) -> Type *;
+
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params, bool) -> Type *;

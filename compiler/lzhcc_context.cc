@@ -57,6 +57,7 @@ Context::Context() {
   push_identifier("switch");
   push_identifier("typedef");
   push_identifier("union");
+  push_identifier("unsigned");
   push_identifier("void");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_alignas);
@@ -85,6 +86,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_switch);
   keyword_map_.push_back(TokenKind::kw_typedef);
   keyword_map_.push_back(TokenKind::kw_union);
+  keyword_map_.push_back(TokenKind::kw_unsigned);
   keyword_map_.push_back(TokenKind::kw_void);
   keyword_map_.push_back(TokenKind::kw_while);
 }
@@ -153,19 +155,39 @@ auto Context::void_type() -> Type * { return create<VoidType>(); }
 auto Context::boolean() -> Type * { return create<BoolType>(); }
 
 auto Context::int8() -> Type * {
-  return create<IntegerType>(IntegerKind::byte, /*is_unsigned=*/false);
+  return create<IntegerType>(IntegerKind::byte, Sign::sign);
 }
 
 auto Context::int16() -> Type * {
-  return create<IntegerType>(IntegerKind::half, /*is_unsigned=*/false);
+  return create<IntegerType>(IntegerKind::half, Sign::sign);
 }
 
 auto Context::int32() -> Type * {
-  return create<IntegerType>(IntegerKind::word, /*is_unsigned=*/false);
+  return create<IntegerType>(IntegerKind::word, Sign::sign);
 }
 
 auto Context::int64() -> Type * {
-  return create<IntegerType>(IntegerKind::dword, /*is_unsigned=*/false);
+  return create<IntegerType>(IntegerKind::dword, Sign::sign);
+}
+
+auto Context::uint8() -> Type * {
+  return create<IntegerType>(IntegerKind::byte, Sign::unsign);
+}
+
+auto Context::uint16() -> Type * {
+  return create<IntegerType>(IntegerKind::half, Sign::unsign);
+}
+
+auto Context::uint32() -> Type * {
+  return create<IntegerType>(IntegerKind::word, Sign::unsign);
+}
+
+auto Context::uint64() -> Type * {
+  return create<IntegerType>(IntegerKind::dword, Sign::unsign);
+}
+
+auto Context::integer(IntegerKind kind, Sign sign) -> Type * {
+  return create<IntegerType>(kind, sign);
 }
 
 auto Context::pointer_to(Type *base) -> Type * {

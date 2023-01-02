@@ -162,6 +162,7 @@ enum {
   kw_long = 1 << 10,
   other = 1 << 12,
   kw_signed = 1 << 14,
+  kw_unsigned = 1 << 16,
 };
 
 static auto is_valid(int mask) -> bool {
@@ -170,17 +171,25 @@ static auto is_valid(int mask) -> bool {
 
   case kw_bool:
 
-  case kw_char:
   case kw_signed + kw_char:
+
+  case kw_char:
+  case kw_unsigned + kw_char:
 
   case kw_short:
   case kw_short + kw_int:
   case kw_signed + kw_short:
   case kw_signed + kw_short + kw_int:
 
+  case kw_unsigned + kw_short:
+  case kw_unsigned + kw_short + kw_int:
+
   case kw_int:
   case kw_signed:
   case kw_signed + kw_int:
+
+  case kw_unsigned:
+  case kw_unsigned + kw_int:
 
   case kw_long:
   case kw_long + kw_int:
@@ -191,6 +200,11 @@ static auto is_valid(int mask) -> bool {
   case kw_signed + kw_long + kw_int:
   case kw_signed + kw_long + kw_long:
   case kw_signed + kw_long + kw_long + kw_int:
+
+  case kw_unsigned + kw_long:
+  case kw_unsigned + kw_long + kw_int:
+  case kw_unsigned + kw_long + kw_long:
+  case kw_unsigned + kw_long + kw_long + kw_int:
 
   case other:
     return true;
@@ -215,6 +229,7 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_extern:
   case TokenKind::kw_alignas:
   case TokenKind::kw_signed:
+  case TokenKind::kw_unsigned:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -249,6 +264,7 @@ loop:
     case_goto(TokenKind::kw_int, +=, kw_int, consume());
     case_goto(TokenKind::kw_long, +=, kw_long, consume());
     case_goto(TokenKind::kw_signed, |=, kw_signed, consume());
+    case_goto(TokenKind::kw_unsigned, |=, kw_unsigned, consume());
     case_goto(TokenKind::kw_struct, +=, other, result = struct_or_union_decl());
     case_goto(TokenKind::kw_union, +=, other, result = struct_or_union_decl());
     case_goto(TokenKind::kw_enum, +=, other, result = enum_spec());
@@ -293,18 +309,26 @@ loop:
     return context_->void_type();
   case kw_bool:
     return context_->boolean();
-  case kw_char:
   case kw_signed + kw_char:
     return context_->int8();
+  case kw_char:
+  case kw_unsigned + kw_char:
+    return context_->uint8();
   case kw_short:
   case kw_short + kw_int:
   case kw_signed + kw_short:
   case kw_signed + kw_short + kw_int:
     return context_->int16();
+  case kw_unsigned + kw_short:
+  case kw_unsigned + kw_short + kw_int:
+    return context_->uint16();
   case kw_int:
   case kw_signed:
   case kw_signed + kw_int:
     return context_->int32();
+  case kw_unsigned:
+  case kw_unsigned + kw_int:
+    return context_->uint32();
   case kw_long:
   case kw_long + kw_int:
   case kw_long + kw_long:
@@ -314,6 +338,11 @@ loop:
   case kw_signed + kw_long + kw_long:
   case kw_signed + kw_long + kw_long + kw_int:
     return context_->int64();
+  case kw_unsigned + kw_long:
+  case kw_unsigned + kw_long + kw_int:
+  case kw_unsigned + kw_long + kw_long:
+  case kw_unsigned + kw_long + kw_long + kw_int:
+    return context_->uint64();
   default:
     assert(result);
     return result;

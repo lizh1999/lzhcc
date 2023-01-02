@@ -71,15 +71,16 @@ auto Generator::addr_proxy(Expr *expr) -> void {
 }
 
 auto Generator::load_integer(IntegerType *type) -> void {
+  const char *suffix = type->sign == Sign::sign ? "" : "u";
   switch (type->kind) {
   case IntegerKind::byte:
-    return println("  lb a0, 0(a0)");
+    return println("  lb%s a0, 0(a0)", suffix);
   case IntegerKind::half:
-    return println("  lh a0, 0(a0)");
+    return println("  lh%s a0, 0(a0)", suffix);
   case IntegerKind::word:
-    return println("  lw a0, 0(a0)");
+    return println("  lw%s a0, 0(a0)", suffix);
   case IntegerKind::dword:
-    return println("  ld a0, 0(a0)");
+    return println("  ld%s a0, 0(a0)", suffix);
   }
 }
 
@@ -119,34 +120,52 @@ auto Generator::integer_expr(IntegerExpr *expr) -> void {
   println("  li a0, %ld", expr->value);
 }
 
+enum Scalar {
+  i8,
+  i16,
+  i32,
+  i64,
+  u8,
+  u16,
+  u32,
+  u64,
+};
+
 static const char i64i8[] = "  slliw a0, a0, 24\n"
                             "  sraiw a0, a0, 24";
 static const char i64i16[] = "  slliw a0, a0, 16\n"
                              "  sraiw a0, a0, 16";
 static const char i64i32[] = "  sext.w  a0, a0";
 
-static const char neq[] = "snez a0, a0";
+static const char i64u8[] = "  andi a0, a0, 255";
+static const char i64u16[] = "  slli a0, a0, 48\n"
+                             "  srli a0, a0, 48";
+static const char i64u32[] = "  slli a0, a0, 32\n"
+                             "  srli a0, a0, 32";
 
 // clang-format off
-static const char *cast_table[][5] = {
-    {nullptr, nullptr,  nullptr,  nullptr,  neq},     // i8
-    {i64i8,   nullptr,  nullptr,  nullptr,  neq},     // i16
-    {i64i8,   i64i16,   nullptr,  nullptr,  neq},     // i32
-    {i64i8,   i64i16,   i64i32,   nullptr,  neq},     // i64
-    {nullptr, nullptr,  nullptr,  nullptr,  nullptr}, // boolean
+static const char *cast_table[][8] = {
+    {nullptr, nullptr,  nullptr,  nullptr,  i64u8,  nullptr,  nullptr,  nullptr}, // i8
+    {i64i8,   nullptr,  nullptr,  nullptr,  i64u8,  i64u16,   nullptr,  nullptr}, // i16
+    {i64i8,   i64i16,   nullptr,  nullptr,  i64u8,  i64u16,   i64u32,   nullptr}, // i32
+    {i64i8,   i64i16,   i64i32,   nullptr,  i64u8,  i64u16,   i64u32,   nullptr}, // i64
+    {i64i8,   nullptr,  nullptr,  nullptr,  nullptr,nullptr,  nullptr,  nullptr}, // u8
+    {i64i8,   i64i16,   nullptr,  nullptr,  i64u8,  nullptr,  nullptr,  nullptr}, // u16
+    {i64i8,   i64i16,   i64i32,   nullptr,  i64u8,  i64u16,   nullptr,  nullptr}, // u32
+    {i64i8,   i64i16,   i64i32,   nullptr,  i64u8,  i64u16,   i64u32,   nullptr}, // u64
 };
 // clang-format on
 
 static auto type_id(IntegerType *type) -> int {
   switch (type->kind) {
   case IntegerKind::byte:
-    return 0;
+    return type->sign == Sign::sign ? i8 : u8;
   case IntegerKind::half:
-    return 1;
+    return type->sign == Sign::sign ? i16 : u16;
   case IntegerKind::word:
-    return 2;
+    return type->sign == Sign::sign ? i32 : u32;
   case IntegerKind::dword:
-    return 3;
+    return type->sign == Sign::sign ? i64 : u64;
   }
 }
 
@@ -161,13 +180,18 @@ static auto type_id(Type *type) -> int {
   case TypeKind::array:
     return 3;
   case TypeKind::boolean:
-    return 4;
   case TypeKind::record:
     std::abort();
   }
 }
 
 auto Generator::cast(Type *src, Type *dest) -> void {
+  if (src->kind == TypeKind::boolean) {
+    return;
+  }
+  if (dest->kind == TypeKind::boolean) {
+    return println("snez a0, a0");
+  }
   int lhs = type_id(src);
   int rhs = type_id(dest);
   if (cast_table[lhs][rhs]) {
@@ -258,7 +282,12 @@ auto Generator::add_integer(IntegerType *type) -> void {
   case IntegerKind::byte:
   case IntegerKind::half:
   case IntegerKind::word:
-    return println("  addw a0, a0, a1");
+    println("  addw a0, a0, a1");
+    if (type->sign == Sign::unsign) {
+      println("  slli a0, a0, 32");
+      println("  srli a0, a0, 32");
+    }
+    break;
   case IntegerKind::dword:
     return println("  add a0, a0, a1");
   }
@@ -284,7 +313,12 @@ auto Generator::subtract_integer(IntegerType *type) -> void {
   case IntegerKind::byte:
   case IntegerKind::half:
   case IntegerKind::word:
-    return println("  subw a0, a0, a1");
+    println("  subw a0, a0, a1");
+    if (type->sign == Sign::unsign) {
+      println("  slli a0, a0, 32");
+      println("  srli a0, a0, 32");
+    }
+    break;
   case IntegerKind::dword:
     return println("  sub a0, a0, a1");
   }
@@ -292,9 +326,15 @@ auto Generator::subtract_integer(IntegerType *type) -> void {
 
 auto Generator::multiply(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
-  switch (cast<IntegerType>(type)->kind) {
+  auto integer = cast<IntegerType>(type);
+  switch (integer->kind) {
   case IntegerKind::word:
-    return println("  mulw a0, a0, a1");
+    println("  mulw a0, a0, a1");
+    if (integer->sign == Sign::unsign) {
+      println("  slli a0, a0, 32");
+      println("  srli a0, a0, 32");
+    }
+    break;
   case IntegerKind::dword:
     return println("  mul a0, a0, a1");
   default:
@@ -304,11 +344,22 @@ auto Generator::multiply(Type *type) -> void {
 
 auto Generator::divide(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
-  switch (cast<IntegerType>(type)->kind) {
+  auto integer = cast<IntegerType>(type);
+  switch (integer->kind) {
   case IntegerKind::word:
-    return println("  divw a0, a0, a1");
+    switch (integer->sign) {
+    case Sign::sign:
+      return println("  divw a0, a0, a1");
+    case Sign::unsign:
+      return println("  divuw a0, a0, a1");
+    }
   case IntegerKind::dword:
-    return println("  div a0, a0, a1");
+    switch (integer->sign) {
+    case Sign::sign:
+      return println("  div a0, a0, a1");
+    case Sign::unsign:
+      return println("  divu a0, a0, a1");
+    }
   default:
     assert(false);
   }
@@ -316,11 +367,22 @@ auto Generator::divide(Type *type) -> void {
 
 auto Generator::modulo(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
-  switch (cast<IntegerType>(type)->kind) {
+  auto integer = cast<IntegerType>(type);
+  switch (integer->kind) {
   case IntegerKind::word:
-    return println("  remw a0, a0, a1");
+    switch (integer->sign) {
+    case Sign::sign:
+      return println("  remw a0, a0, a1");
+    case Sign::unsign:
+      return println("  remuw a0, a0, a1");
+    }
   case IntegerKind::dword:
-    return println("  rem a0, a0, a1");
+    switch (integer->sign) {
+    case Sign::sign:
+      return println("  rem a0, a0, a1");
+    case Sign::unsign:
+      return println("  remu a0, a0, a1");
+    }
   default:
     assert(false);
   }
@@ -340,11 +402,13 @@ auto Generator::shift_left(Type *type) -> void {
 
 auto Generator::shift_right(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
-  switch (cast<IntegerType>(type)->kind) {
+  auto integer = cast<IntegerType>(type);
+  char c = integer->sign == Sign::sign ? 'a' : 'l';
+  switch (integer->kind) {
   case IntegerKind::word:
-    return println("  sraw a0, a0, a1");
+    return println("  sr%cw a0, a0, a1", c);
   case IntegerKind::dword:
-    return println("  sra a0, a0, a1");
+    return println("  sr%c a0, a0, a1", c);
   default:
     assert(false);
   }
@@ -384,10 +448,22 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     return println("  or a0, a0, a1");
   case BinaryKind::less_than:
     rvalue();
-    return println("  slt a0, a0, a1");
+    switch (cast<IntegerType>(expr->lhs->type)->sign) {
+    case Sign::sign:
+      return println("  slt a0, a0, a1");
+    case Sign::unsign:
+      return println("  sltu a0, a0, a1");
+    }
   case BinaryKind::less_equal:
     rvalue();
-    println("  slt a0, a1, a0");
+    switch (cast<IntegerType>(expr->lhs->type)->sign) {
+    case Sign::sign:
+      println("  slt a0, a1, a0");
+      break;
+    case Sign::unsign:
+      println("  sltu a0, a1, a0");
+      break;
+    }
     return println("  xori a0, a0, 1");
   case BinaryKind::equal:
     rvalue();

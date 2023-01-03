@@ -915,13 +915,10 @@ auto convert(Context *context, Expr *operand) -> std::pair<Expr *, Type *> {
   assert(operand->type->kind == TypeKind::integer);
   auto operand_type = cast<IntegerType>(operand->type);
   using enum IntegerKind;
-
-  auto target = std::max(operand_type->kind, word);
-  auto type = target == word ? context->int32() : context->int64();
-  if (target != operand_type->kind) {
-    operand = low_cast_op(context, type, operand);
+  if (operand_type->kind < IntegerKind::word) {
+    operand = low_cast_op(context, context->int32(), operand);
   }
-  return std::pair(operand, type);
+  return std::pair(operand, operand->type);
 }
 
 auto low_mul_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {

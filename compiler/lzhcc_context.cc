@@ -186,10 +186,6 @@ auto Context::uint64() -> Type * {
   return create<IntegerType>(IntegerKind::dword, Sign::unsign);
 }
 
-auto Context::integer(IntegerKind kind, Sign sign) -> Type * {
-  return create<IntegerType>(kind, sign);
-}
-
 auto Context::pointer_to(Type *base) -> Type * {
   return create<PointerType>(base);
 }
@@ -292,6 +288,10 @@ auto Context::integer(int32_t value) -> Expr * {
 
 auto Context::integer(int64_t value) -> Expr * {
   return create<IntegerExpr>(int64(), value);
+}
+
+auto Context::integer(Type *type, int64_t value) -> Expr * {
+  return create<IntegerExpr>(type, value);
 }
 
 auto Context::negative(Type *type, Expr *operand) -> Expr * {

@@ -572,8 +572,6 @@ public:
   auto uint32() -> Type *;
   auto uint64() -> Type *;
 
-  auto integer(IntegerKind kind, Sign sign) -> Type *;
-
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params, bool) -> Type *;
@@ -600,6 +598,8 @@ public:
   auto integer(int8_t value) -> Expr *;
   auto integer(int32_t value) -> Expr *;
   auto integer(int64_t value) -> Expr *;
+  auto integer(Type *type, int64_t value) -> Expr *;
+
   auto negative(Type *type, Expr *operand) -> Expr *;
   auto refrence(Type *type, Expr *operand) -> Expr *;
   auto deref(Type *type, Expr *operand) -> Expr *;

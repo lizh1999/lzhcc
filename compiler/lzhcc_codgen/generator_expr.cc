@@ -414,6 +414,52 @@ auto Generator::shift_right(Type *type) -> void {
   }
 }
 
+auto Generator::less_than(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::record:
+    assert(false);
+  case TypeKind::integer:
+    switch (cast<IntegerType>(type)->sign) {
+    case Sign::sign:
+      return println("  slt a0, a0, a1");
+    case Sign::unsign:
+      return println("  sltu a0, a0, a1");
+    }
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+    return println("  sltu a0, a0, a1");
+  }
+}
+
+auto Generator::less_equal(Type *type) -> void {
+  switch (type->kind) {
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::record:
+    assert(false);
+  case TypeKind::integer:
+    switch (cast<IntegerType>(type)->sign) {
+    case Sign::sign:
+      println("   slt a0, a1, a0");
+      break;
+    case Sign::unsign:
+      println("  sltu a0, a1, a0");
+      break;
+    }
+    break;
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+    println("  sltu a0, a1, a0");
+    break;
+  }
+  println("  xori a0, a0, 1");
+}
+
+
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
 #define rvalue()                                                               \
   expr_proxy(expr->rhs);                                                       \
@@ -448,23 +494,10 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     return println("  or a0, a0, a1");
   case BinaryKind::less_than:
     rvalue();
-    switch (cast<IntegerType>(expr->lhs->type)->sign) {
-    case Sign::sign:
-      return println("  slt a0, a0, a1");
-    case Sign::unsign:
-      return println("  sltu a0, a0, a1");
-    }
+    return less_than(expr->lhs->type);
   case BinaryKind::less_equal:
     rvalue();
-    switch (cast<IntegerType>(expr->lhs->type)->sign) {
-    case Sign::sign:
-      println("  slt a0, a1, a0");
-      break;
-    case Sign::unsign:
-      println("  sltu a0, a1, a0");
-      break;
-    }
-    return println("  xori a0, a0, 1");
+    return less_equal(expr->lhs->type);
   case BinaryKind::equal:
     rvalue();
     println("  xor a0, a0, a1");

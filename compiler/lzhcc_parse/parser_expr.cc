@@ -9,6 +9,8 @@ static auto low_deref_op(Context *, Expr *, int) -> Expr *;
 static auto low_cast_op(Context *, Type *, Expr *) -> Expr *;
 static auto convert(Context *, Expr *, Expr *, int)
     -> std::tuple<Expr *, Expr *, Type *>;
+static auto convert_cmp(Context *, Expr *, Expr *, int)
+    -> std::pair<Expr *, Expr *>;
 static auto convert(Context *, Expr *) -> std::pair<Expr *, Type *>;
 static auto low_mul_op(Context *, Expr *, Expr *, int) -> Expr *;
 static auto low_div_op(Context *, Expr *, Expr *, int) -> Expr *;
@@ -613,28 +615,28 @@ loop:
   case TokenKind::less: {
     auto token = consume();
     auto rhs = shift();
-    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    auto [l, r] = convert_cmp(context_, lhs, rhs, token->location);
     lhs = context_->less_than(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::less_equal: {
     auto token = consume();
     auto rhs = shift();
-    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    auto [l, r] = convert_cmp(context_, lhs, rhs, token->location);
     lhs = context_->less_equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::greater: {
     auto token = consume();
     auto rhs = shift();
-    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    auto [l, r] = convert_cmp(context_, lhs, rhs, token->location);
     lhs = context_->less_than(context_->int32(), r, l);
     goto loop;
   }
   case TokenKind::greater_equal: {
     auto token = consume();
     auto rhs = shift();
-    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    auto [l, r] = convert_cmp(context_, lhs, rhs, token->location);
     lhs = context_->less_equal(context_->int32(), r, l);
     goto loop;
   }
@@ -651,14 +653,14 @@ loop:
   case TokenKind::equal_equal: {
     auto token = consume();
     auto rhs = relational();
-    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    auto [l, r] = convert_cmp(context_, lhs, rhs, token->location);
     lhs = context_->equal(context_->int32(), l, r);
     goto loop;
   }
   case TokenKind::exclaim_equal: {
     auto token = consume();
     auto rhs = relational();
-    auto [l, r, _] = convert(context_, lhs, rhs, token->location);
+    auto [l, r] = convert_cmp(context_, lhs, rhs, token->location);
     lhs = context_->not_equal(context_->int32(), l, r);
     goto loop;
   }
@@ -909,6 +911,29 @@ auto convert(Context *context, Expr *lhs, Expr *rhs, int loc)
   lhs = low_cast_op(context, type, lhs);
   rhs = low_cast_op(context, type, rhs);
   return std::tuple(lhs, rhs, type);
+}
+
+auto convert_cmp(Context *context, Expr *lhs, Expr *rhs, int loc)
+    -> std::pair<Expr *, Expr *> {
+  auto is_pointer_like = [](Type *type) {
+    switch (type->kind) {
+    case TypeKind::kw_void:
+    case TypeKind::boolean:
+    case TypeKind::record:
+    case TypeKind::integer:
+      return false;
+    case TypeKind::pointer:
+    case TypeKind::function:
+    case TypeKind::array:
+      return true;
+    }
+  };
+  if (is_pointer_like(lhs->type) && is_pointer_like(rhs->type)) {
+    return std::pair(lhs, rhs);
+  } else {
+    auto [l, r, _] = convert(context, lhs, rhs, loc);
+    return std::pair(l, r);
+  }
 }
 
 auto convert(Context *context, Expr *operand) -> std::pair<Expr *, Type *> {

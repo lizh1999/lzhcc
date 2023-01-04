@@ -162,6 +162,31 @@ enum class Sign {
   unsign,
 };
 
+enum class Scalar {
+  int8,
+  int16,
+  int32,
+  int64,
+  uint8,
+  uint16,
+  uint32,
+  uint64,
+};
+
+inline constexpr auto pattern(IntegerKind kind, Sign sign) -> Scalar {
+  using enum Scalar;
+  switch (kind) {
+  case IntegerKind::byte:
+    return sign == Sign::sign ? int8 : uint8;
+  case IntegerKind::half:
+    return sign == Sign::sign ? int16 : uint16;
+  case IntegerKind::word:
+    return sign == Sign::sign ? int32 : uint32;
+  case IntegerKind::dword:
+    return sign == Sign::sign ? int64 : uint64;
+  }
+}
+
 struct IntegerType : Type {
   IntegerType(IntegerKind kind, Sign sign)
       : Type(TypeKind::integer), kind(kind), sign(sign) {}

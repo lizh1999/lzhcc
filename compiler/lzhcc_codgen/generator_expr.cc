@@ -120,7 +120,7 @@ auto Generator::integer_expr(IntegerExpr *expr) -> void {
   println("  li a0, %ld", expr->value);
 }
 
-enum Scalar {
+enum {
   i8,
   i16,
   i32,

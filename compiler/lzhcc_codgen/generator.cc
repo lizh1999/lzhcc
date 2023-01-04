@@ -96,7 +96,8 @@ auto Generator::codegen(Function *function) -> void {
   println("%.*s:", (int)name.size(), name.data());
   push("fp");
   push("ra");
-  println("  addi sp, sp, -%d", function->stack_size);
+  println("  li t0, -%d", function->stack_size);
+  println("  add sp, sp, t0");
   println("  mv fp, sp");
 
   auto &params = function->params;
@@ -112,7 +113,8 @@ auto Generator::codegen(Function *function) -> void {
 
   stmt_proxy(function->stmt);
   println(".L.return.%d:", return_label_);
-  println("  addi sp, sp, %d", function->stack_size);
+  println("  li t0, %d", function->stack_size);
+  println("  add sp, sp, t0");
   pop("ra");
   pop("fp");
   println("  ret");

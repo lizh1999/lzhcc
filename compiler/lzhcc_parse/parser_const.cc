@@ -22,7 +22,7 @@ auto Parser::const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
   return lzhcc::const_int(expr, value, label);
 }
 
-auto const_int(Expr *expr, int64_t *value,LabelRef label) -> bool {
+auto const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
   switch (expr->kind) {
   case ExperKind::integer:
     *value = cast<IntegerExpr>(expr)->value;
@@ -50,8 +50,8 @@ auto const_value_int(ValueExpr *expr, int64_t *offset, LabelRef label) -> bool {
     return false;
   }
   auto type_kind = value->type->kind;
-  if (!label || type_kind != TypeKind::array &&
-      type_kind != TypeKind::function) {
+  if (!label ||
+      type_kind != TypeKind::array && type_kind != TypeKind::function) {
     return false;
   }
   *offset = 0;
@@ -59,7 +59,8 @@ auto const_value_int(ValueExpr *expr, int64_t *offset, LabelRef label) -> bool {
   return true;
 }
 
-auto const_member_int(MemberExpr *expr, int64_t *offset, LabelRef label) -> bool {
+auto const_member_int(MemberExpr *expr, int64_t *offset, LabelRef label)
+    -> bool {
   if (!label || expr->type->kind != TypeKind::array) {
     return false;
   } else if (const_addr(expr->record, offset, label)) {
@@ -76,18 +77,31 @@ static auto const_cast_int(int64_t *value, Type *type) -> bool {
   } else if (type->kind != TypeKind::integer) {
     return false;
   }
-  switch (cast<IntegerType>(type)->kind) {
-  case IntegerKind::byte:
+  auto integer = cast<IntegerType>(type);
+  switch (pattern(integer->kind, integer->sign)) {
+  case Scalar::int8:
     *value = static_cast<int8_t>(*value);
     return true;
-  case IntegerKind::half:
+  case Scalar::int16:
     *value = static_cast<int16_t>(*value);
     return true;
-  case IntegerKind::word:
+  case Scalar::int32:
     *value = static_cast<int32_t>(*value);
     return true;
-  case IntegerKind::dword:
+  case Scalar::int64:
     *value = static_cast<int64_t>(*value);
+    return true;
+  case Scalar::uint8:
+    *value = static_cast<uint8_t>(*value);
+    return true;
+  case Scalar::uint16:
+    *value = static_cast<uint16_t>(*value);
+    return true;
+  case Scalar::uint32:
+    *value = static_cast<uint32_t>(*value);
+    return true;
+  case Scalar::uint64:
+    *value = static_cast<uint64_t>(*value);
     return true;
   }
 }
@@ -123,7 +137,11 @@ auto const_binary_int(BinaryExpr *expr, int64_t *value, LabelRef label)
     bool success = false;                                                      \
     int64_t lhs, rhs;                                                          \
     if (const_int(expr->lhs, &lhs, x) && const_int(expr->rhs, &rhs, 0)) {      \
-      *value = lhs op rhs;                                                     \
+      if (cast<IntegerType>(expr->lhs->type)->sign == Sign::unsign) {          \
+        *value = (uint64_t)lhs op rhs;                                         \
+      } else {                                                                 \
+        *value = lhs op rhs;                                                   \
+      }                                                                        \
       success = true;                                                          \
     }                                                                          \
     success;                                                                   \

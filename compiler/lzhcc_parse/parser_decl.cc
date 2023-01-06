@@ -383,16 +383,25 @@ loop:
 
 auto Parser::array_dimensions(Type *base) -> Type * {
   auto open = consume(TokenKind::open_bracket);
-  if (consume_if(TokenKind::close_bracket)) {
+loop:
+  switch (next_kind()) {
+  case TokenKind::kw_static:
+  case TokenKind::kw_restrict:
+    consume();
+    goto loop;
+  case TokenKind::close_bracket:
+    consume();
     base = suffix_type(base, nullptr);
     return context_->array_of(base, -1);
-  } else if (int64_t tmp; !const_int(&tmp)) {
-    context_->fatal(open->location, "");
-  } else {
-    int length = static_cast<int>(tmp);
-    consume(TokenKind::close_bracket);
-    base = suffix_type(base, nullptr);
-    return context_->array_of(base, length);
+  default:
+    if (int64_t tmp; !const_int(&tmp)) {
+      context_->fatal(open->location, "");
+    } else {
+      int length = static_cast<int>(tmp);
+      consume(TokenKind::close_bracket);
+      base = suffix_type(base, nullptr);
+      return context_->array_of(base, length);
+    }
   }
 }
 

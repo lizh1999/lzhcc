@@ -82,10 +82,12 @@ enum class TokenKind : uint8_t {
   eof,                   // eof
   kw_alignas,            // "_Alignas"
   kw_alignof,            // "_Alignof"
+  kw_auto,               // "auto"
   kw_bool,               // "_Bool"
   kw_break,              // "break"
   kw_case,               // "case"
   kw_char,               // "char"
+  kw_const,              // "const"
   kw_continue,           // "continue"
   kw_default,            // "default"
   kw_do,                 // "do"
@@ -97,6 +99,9 @@ enum class TokenKind : uint8_t {
   kw_if,                 // "if"
   kw_int,                // "int"
   kw_long,               // "long"
+  kw_noreturn,           // "_Noreturn"
+  kw_register,           // "register"
+  kw_restrict,           // "restrict"
   kw_return,             // "return"
   kw_short,              // "short"
   kw_signed,             // "signed"
@@ -108,6 +113,7 @@ enum class TokenKind : uint8_t {
   kw_union,              // "union"
   kw_unsigned,           // "unsigned"
   kw_void,               // "void"
+  kw_volatile,           // "volatile"
   kw_while,              // "while"
 };
 

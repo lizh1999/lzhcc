@@ -230,6 +230,12 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_alignas:
   case TokenKind::kw_signed:
   case TokenKind::kw_unsigned:
+  case TokenKind::kw_auto:
+  case TokenKind::kw_const:
+  case TokenKind::kw_noreturn:
+  case TokenKind::kw_register:
+  case TokenKind::kw_restrict:
+  case TokenKind::kw_volatile:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -272,6 +278,15 @@ loop:
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
     attr_goto(TokenKind::kw_static, is_static, consume());
     attr_goto(TokenKind::kw_extern, is_extern, consume());
+
+  case TokenKind::kw_auto:
+  case TokenKind::kw_const:
+  case TokenKind::kw_noreturn:
+  case TokenKind::kw_register:
+  case TokenKind::kw_restrict:
+  case TokenKind::kw_volatile:
+    consume();
+    goto loop;
 
   case TokenKind::kw_alignas: {
     auto token = consume();
@@ -350,10 +365,20 @@ loop:
 }
 
 auto Parser::pointers(Type *base) -> Type * {
-  while (consume_if(TokenKind::star)) {
+loop:
+  switch (next_kind()) {
+  case TokenKind::kw_const:
+  case TokenKind::kw_restrict:
+  case TokenKind::kw_volatile:
+    consume();
+    goto loop;
+  case TokenKind::star:
+    consume();
     base = context_->pointer_to(base);
+    goto loop;
+  default:
+    return base;
   }
-  return base;
 }
 
 auto Parser::array_dimensions(Type *base) -> Type * {

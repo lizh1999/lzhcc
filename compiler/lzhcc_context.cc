@@ -33,10 +33,12 @@ private:
 Context::Context() {
   push_identifier("_Alignas");
   push_identifier("_Alignof");
+  push_identifier("auto");
   push_identifier("_Bool");
   push_identifier("break");
   push_identifier("case");
   push_identifier("char");
+  push_identifier("const");
   push_identifier("continue");
   push_identifier("default");
   push_identifier("do");
@@ -48,6 +50,11 @@ Context::Context() {
   push_identifier("if");
   push_identifier("int");
   push_identifier("long");
+  push_identifier("_Noreturn");
+  push_identifier("register");
+  push_identifier("restrict");
+  push_identifier("__restrict");
+  push_identifier("__restrict__");
   push_identifier("return");
   push_identifier("short");
   push_identifier("signed");
@@ -59,13 +66,16 @@ Context::Context() {
   push_identifier("union");
   push_identifier("unsigned");
   push_identifier("void");
+  push_identifier("volatile");
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_alignas);
   keyword_map_.push_back(TokenKind::kw_alignof);
+  keyword_map_.push_back(TokenKind::kw_auto);
   keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_break);
   keyword_map_.push_back(TokenKind::kw_case);
   keyword_map_.push_back(TokenKind::kw_char);
+  keyword_map_.push_back(TokenKind::kw_const);
   keyword_map_.push_back(TokenKind::kw_continue);
   keyword_map_.push_back(TokenKind::kw_default);
   keyword_map_.push_back(TokenKind::kw_do);
@@ -77,6 +87,11 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_if);
   keyword_map_.push_back(TokenKind::kw_int);
   keyword_map_.push_back(TokenKind::kw_long);
+  keyword_map_.push_back(TokenKind::kw_noreturn);
+  keyword_map_.push_back(TokenKind::kw_register);
+  keyword_map_.push_back(TokenKind::kw_restrict);
+  keyword_map_.push_back(TokenKind::kw_restrict);
+  keyword_map_.push_back(TokenKind::kw_restrict);
   keyword_map_.push_back(TokenKind::kw_return);
   keyword_map_.push_back(TokenKind::kw_short);
   keyword_map_.push_back(TokenKind::kw_signed);
@@ -88,6 +103,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_union);
   keyword_map_.push_back(TokenKind::kw_unsigned);
   keyword_map_.push_back(TokenKind::kw_void);
+  keyword_map_.push_back(TokenKind::kw_volatile);
   keyword_map_.push_back(TokenKind::kw_while);
 }
 

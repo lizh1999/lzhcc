@@ -1,4 +1,5 @@
 #include "lzhcc_codegen.h"
+#include <bit>
 #include <cassert>
 
 namespace lzhcc {
@@ -120,16 +121,20 @@ auto Generator::integer_expr(IntegerExpr *expr) -> void {
   println("  li a0, %ld", expr->value);
 }
 
-enum {
-  i8,
-  i16,
-  i32,
-  i64,
-  u8,
-  u16,
-  u32,
-  u64,
-};
+auto Generator::floating_expr(FloatingExpr *expr) -> void {
+  assert(expr->type->kind == TypeKind::floating);
+  auto floating = cast<FloatingType>(expr->type);
+  switch (floating->kind) {
+  case FloatingKind::float32: {
+    float f32 = expr->value;
+    println("  li a0, %u", std::bit_cast<uint32_t>(f32));
+    return println("  fmv.w.x fa0, a0");
+  }
+  case FloatingKind::float64:
+    println("  li a0, %lu", std::bit_cast<uint64_t>(expr->value));
+    return println("  fmv.d.x fa0, a0");
+  }
+}
 
 static const char i64i8[] = "  slliw a0, a0, 24\n"
                             "  sraiw a0, a0, 24";
@@ -157,16 +162,7 @@ static const char *cast_table[][8] = {
 // clang-format on
 
 static auto type_id(IntegerType *type) -> int {
-  switch (type->kind) {
-  case IntegerKind::byte:
-    return type->sign == Sign::sign ? i8 : u8;
-  case IntegerKind::half:
-    return type->sign == Sign::sign ? i16 : u16;
-  case IntegerKind::word:
-    return type->sign == Sign::sign ? i32 : u32;
-  case IntegerKind::dword:
-    return type->sign == Sign::sign ? i64 : u64;
-  }
+  return static_cast<int>(pattern(type->kind, type->sign));
 }
 
 static auto type_id(Type *type) -> int {
@@ -459,7 +455,6 @@ auto Generator::less_equal(Type *type) -> void {
   println("  xori a0, a0, 1");
 }
 
-
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
 #define rvalue()                                                               \
   expr_proxy(expr->rhs);                                                       \
@@ -601,6 +596,8 @@ auto Generator::expr_proxy(Expr *expr) -> void {
     return value_expr(cast<ValueExpr>(expr));
   case ExperKind::integer:
     return integer_expr(cast<IntegerExpr>(expr));
+  case ExperKind::floating:
+    return floating_expr(cast<FloatingExpr>(expr));
   case ExperKind::unary:
     return unary_expr(cast<UnaryExpr>(expr));
   case ExperKind::binary:

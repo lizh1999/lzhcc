@@ -1,10 +1,40 @@
+#include "lzhcc.h"
 #include "lzhcc_parse.h"
 #include <charconv>
 
 namespace lzhcc {
 
-auto Parser::integer() -> Expr * {
-  auto token = consume(TokenKind::numeric);
+auto Parser::numeric() -> Expr * {
+  auto token = consume();
+  return integer(token) ?: floating(token);
+}
+
+auto Parser::floating(Token *token) -> Expr * {
+  auto literal = context_->storage(token->inner);
+  auto fmt = std::chars_format::general;
+  if (literal.starts_with("0x") || literal.starts_with("0X")) {
+    literal.remove_prefix(2);
+    fmt = std::chars_format::hex;
+  }
+  double value;
+  auto [end, _] = std::from_chars(literal.begin(), literal.end(), value, fmt);
+
+  std::string_view suffix(end, literal.end());
+
+  Type *type = nullptr;
+  if (suffix == "f" || suffix == "F") {
+    type = context_->float32();
+  } else if (suffix == "l" || suffix == "L") {
+    type = context_->float64();
+  } else if (!suffix.empty()) {
+    context_->fatal(token->location, "");
+  } else {
+    type = context_->float64();
+  }
+  return context_->floating(type, value);
+}
+
+auto Parser::integer(Token *token) -> Expr * {
   auto literal = context_->storage(token->inner);
   int base;
   if (literal[0] != '0') {
@@ -60,7 +90,7 @@ auto Parser::integer() -> Expr * {
   }
 check:
   if (!suffix.empty()) {
-    context_->fatal(token->location, "");
+    return nullptr;
   }
 
   Type *type = [&]() -> Type * {

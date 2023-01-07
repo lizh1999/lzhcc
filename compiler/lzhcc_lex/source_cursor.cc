@@ -52,6 +52,8 @@ loop:
         advance_current();
         advance_current();
         return token(TokenKind::dotdotdot, location);
+      case '0' ... '9':
+        return numeric(".");
       default:
         return token(TokenKind::dot, location);
     }
@@ -149,8 +151,7 @@ auto SourceCursor::character() -> Token {
   return token(TokenKind::character, location, literal);
 }
 
-auto SourceCursor::numeric() -> Token {
-  std::string text = "";
+auto SourceCursor::numeric(std::string text) -> Token {
   int location = location_;
   eat_while([&, last = '\0'](char ch) mutable {
     if (is_exp(last, ch) || ch == '.' || std::isalnum(ch)) {

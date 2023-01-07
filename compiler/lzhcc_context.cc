@@ -202,6 +202,14 @@ auto Context::uint64() -> Type * {
   return create<IntegerType>(IntegerKind::dword, Sign::unsign);
 }
 
+auto Context::float32() -> Type * {
+  return create<FloatingType>(FloatingKind::float32);
+}
+
+auto Context::float64() -> Type * {
+  return create<FloatingType>(FloatingKind::float64);
+}
+
 auto Context::pointer_to(Type *base) -> Type * {
   return create<PointerType>(base);
 }
@@ -231,6 +239,10 @@ auto Context::size_of(Type *type) -> int {
     auto integer = cast<IntegerType>(type);
     return static_cast<int>(integer->kind);
   }
+  case TypeKind::floating: {
+    auto floating = cast<FloatingType>(type);
+    return static_cast<int>(floating->kind);
+  }
   case TypeKind::array: {
     auto array = cast<ArrayType>(type);
     return array->length == -1 ? 8 : array->length * size_of(array->base);
@@ -253,6 +265,10 @@ auto Context::align_of(Type *type) -> int {
   case TypeKind::integer: {
     auto integer = cast<IntegerType>(type);
     return static_cast<int>(integer->kind);
+  }
+  case TypeKind::floating: {
+    auto floating = cast<FloatingType>(type);
+    return static_cast<int>(floating->kind);
   }
   case TypeKind::array:
     return align_of(cast<ArrayType>(type)->base);
@@ -308,6 +324,10 @@ auto Context::integer(int64_t value) -> Expr * {
 
 auto Context::integer(Type *type, int64_t value) -> Expr * {
   return create<IntegerExpr>(type, value);
+}
+
+auto Context::floating(Type *type, double value) -> Expr * {
+  return create<FloatingExpr>(type, value);
 }
 
 auto Context::negative(Type *type, Expr *operand) -> Expr * {

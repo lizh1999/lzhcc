@@ -74,7 +74,9 @@ private:
   auto init_global(Init *init, std::span<uint8_t> out,
                    std::vector<Relocation> &relocations, int loc) -> void;
 
-  auto integer() -> Expr *;
+  auto numeric() -> Expr *;
+  auto integer(Token *token) -> Expr *;
+  auto floating(Token *token) -> Expr *;
   auto cook_string() -> std::string;
   auto string() -> Expr *;
   auto character() -> Expr *;

@@ -137,6 +137,7 @@ enum class TypeKind {
   kw_void,
   boolean,
   integer,
+  floating,
   pointer,
   function,
   array,
@@ -198,6 +199,16 @@ struct IntegerType : Type {
       : Type(TypeKind::integer), kind(kind), sign(sign) {}
   IntegerKind kind;
   Sign sign;
+};
+
+enum class FloatingKind {
+  float32 = 4,
+  float64 = 8,
+};
+
+struct FloatingType : Type {
+  FloatingType(FloatingKind kind) : Type(TypeKind::floating), kind(kind) {}
+  FloatingKind kind;
 };
 
 struct PointerType : Type {
@@ -308,6 +319,7 @@ enum class ExperKind {
   zero,
   value,
   integer,
+  floating,
   unary,
   binary,
   call,
@@ -338,6 +350,12 @@ struct IntegerExpr : Expr {
   IntegerExpr(Type *type, int64_t value)
       : Expr(ExperKind::integer, type), value(value) {}
   int64_t value;
+};
+
+struct FloatingExpr : Expr {
+  FloatingExpr(Type *type, double value)
+    : Expr(ExperKind::floating, type), value(value) {}
+  double value;
 };
 
 struct StmtExpr : Expr {
@@ -603,6 +621,9 @@ public:
   auto uint32() -> Type *;
   auto uint64() -> Type *;
 
+  auto float32() -> Type *;
+  auto float64() -> Type *;
+
   auto pointer_to(Type *base) -> Type *;
   auto array_of(Type *base, int length) -> Type *;
   auto function_type(Type *ret, std::vector<Type *> params, bool) -> Type *;
@@ -629,6 +650,7 @@ public:
   auto integer(int8_t value) -> Expr *;
   auto integer(int32_t value) -> Expr *;
   auto integer(int64_t value) -> Expr *;
+  auto floating(Type *type, double value) -> Expr *;
   auto integer(Type *type, int64_t value) -> Expr *;
 
   auto negative(Type *type, Expr *operand) -> Expr *;

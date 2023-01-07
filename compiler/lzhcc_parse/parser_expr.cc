@@ -321,7 +321,7 @@ auto Parser::call(Token *token) -> Expr * {
 auto Parser::primary() -> Expr * {
   switch (next_kind()) {
   case TokenKind::numeric:
-    return integer();
+    return numeric();
   case TokenKind::character:
     return character();
   case TokenKind::open_paren: {

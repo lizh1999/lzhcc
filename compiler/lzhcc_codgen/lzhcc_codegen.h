@@ -23,6 +23,7 @@ private:
   auto zero_expr(ZeroExpr *expr) -> void;
   auto value_expr(ValueExpr *expr) -> void;
   auto integer_expr(IntegerExpr *expr) -> void;
+  auto floating_expr(FloatingExpr *expr) -> void;
 
   auto cast(Type* src, Type* dest) -> void;
   auto unary_expr(UnaryExpr *expr) -> void;

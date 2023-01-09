@@ -42,9 +42,11 @@ Context::Context() {
   push_identifier("continue");
   push_identifier("default");
   push_identifier("do");
+  push_identifier("double");
   push_identifier("else");
   push_identifier("enum");
   push_identifier("extern");
+  push_identifier("float");
   push_identifier("for");
   push_identifier("goto");
   push_identifier("if");
@@ -79,9 +81,11 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_continue);
   keyword_map_.push_back(TokenKind::kw_default);
   keyword_map_.push_back(TokenKind::kw_do);
+  keyword_map_.push_back(TokenKind::kw_double);
   keyword_map_.push_back(TokenKind::kw_else);
   keyword_map_.push_back(TokenKind::kw_enum);
   keyword_map_.push_back(TokenKind::kw_extern);
+  keyword_map_.push_back(TokenKind::kw_float);
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_goto);
   keyword_map_.push_back(TokenKind::kw_if);

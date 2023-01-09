@@ -40,6 +40,7 @@ auto const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
   case ExperKind::zero:
   case ExperKind::call:
   case ExperKind::stmt:
+  case ExperKind::floating:
     return false;
   }
 }

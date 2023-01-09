@@ -72,16 +72,32 @@ auto Generator::addr_proxy(Expr *expr) -> void {
 }
 
 auto Generator::load_integer(IntegerType *type) -> void {
-  const char *suffix = type->sign == Sign::sign ? "" : "u";
+  switch (pattern(type->kind, type->sign)) {
+  case Scalar::int8:
+    return println("  lb a0, 0(a0)");
+  case Scalar::int16:
+    return println("  lh a0, 0(a0)");
+  case Scalar::int32:
+    return println("  lw a0, 0(a0)");
+  case Scalar::int64:
+    return println("  ld a0, 0(a0)");
+  case Scalar::uint8:
+    return println("  lbu a0, 0(a0)");
+  case Scalar::uint16:
+    return println("  lhu a0, 0(a0)");
+  case Scalar::uint32:
+    return println("  lwu a0, 0(a0)");
+  case Scalar::uint64:
+    return println("  ldu a0, 0(a0)");
+  }
+}
+
+auto Generator::load_floating(FloatingType *type) -> void {
   switch (type->kind) {
-  case IntegerKind::byte:
-    return println("  lb%s a0, 0(a0)", suffix);
-  case IntegerKind::half:
-    return println("  lh%s a0, 0(a0)", suffix);
-  case IntegerKind::word:
-    return println("  lw%s a0, 0(a0)", suffix);
-  case IntegerKind::dword:
-    return println("  ld%s a0, 0(a0)", suffix);
+    case FloatingKind::float32:
+      return println("  flw fa0, 0(a0)");
+    case FloatingKind::float64:
+      return println("  fld fa0, 0(a0)");
   }
 }
 
@@ -92,6 +108,10 @@ auto Generator::load(Type *type) -> void {
   case TypeKind::integer: {
     auto integer = cast<IntegerType>(type);
     return load_integer(integer);
+  }
+  case TypeKind::floating: {
+    auto floating = cast<FloatingType>(type);
+    return load_floating(floating);
   }
   case TypeKind::pointer:
     println("  ld a0, 0(a0)");
@@ -147,22 +167,76 @@ static const char i64u16[] = "  slli a0, a0, 48\n"
                              "  srli a0, a0, 48";
 static const char i64u32[] = "  slli a0, a0, 32\n"
                              "  srli a0, a0, 32";
+static const char i64f32[] = "  fcvt.s.l fa0, a0";
+static const char i64f64[] = "  fcvt.d.l fa0, a0";
 
-// clang-format off
-static const char *cast_table[][8] = {
-    {nullptr, nullptr,  nullptr,  nullptr,  i64u8,  nullptr,  nullptr,  nullptr}, // i8
-    {i64i8,   nullptr,  nullptr,  nullptr,  i64u8,  i64u16,   nullptr,  nullptr}, // i16
-    {i64i8,   i64i16,   nullptr,  nullptr,  i64u8,  i64u16,   i64u32,   nullptr}, // i32
-    {i64i8,   i64i16,   i64i32,   nullptr,  i64u8,  i64u16,   i64u32,   nullptr}, // i64
-    {i64i8,   nullptr,  nullptr,  nullptr,  nullptr,nullptr,  nullptr,  nullptr}, // u8
-    {i64i8,   i64i16,   nullptr,  nullptr,  i64u8,  nullptr,  nullptr,  nullptr}, // u16
-    {i64i8,   i64i16,   i64i32,   nullptr,  i64u8,  i64u16,   nullptr,  nullptr}, // u32
-    {i64i8,   i64i16,   i64i32,   nullptr,  i64u8,  i64u16,   i64u32,   nullptr}, // u64
+static const char u64f32[] = "  fcvt.s.lu fa0, a0";
+static const char u64f64[] = "  fcvt.d.lu fa0, a0";
+
+static const char f32i8[] = "  fcvt.w.s a0, fa0, rtz\n"
+                            "  slli a0, a0, 56\n"
+                            "  srai a0, a0, 56";
+static const char f32i16[] = "  fcvt.w.s a0, fa0, rtz\n"
+                             "  slli a0, a0, 48\n"
+                             "  srai a0, a0, 48";
+static const char f32i32[] = "  fcvt.w.s a0, fa0, rtz";
+static const char f32i64[] = "  fcvt.l.s a0, fa0, rtz";
+static const char f32u8[] = "  fcvt.wu.s a0, fa0, rtz\n"
+                            "  slli a0, a0, 56\n"
+                            "  srli a0, a0, 56";
+static const char f32u16[] = "  fcvt.wu.s a0, fa0, rtz\n"
+                             "  slli a0, a0, 48\n"
+                             "  srli a0, a0, 48";
+static const char f32u32[] = "  fcvt.wu.s a0, fa0, rtz";
+static const char f32u64[] = "  fcvt.lu.s a0, fa0, rtz";
+static const char f32f64[] = "  fcvt.d.s fa0, fa0";
+
+static const char f64i8[] = "  fcvt.w.d a0, fa0, rtz\n"
+                            "  slli a0, a0, 56\n"
+                            "  srai a0, a0, 56";
+static const char f64i16[] = "  fcvt.w.d a0, fa0, rtz\n"
+                             "  slli a0, a0, 48\n"
+                             "  srai a0, a0, 48";
+static const char f64i32[] = "  fcvt.w.d a0, fa0, rtz";
+static const char f64i64[] = "  fcvt.l.d a0, fa0, rtz";
+
+static const char f64u8[] = "  fcvt.wu.d a0, fa0, rtz\n"
+                            "  slli a0, a0, 56\n"
+                            "  srli a0, a0, 56";
+static const char f64u16[] = "  fcvt.wu.d a0, fa0, rtz\n"
+                             "  slli a0, a0, 48\n"
+                             "  srli a0, a0, 48";
+static const char f64u32[] = "  fcvt.wu.d a0, fa0, rtz";
+static const char f64u64[] = "  fcvt.lu.d a0, fa0, rtz";
+
+static const char f64f32[] = "  fcvt.s.d fa0, fa0";
+
+// clang-fromat off
+static const char *cast_table[][10] = {
+    {0,     0,      0,      0,      i64u8,  0,      0,      0,      i64f32, i64f64},  // i8
+    {i64i8, 0,      0,      0,      i64u8,  i64u16, 0,      0,      i64f32, i64f64},  // i16
+    {i64i8, i64i16, 0,      0,      i64u8,  i64u16, i64u32, 0,      i64f32, i64f64},  // i32
+    {i64i8, i64i16, i64i32, 0,      i64u8,  i64u16, i64u32, 0,      i64f32, i64f64},  // i64
+    {i64i8, 0,      0,      0,      0,      0,      0,      0,      u64f32, u64f64},  // u8
+    {i64i8, i64i16, 0,      0,      i64u8,  0,      0,      0,      u64f32, u64f64},  // u16
+    {i64i8, i64i16, i64i32, 0,      i64u8,  i64u16, 0,      0,      u64f32, u64f64},  // u32
+    {i64i8, i64i16, i64i32, 0,      i64u8,  i64u16, i64u32, 0,      u64f32, u64f64},  // u64
+    {f32i8, f32i16, f32i32, f32i64, f32u8,  f32u16, f32u32, f32u64, 0,      f32f64},  // f32
+    {f64i8, f64i16, f64i32, f64i64, f64u8,  f64u16, f64u32, f64u64, f64f32, 0},       // f64
 };
 // clang-format on
 
 static auto type_id(IntegerType *type) -> int {
   return static_cast<int>(pattern(type->kind, type->sign));
+}
+
+static auto type_id(FloatingType *type) -> int {
+  switch (type->kind) {
+    case FloatingKind::float32:
+      return 8;
+    case FloatingKind::float64:
+      return 9;
+  }
 }
 
 static auto type_id(Type *type) -> int {
@@ -175,6 +249,8 @@ static auto type_id(Type *type) -> int {
   case TypeKind::function:
   case TypeKind::array:
     return 3;
+  case TypeKind::floating:
+    return type_id(cast<FloatingType>(type));
   case TypeKind::boolean:
   case TypeKind::record:
     std::abort();
@@ -186,7 +262,7 @@ auto Generator::cast(Type *src, Type *dest) -> void {
     return;
   }
   if (dest->kind == TypeKind::boolean) {
-    return println("snez a0, a0");
+    return println("  snez a0, a0");
   }
   int lhs = type_id(src);
   int rhs = type_id(dest);
@@ -230,6 +306,15 @@ auto Generator::store_integer(IntegerType *type) -> void {
   }
 }
 
+auto Generator::store_floating(FloatingType *type) -> void {
+  switch (type->kind) {
+  case FloatingKind::float32:
+    return println("  fsw fa0, 0(a0)");
+  case FloatingKind::float64:
+    return println("  fsd fa0, 0(a0)");
+  }
+}
+
 auto Generator::store_record(RecordType *type) -> void {
   int size = context_->size_of(type);
   for (int i = 0; i < size; i++) {
@@ -245,6 +330,10 @@ auto Generator::store(Type *type) -> void {
   case TypeKind::integer: {
     auto integer = cast<IntegerType>(type);
     return store_integer(integer);
+  }
+  case TypeKind::floating: {
+    auto floating = cast<FloatingType>(type);
+    return store_floating(floating);
   }
   case TypeKind::pointer:
     println("  sd a1, 0(a0)");
@@ -265,6 +354,7 @@ auto Generator::add(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::pointer:
     return println("  add a0, a0, a1");
+  case TypeKind::floating:
   case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::function:
@@ -296,6 +386,7 @@ auto Generator::subtract(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::pointer:
     return println("  sub a0, a0, a1");
+  case TypeKind::floating:
   case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::function:
@@ -415,6 +506,7 @@ auto Generator::less_than(Type *type) -> void {
   case TypeKind::kw_void:
   case TypeKind::boolean:
   case TypeKind::record:
+  case TypeKind::floating:
     assert(false);
   case TypeKind::integer:
     switch (cast<IntegerType>(type)->sign) {
@@ -435,6 +527,7 @@ auto Generator::less_equal(Type *type) -> void {
   case TypeKind::kw_void:
   case TypeKind::boolean:
   case TypeKind::record:
+  case TypeKind::floating:
     assert(false);
   case TypeKind::integer:
     switch (cast<IntegerType>(type)->sign) {

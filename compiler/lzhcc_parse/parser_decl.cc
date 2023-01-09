@@ -163,6 +163,8 @@ enum {
   other = 1 << 12,
   kw_signed = 1 << 14,
   kw_unsigned = 1 << 16,
+  kw_float = 1 << 18,
+  kw_double = 1 << 20,
 };
 
 static auto is_valid(int mask) -> bool {
@@ -206,6 +208,10 @@ static auto is_valid(int mask) -> bool {
   case kw_unsigned + kw_long + kw_long:
   case kw_unsigned + kw_long + kw_long + kw_int:
 
+  case kw_float:
+
+  case kw_double:
+
   case other:
     return true;
   default:
@@ -236,6 +242,8 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_register:
   case TokenKind::kw_restrict:
   case TokenKind::kw_volatile:
+  case TokenKind::kw_float:
+  case TokenKind::kw_double:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -274,6 +282,8 @@ loop:
     case_goto(TokenKind::kw_struct, +=, other, result = struct_or_union_decl());
     case_goto(TokenKind::kw_union, +=, other, result = struct_or_union_decl());
     case_goto(TokenKind::kw_enum, +=, other, result = enum_spec());
+    case_goto(TokenKind::kw_float, +=, kw_float, consume());
+    case_goto(TokenKind::kw_double, +=, kw_double, consume());
 
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
     attr_goto(TokenKind::kw_static, is_static, consume());
@@ -358,6 +368,10 @@ loop:
   case kw_unsigned + kw_long + kw_long:
   case kw_unsigned + kw_long + kw_long + kw_int:
     return context_->uint64();
+  case kw_float:
+    return context_->float32();
+  case kw_double:
+    return context_->float64();
   default:
     assert(result);
     return result;

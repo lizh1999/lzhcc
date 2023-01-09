@@ -15,9 +15,11 @@ private:
 
   auto store(Type *type) -> void;
   auto store_integer(IntegerType *type) -> void;
+  auto store_floating(FloatingType *type) -> void;
   auto store_record(RecordType *type) -> void;
   auto load(Type *type) -> void;
   auto load_integer(IntegerType *type) -> void;
+  auto load_floating(FloatingType *type) -> void;
 
 
   auto zero_expr(ZeroExpr *expr) -> void;

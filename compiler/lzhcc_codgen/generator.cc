@@ -72,6 +72,7 @@ auto Generator::store(Type *type, int src, int offset) -> void {
     return println("  sb a%d, %d(sp)", src, offset);
   case TypeKind::pointer:
     return println("  sd a%d, %d(sp)", src, offset);
+  case TypeKind::floating:
   case TypeKind::function:
   case TypeKind::array:
   case TypeKind::record:

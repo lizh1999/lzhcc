@@ -118,6 +118,7 @@ auto Parser::init(Type *type) -> Init * {
     return scalar_init();
   case TypeKind::record:
     return record_init(cast<RecordType>(type));
+  case TypeKind::floating:
   case TypeKind::kw_void:
     assert(false);
   }
@@ -170,6 +171,7 @@ auto Parser::init2(Type *type) -> Init * {
     return scalar_init();
   case TypeKind::record:
     return record_init2(cast<RecordType>(type));
+  case TypeKind::floating:
   case TypeKind::kw_void:
     assert(false);
   }
@@ -866,6 +868,7 @@ auto low_deref_op(Context *context, Expr *operand, int loc) -> Expr * {
   case TypeKind::integer:
   case TypeKind::function:
   case TypeKind::record:
+  case TypeKind::floating:
   case TypeKind::kw_void:
     context->fatal(loc, "");
   }
@@ -921,6 +924,7 @@ auto convert_cmp(Context *context, Expr *lhs, Expr *rhs, int loc)
     case TypeKind::boolean:
     case TypeKind::record:
     case TypeKind::integer:
+    case TypeKind::floating:
       return false;
     case TypeKind::pointer:
     case TypeKind::function:

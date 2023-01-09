@@ -94,10 +94,10 @@ auto Generator::load_integer(IntegerType *type) -> void {
 
 auto Generator::load_floating(FloatingType *type) -> void {
   switch (type->kind) {
-    case FloatingKind::float32:
-      return println("  flw fa0, 0(a0)");
-    case FloatingKind::float64:
-      return println("  fld fa0, 0(a0)");
+  case FloatingKind::float32:
+    return println("  flw fa0, 0(a0)");
+  case FloatingKind::float64:
+    return println("  fld fa0, 0(a0)");
   }
 }
 
@@ -156,75 +156,133 @@ auto Generator::floating_expr(FloatingExpr *expr) -> void {
   }
 }
 
-static const char i64i8[] = "  slliw a0, a0, 24\n"
-                            "  sraiw a0, a0, 24";
-static const char i64i16[] = "  slliw a0, a0, 16\n"
-                             "  sraiw a0, a0, 16";
-static const char i64i32[] = "  sext.w  a0, a0";
-
-static const char i64u8[] = "  andi a0, a0, 255";
-static const char i64u16[] = "  slli a0, a0, 48\n"
-                             "  srli a0, a0, 48";
-static const char i64u32[] = "  slli a0, a0, 32\n"
-                             "  srli a0, a0, 32";
-static const char i64f32[] = "  fcvt.s.l fa0, a0";
-static const char i64f64[] = "  fcvt.d.l fa0, a0";
-
-static const char u64f32[] = "  fcvt.s.lu fa0, a0";
-static const char u64f64[] = "  fcvt.d.lu fa0, a0";
-
-static const char f32i8[] = "  fcvt.w.s a0, fa0, rtz\n"
-                            "  slli a0, a0, 56\n"
-                            "  srai a0, a0, 56";
-static const char f32i16[] = "  fcvt.w.s a0, fa0, rtz\n"
-                             "  slli a0, a0, 48\n"
-                             "  srai a0, a0, 48";
-static const char f32i32[] = "  fcvt.w.s a0, fa0, rtz";
-static const char f32i64[] = "  fcvt.l.s a0, fa0, rtz";
-static const char f32u8[] = "  fcvt.wu.s a0, fa0, rtz\n"
-                            "  slli a0, a0, 56\n"
-                            "  srli a0, a0, 56";
-static const char f32u16[] = "  fcvt.wu.s a0, fa0, rtz\n"
-                             "  slli a0, a0, 48\n"
-                             "  srli a0, a0, 48";
-static const char f32u32[] = "  fcvt.wu.s a0, fa0, rtz";
-static const char f32u64[] = "  fcvt.lu.s a0, fa0, rtz";
-static const char f32f64[] = "  fcvt.d.s fa0, fa0";
-
-static const char f64i8[] = "  fcvt.w.d a0, fa0, rtz\n"
-                            "  slli a0, a0, 56\n"
-                            "  srai a0, a0, 56";
-static const char f64i16[] = "  fcvt.w.d a0, fa0, rtz\n"
-                             "  slli a0, a0, 48\n"
-                             "  srai a0, a0, 48";
-static const char f64i32[] = "  fcvt.w.d a0, fa0, rtz";
-static const char f64i64[] = "  fcvt.l.d a0, fa0, rtz";
-
-static const char f64u8[] = "  fcvt.wu.d a0, fa0, rtz\n"
-                            "  slli a0, a0, 56\n"
-                            "  srli a0, a0, 56";
-static const char f64u16[] = "  fcvt.wu.d a0, fa0, rtz\n"
-                             "  slli a0, a0, 48\n"
-                             "  srli a0, a0, 48";
-static const char f64u32[] = "  fcvt.wu.d a0, fa0, rtz";
-static const char f64u64[] = "  fcvt.lu.d a0, fa0, rtz";
-
-static const char f64f32[] = "  fcvt.s.d fa0, fa0";
-
-// clang-fromat off
 static const char *cast_table[][10] = {
-    {0,     0,      0,      0,      i64u8,  0,      0,      0,      i64f32, i64f64},  // i8
-    {i64i8, 0,      0,      0,      i64u8,  i64u16, 0,      0,      i64f32, i64f64},  // i16
-    {i64i8, i64i16, 0,      0,      i64u8,  i64u16, i64u32, 0,      i64f32, i64f64},  // i32
-    {i64i8, i64i16, i64i32, 0,      i64u8,  i64u16, i64u32, 0,      i64f32, i64f64},  // i64
-    {i64i8, 0,      0,      0,      0,      0,      0,      0,      u64f32, u64f64},  // u8
-    {i64i8, i64i16, 0,      0,      i64u8,  0,      0,      0,      u64f32, u64f64},  // u16
-    {i64i8, i64i16, i64i32, 0,      i64u8,  i64u16, 0,      0,      u64f32, u64f64},  // u32
-    {i64i8, i64i16, i64i32, 0,      i64u8,  i64u16, i64u32, 0,      u64f32, u64f64},  // u64
-    {f32i8, f32i16, f32i32, f32i64, f32u8,  f32u16, f32u32, f32u64, 0,      f32f64},  // f32
-    {f64i8, f64i16, f64i32, f64i64, f64u8,  f64u16, f64u32, f64u64, f64f32, 0},       // f64
-};
-// clang-format on
+    {
+        nullptr,                                // i8i8
+        nullptr,                                // i8i16
+        nullptr,                                // i8i32
+        nullptr,                                // i8i64
+        "  andi a0, a0, 0xff",                  // i8u8
+        "  slli a0, a0, 48\n  srli a0, a0, 48", // i8u16
+        nullptr,                                // i8u32
+        nullptr,                                // i8u64
+        "  fcvt.s.w fa0, a0",                   // i8f32
+        "  fcvt.d.w fa0, a0",                   // i8f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // i16i8
+        nullptr,                                  // i16i16
+        nullptr,                                  // i16i32
+        nullptr,                                  // i16i64
+        "  andi a0, a0, 0xff",                    // i16u8
+        "  slli a0, a0, 48\n  srli a0, a0, 48",   // i16u16
+        nullptr,                                  // i16u32
+        nullptr,                                  // i16u64
+        "  fcvt.s.w fa0, a0",                     // i16f32
+        "  fcvt.d.w fa0, a0",                     // i16f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // i32i8
+        "  slliw a0, a0, 16\n  sraiw a0, a0, 16", // i32i16
+        nullptr,                                  // i32i32
+        nullptr,                                  // i32i64
+        "  andi a0, a0, 0xff",                    // i32u8
+        "  slli a0, a0, 48\n  srli a0, a0, 48",   // i32u16
+        nullptr,                                  // i32u32
+        nullptr,                                  // i32u64
+        "  fcvt.s.w fa0, a0",                     // i32f32
+        "  fcvt.d.w fa0, a0",                     // i32f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // i64i8
+        "  slliw a0, a0, 16\n  sraiw a0, a0, 16", // i64i16
+        "  sext.w a0, a0",                        // i64i32
+        nullptr,                                  // i64i64
+        "  andi a0, a0, 0xff",                    // i64u8
+        "  slli a0, a0, 48\n  srli a0, a0, 48",   // i64u16
+        "  sext.w a0, a0",                        // i64u32
+        nullptr,                                  // i64u64
+        "  fcvt.s.l fa0, a0",                     // i64f32
+        "  fcvt.d.l fa0, a0",                     // i64f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // u8i8
+        nullptr,                                  // u8i16
+        nullptr,                                  // u8i32
+        nullptr,                                  // u8i64
+        nullptr,                                  // u8u8
+        nullptr,                                  // u8u16
+        nullptr,                                  // u8u32
+        nullptr,                                  // u8u64
+        "  fcvt.s.wu fa0, a0",                    // u8f32
+        "  fcvt.d.wu fa0, a0",                    // u8f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // u16i8
+        "  slliw a0, a0, 16\n  sraiw a0, a0, 16", // u16i16
+        nullptr,                                  // u16i32
+        nullptr,                                  // u16i64
+        "  andi a0, a0, 0xff",                    // u16u8
+        nullptr,                                  // u16u16
+        nullptr,                                  // u16u32
+        nullptr,                                  // u16u64
+        "  fcvt.s.wu fa0, a0",                    // u16f32
+        "  fcvt.d.wu fa0, a0",                    // u16f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // u32i8
+        "  slliw a0, a0, 16\n  sraiw a0, a0, 16", // u32i16
+        nullptr,                                  // u32i32
+        "  slli a0, a0, 32\n  srli a0, a0, 32",   // u32i64
+        "  andi a0, a0, 0xff",                    // u32u8
+        "  slli a0, a0, 48\n  srli a0, a0, 48",   // u32u16
+        nullptr,                                  // u32u32
+        "  slli a0, a0, 32\n  srli a0, a0, 32",   // u32u64
+        "  fcvt.s.wu fa0, a0",                    // u32f32
+        "  fcvt.d.wu fa0, a0",                    // u32f64
+    },
+    {
+        "  slliw a0, a0, 24\n  sraiw a0, a0, 24", // u64i8
+        "  slliw a0, a0, 16\n  sraiw a0, a0, 16", // u64i16
+        "  sext.w a0, a0",                        // u64i32
+        nullptr,                                  // u64i64
+        "  andi a0, a0, 0xff",                    // u64u8
+        "  slli a0, a0, 48\n  srli a0, a0, 48",   // u64u16
+        "  sext.w a0, a0",                        // u64u32
+        nullptr,                                  // u64u64
+        "  fcvt.s.lu fa0, a0",                    // u64f32
+        "  fcvt.d.lu fa0, a0",                    // u64f64
+    },
+    {
+        "  fcvt.w.s a0, fa0, rtz\n  slliw a0, a0, 24\n  sraiw a0, a0, "
+        "24", // f32i8
+        "  fcvt.w.s a0, fa0, rtz\n  slliw a0, a0, 16\n  sraiw a0, a0, "
+        "16",                                            // f32i16
+        "  fcvt.w.s a0, fa0, rtz\n  sext.w a0, a0",      // f32i32
+        "  fcvt.l.s a0, fa0, rtz",                       // f32i64
+        "  fcvt.wu.s a0, fa0, rtz\n  andi a0, a0, 0xff", // f32u8
+        "  fcvt.wu.s a0, fa0, rtz\n  slli a0, a0, 48\n  srli a0, a0, "
+        "48",                                        // f32u16
+        "  fcvt.wu.s a0, fa0, rtz\n  sext.w a0, a0", // f32u32
+        "  fcvt.lu.s a0, fa0, rtz",                  // f32u64
+        nullptr,                                     // f32f32
+        "  fcvt.d.s fa0, fa0",                       // f32f64
+    },
+    {
+        "  fcvt.w.d a0, fa0, rtz\n  slliw a0, a0, 24\n  sraiw a0, a0, "
+        "24", // f64i8
+        "  fcvt.w.d a0, fa0, rtz\n  slliw a0, a0, 16\n  sraiw a0, a0, "
+        "16",                                            // f64i16
+        "  fcvt.w.d a0, fa0, rtz\n  sext.w a0, a0",      // f64i32
+        "  fcvt.l.d a0, fa0, rtz",                       // f64i64
+        "  fcvt.wu.d a0, fa0, rtz\n  andi a0, a0, 0xff", // f64u8
+        "  fcvt.wu.d a0, fa0, rtz\n  slli a0, a0, 48\n  srli a0, a0, "
+        "48",                                        // f64u16
+        "  fcvt.wu.d a0, fa0, rtz\n  sext.w a0, a0", // f64u32
+        "  fcvt.lu.d a0, fa0, rtz",                  // f64u64
+        "  fcvt.s.d fa0, fa0",                       // f64f32
+        nullptr,                                     // f64f64
+    }};
 
 static auto type_id(IntegerType *type) -> int {
   return static_cast<int>(pattern(type->kind, type->sign));
@@ -232,10 +290,10 @@ static auto type_id(IntegerType *type) -> int {
 
 static auto type_id(FloatingType *type) -> int {
   switch (type->kind) {
-    case FloatingKind::float32:
-      return 8;
-    case FloatingKind::float64:
-      return 9;
+  case FloatingKind::float32:
+    return 8;
+  case FloatingKind::float64:
+    return 9;
   }
 }
 
@@ -365,17 +423,12 @@ auto Generator::add(Type *type) -> void {
 
 auto Generator::add_integer(IntegerType *type) -> void {
   switch (type->kind) {
-  case IntegerKind::byte:
-  case IntegerKind::half:
   case IntegerKind::word:
-    println("  addw a0, a0, a1");
-    if (type->sign == Sign::unsign) {
-      println("  slli a0, a0, 32");
-      println("  srli a0, a0, 32");
-    }
-    break;
+    return println("  addw a0, a0, a1");
   case IntegerKind::dword:
     return println("  add a0, a0, a1");
+  default:
+    assert(false);
   }
 }
 
@@ -397,17 +450,12 @@ auto Generator::subtract(Type *type) -> void {
 
 auto Generator::subtract_integer(IntegerType *type) -> void {
   switch (type->kind) {
-  case IntegerKind::byte:
-  case IntegerKind::half:
   case IntegerKind::word:
-    println("  subw a0, a0, a1");
-    if (type->sign == Sign::unsign) {
-      println("  slli a0, a0, 32");
-      println("  srli a0, a0, 32");
-    }
-    break;
+    return println("  subw a0, a0, a1");
   case IntegerKind::dword:
     return println("  sub a0, a0, a1");
+  default:
+    assert(false);
   }
 }
 
@@ -416,12 +464,7 @@ auto Generator::multiply(Type *type) -> void {
   auto integer = cast<IntegerType>(type);
   switch (integer->kind) {
   case IntegerKind::word:
-    println("  mulw a0, a0, a1");
-    if (integer->sign == Sign::unsign) {
-      println("  slli a0, a0, 32");
-      println("  srli a0, a0, 32");
-    }
-    break;
+    return println("  mulw a0, a0, a1");
   case IntegerKind::dword:
     return println("  mul a0, a0, a1");
   default:
@@ -432,21 +475,15 @@ auto Generator::multiply(Type *type) -> void {
 auto Generator::divide(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
   auto integer = cast<IntegerType>(type);
-  switch (integer->kind) {
-  case IntegerKind::word:
-    switch (integer->sign) {
-    case Sign::sign:
-      return println("  divw a0, a0, a1");
-    case Sign::unsign:
-      return println("  divuw a0, a0, a1");
-    }
-  case IntegerKind::dword:
-    switch (integer->sign) {
-    case Sign::sign:
-      return println("  div a0, a0, a1");
-    case Sign::unsign:
-      return println("  divu a0, a0, a1");
-    }
+  switch (pattern(integer->kind, integer->sign)) {
+  case Scalar::int32:
+    return println("  divw a0, a0, a1");
+  case Scalar::int64:
+    return println("  div a0, a0, a1");
+  case Scalar::uint32:
+    return println("  divuw a0, a0, a1");
+  case Scalar::uint64:
+    return println("  divu a0, a0, a1");
   default:
     assert(false);
   }
@@ -455,21 +492,15 @@ auto Generator::divide(Type *type) -> void {
 auto Generator::modulo(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
   auto integer = cast<IntegerType>(type);
-  switch (integer->kind) {
-  case IntegerKind::word:
-    switch (integer->sign) {
-    case Sign::sign:
-      return println("  remw a0, a0, a1");
-    case Sign::unsign:
-      return println("  remuw a0, a0, a1");
-    }
-  case IntegerKind::dword:
-    switch (integer->sign) {
-    case Sign::sign:
-      return println("  rem a0, a0, a1");
-    case Sign::unsign:
-      return println("  remu a0, a0, a1");
-    }
+  switch (pattern(integer->kind, integer->sign)) {
+  case Scalar::int32:
+    return println("  remw a0, a0, a1");
+  case Scalar::int64:
+    return println("  rem a0, a0, a1");
+  case Scalar::uint32:
+    return println("  remuw a0, a0, a1");
+  case Scalar::uint64:
+    return println("  remu a0, a0, a1");
   default:
     assert(false);
   }
@@ -490,62 +521,138 @@ auto Generator::shift_left(Type *type) -> void {
 auto Generator::shift_right(Type *type) -> void {
   assert(type->kind == TypeKind::integer);
   auto integer = cast<IntegerType>(type);
-  char c = integer->sign == Sign::sign ? 'a' : 'l';
-  switch (integer->kind) {
-  case IntegerKind::word:
-    return println("  sr%cw a0, a0, a1", c);
-  case IntegerKind::dword:
-    return println("  sr%c a0, a0, a1", c);
+  switch (pattern(integer->kind, integer->sign)) {
+  case Scalar::int32:
+    return println("  sraw a0, a0, a1");
+  case Scalar::int64:
+    return println("  sra a0, a0, a1");
+  case Scalar::uint32:
+    return println("  srlw a0, a0, a1");
+  case Scalar::uint64:
+    return println("  srl a0, a0, a1");
   default:
     assert(false);
   }
 }
 
-auto Generator::less_than(Type *type) -> void {
-  switch (type->kind) {
-  case TypeKind::kw_void:
-  case TypeKind::boolean:
-  case TypeKind::record:
-  case TypeKind::floating:
-    assert(false);
-  case TypeKind::integer:
-    switch (cast<IntegerType>(type)->sign) {
+auto Generator::less_than(BinaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (type->sign) {
     case Sign::sign:
       return println("  slt a0, a0, a1");
     case Sign::unsign:
       return println("  sltu a0, a0, a1");
     }
-  case TypeKind::pointer:
-  case TypeKind::function:
-  case TypeKind::array:
-    return println("  sltu a0, a0, a1");
-  }
-}
-
-auto Generator::less_equal(Type *type) -> void {
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  flt.s a0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  flt.d a0, fa0, fa1");
+    }
+  };
+  auto type = expr->lhs->type;
   switch (type->kind) {
   case TypeKind::kw_void:
   case TypeKind::boolean:
   case TypeKind::record:
-  case TypeKind::floating:
     assert(false);
+  case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
   case TypeKind::integer:
-    switch (cast<IntegerType>(type)->sign) {
-    case Sign::sign:
-      println("   slt a0, a1, a0");
-      break;
-    case Sign::unsign:
-      println("  sltu a0, a1, a0");
-      break;
-    }
-    break;
+    visit(expr);
+    return integer(cast<IntegerType>(type));
   case TypeKind::pointer:
   case TypeKind::function:
   case TypeKind::array:
-    println("  sltu a0, a1, a0");
-    break;
+    visit(expr);
+    return println("  sltu a0, a0, a1");
   }
-  println("  xori a0, a0, 1");
+}
+
+auto Generator::less_equal(BinaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (type->sign) {
+    case Sign::sign:
+      println("  slt a0, a1, a0");
+      return println("  xori a0, a0, 1");
+    case Sign::unsign:
+      println("  sltu a0, a1, a0");
+      return println("  xori a0, a0, 1");
+    }
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fle.s a0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  fle.d a0, fa0, fa1");
+    }
+  };
+  auto type = expr->lhs->type;
+  switch (type->kind) {
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::record:
+    assert(false);
+  case TypeKind::integer:
+    visit(expr);
+    return integer(cast<IntegerType>(type));
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+    visit(expr);
+    println("  sltu a0, a1, a0");
+    return println("  xori a0, a0, 1");
+  case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
+  }
+}
+
+auto Generator::equal(BinaryExpr *expr) -> void {
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  feq.s a0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  feq.d a0, fa0, fa1");
+    }
+  };
+
+  auto type = expr->lhs->type;
+  switch (type->kind) {
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::record:
+    assert(false);
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::integer:
+    visit(expr);
+    println("  sub a0, a0, a1");
+    return println("  seqz a0, a0");
+  case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
+  }
+}
+
+auto Generator::visit(BinaryExpr *expr) -> void {
+  expr_proxy(expr->rhs);
+  push("a0");
+  expr_proxy(expr->lhs);
+  pop("a1");
+}
+
+auto Generator::visitf(BinaryExpr *expr) -> void {
+  expr_proxy(expr->rhs);
+  pushf("fa0");
+  expr_proxy(expr->lhs);
+  popf("fa1");
 }
 
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
@@ -581,19 +688,14 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     rvalue();
     return println("  or a0, a0, a1");
   case BinaryKind::less_than:
-    rvalue();
-    return less_than(expr->lhs->type);
+    return less_than(expr);
   case BinaryKind::less_equal:
-    rvalue();
-    return less_equal(expr->lhs->type);
+    return less_equal(expr);
   case BinaryKind::equal:
-    rvalue();
-    println("  xor a0, a0, a1");
-    return println("  seqz a0, a0");
+    return equal(expr);
   case BinaryKind::not_equal:
-    rvalue();
-    println("  xor a0, a0, a1");
-    return println("  snez a0, a0");
+    equal(expr);
+    return println("  xori a0, a0, 1");
   case BinaryKind::shift_left:
     rvalue();
     return shift_left(expr->type);
@@ -640,13 +742,7 @@ auto Generator::call_expr(CallExpr *expr) -> void {
     pop(reg);
     reg[1] -= i;
   }
-  if (depth_ % 2 != 0) {
-    println("  addi sp, sp, -8");
-    println("  call %.*s", (int)expr->name.size(), expr->name.data());
-    println("  addi sp, sp, 8");
-  } else {
-    println("  call %.*s", (int)expr->name.size(), expr->name.data());
-  }
+  println("  call %.*s", (int)expr->name.size(), expr->name.data());
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {
@@ -670,15 +766,39 @@ auto Generator::condition_expr(ConditionExpr *expr) -> void {
 }
 
 auto Generator::push(const char *reg) -> void {
-  depth_++;
-  println("  addi sp, sp, -8");
-  println("  sd %s, 0(sp)", reg);
+  if (depth_++ % 2 == 0) {
+    println("  addi sp, sp, -16");
+    println("  sd %s, 8(sp)", reg);
+  } else {
+    println("  sd %s, 0(sp)", reg);
+  }
 }
 
 auto Generator::pop(const char *reg) -> void {
-  depth_--;
-  println("  ld %s, 0(sp)", reg);
-  println("  addi sp, sp, 8");
+  if (--depth_ % 2 == 0) {
+    println("  ld %s, 8(sp)", reg);
+    println("  addi sp, sp, 16");
+  } else {
+    println("  ld %s, 0(sp)", reg);
+  }
+}
+
+auto Generator::pushf(const char *reg) -> void {
+  if (depth_++ % 2 == 0) {
+    println("  addi sp, sp, -16");
+    println("  fsd %s, 8(sp)", reg);
+  } else {
+    println("  fsd %s, 0(sp)", reg);
+  }
+}
+
+auto Generator::popf(const char *reg) -> void {
+  if (--depth_ % 2 == 0) {
+    println("  fld %s, 8(sp)", reg);
+    println("  addi sp, sp, 16");
+  } else {
+    println("  fld %s, 0(sp)", reg);
+  }
 }
 
 auto Generator::expr_proxy(Expr *expr) -> void {

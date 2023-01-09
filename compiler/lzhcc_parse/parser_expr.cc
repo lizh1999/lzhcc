@@ -836,7 +836,7 @@ auto Parser::expression() -> Expr * {
   return lhs;
 }
 
-static constexpr auto pattern(TypeKind lhs, TypeKind rhs) -> int {
+static constexpr auto pattern(auto lhs, auto rhs) -> int {
   return static_cast<int>(lhs) * 65536 | static_cast<int>(rhs);
 }
 
@@ -886,34 +886,65 @@ auto convert(Context *context, Expr *lhs, Expr *rhs, int loc)
   if (rhs->type->kind == TypeKind::boolean) {
     rhs = context->cast(context->int32(), rhs);
   }
-  if (lhs->type->kind != TypeKind::integer ||
-      rhs->type->kind != TypeKind::integer) {
+  auto convert_floating = [&] {
+    auto lhs_type = cast<FloatingType>(lhs->type);
+    auto rhs_type = cast<FloatingType>(rhs->type);
+    switch (pattern(lhs_type->kind, rhs_type->kind)) {
+    case pattern(FloatingKind::float32, FloatingKind::float32):
+    case pattern(FloatingKind::float64, FloatingKind::float64):
+      break;
+    case pattern(FloatingKind::float32, FloatingKind::float64):
+      lhs = low_cast_op(context, rhs->type, lhs);
+      break;
+    case pattern(FloatingKind::float64, FloatingKind::float32):
+      rhs = low_cast_op(context, lhs->type, lhs);
+      break;
+    default:
+      context->fatal(loc, "");
+    }
+    return std::tuple(lhs, rhs, lhs->type);
+  };
+  auto convert_integer = [&] {
+    auto lhs_type = cast<IntegerType>(lhs->type);
+    auto rhs_type = cast<IntegerType>(rhs->type);
+    using enum IntegerKind;
+
+    if (lhs_type->kind < IntegerKind::word) {
+      lhs_type = cast<IntegerType>(context->int32());
+    }
+
+    if (rhs_type->kind < IntegerKind::word) {
+      rhs_type = cast<IntegerType>(context->int32());
+    }
+
+    Type *type = nullptr;
+    if (lhs_type->kind != rhs_type->kind) {
+      type = lhs_type->kind < rhs_type->kind ? rhs_type : lhs_type;
+    } else if (rhs_type->sign == Sign::unsign) {
+      type = rhs_type;
+    } else {
+      type = lhs_type;
+    }
+
+    lhs = low_cast_op(context, type, lhs);
+    rhs = low_cast_op(context, type, rhs);
+    return std::tuple(lhs, rhs, type);
+  };
+  switch (pattern(lhs->type->kind, rhs->type->kind)) {
+  case pattern(TypeKind::floating, TypeKind::floating):
+    return convert_floating();
+  case pattern(TypeKind::integer, TypeKind::integer):
+    return convert_integer();
+  case pattern(TypeKind::integer, TypeKind::floating):
+    lhs = low_cast_op(context, rhs->type, lhs);
+    break;
+  case pattern(TypeKind::floating, TypeKind::integer):
+    rhs = low_cast_op(context, lhs->type, rhs);
+    break;
+  default:
     context->fatal(loc, "");
   }
-  auto lhs_type = cast<IntegerType>(lhs->type);
-  auto rhs_type = cast<IntegerType>(rhs->type);
-  using enum IntegerKind;
-
-  if (lhs_type->kind < IntegerKind::word) {
-    lhs_type = cast<IntegerType>(context->int32());
-  }
-
-  if (rhs_type->kind < IntegerKind::word) {
-    rhs_type = cast<IntegerType>(context->int32());
-  }
-
-  Type *type = nullptr;
-  if (lhs_type->kind != rhs_type->kind) {
-    type = lhs_type->kind < rhs_type->kind ? rhs_type : lhs_type;
-  } else if (rhs_type->sign == Sign::unsign) {
-    type = rhs_type;
-  } else {
-    type = lhs_type;
-  }
-
-  lhs = low_cast_op(context, type, lhs);
-  rhs = low_cast_op(context, type, rhs);
-  return std::tuple(lhs, rhs, type);
+  return std::tuple(lhs, rhs, lhs->type);
 }
 
 auto convert_cmp(Context *context, Expr *lhs, Expr *rhs, int loc)

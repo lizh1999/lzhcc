@@ -41,8 +41,11 @@ private:
   auto modulo(Type *type) -> void;
   auto shift_left(Type *type) -> void;
   auto shift_right(Type *type) -> void;
-  auto less_than(Type *type) -> void;
-  auto less_equal(Type *type) -> void;
+  auto less_than(BinaryExpr *expr) -> void;
+  auto less_equal(BinaryExpr *expr) -> void;
+  auto equal(BinaryExpr *expr) -> void;
+  auto visit(BinaryExpr *expr) -> void;
+  auto visitf(BinaryExpr *expr) -> void;
 
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;
@@ -72,6 +75,8 @@ private:
 
   auto push(const char *reg) -> void;
   auto pop(const char *reg) -> void;
+  auto pushf(const char *reg) -> void;
+  auto popf(const char *reg) -> void;
 
   [[gnu::format(printf, 2, 3)]] auto println(const char *, ...) -> void;
 

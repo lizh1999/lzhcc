@@ -30,14 +30,10 @@ private:
   auto cast(Type* src, Type* dest) -> void;
   auto unary_expr(UnaryExpr *expr) -> void;
 
-  auto add(Type *type) -> void;
-  auto add_integer(IntegerType *type) -> void;
-
-  auto subtract(Type *type) -> void;
-  auto subtract_integer(IntegerType *type) -> void;
-
-  auto multiply(Type *type) -> void;
-  auto divide(Type *type) -> void;
+  auto add(BinaryExpr *expr) -> void;
+  auto subtract(BinaryExpr *expr) -> void;
+  auto multiply(BinaryExpr *expr) -> void;
+  auto divide(BinaryExpr *expr) -> void;
   auto modulo(Type *type) -> void;
   auto shift_left(Type *type) -> void;
   auto shift_right(Type *type) -> void;
@@ -46,6 +42,8 @@ private:
   auto equal(BinaryExpr *expr) -> void;
   auto visit(BinaryExpr *expr) -> void;
   auto visitf(BinaryExpr *expr) -> void;
+
+  auto negative(UnaryExpr *expr) -> void;
 
   auto binary_expr(BinaryExpr *expr) -> void;
   auto call_expr(CallExpr *expr) -> void;

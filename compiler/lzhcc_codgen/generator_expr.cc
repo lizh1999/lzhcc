@@ -121,7 +121,7 @@ auto Generator::load(Type *type) -> void {
   case TypeKind::record:
     break;
   case TypeKind::kw_void:
-    std::abort();
+    assert(false);
   }
 }
 
@@ -311,7 +311,7 @@ static auto type_id(Type *type) -> int {
     return type_id(cast<FloatingType>(type));
   case TypeKind::boolean:
   case TypeKind::record:
-    std::abort();
+    assert(false);
   }
 }
 
@@ -329,11 +329,47 @@ auto Generator::cast(Type *src, Type *dest) -> void {
   }
 }
 
+auto Generator::negative(UnaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (type->kind) {
+    case IntegerKind::word:
+      return println("  negw a0, a0");
+    case IntegerKind::dword:
+      return println("  neg a0, a0");
+    default:
+      assert(false);
+    }
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fneg.s fa0, fa0");
+    case FloatingKind::float64:
+      return println("  fneg.d fa0, fa0");
+    }
+  };
+  auto type = expr->type;
+  switch (type->kind) {
+  case TypeKind::integer:
+    expr_proxy(expr->operand);
+    return integer(cast<IntegerType>(type));
+  case TypeKind::floating:
+    expr_proxy(expr->operand);
+    return floating(cast<FloatingType>(type));
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::record:
+    assert(false);
+  }
+}
+
 auto Generator::unary_expr(UnaryExpr *expr) -> void {
   switch (expr->kind) {
   case UnaryKind::negative:
-    expr_proxy(expr->operand);
-    return println("  neg a0, a0");
+    return negative(expr);
   case UnaryKind::deref:
     expr_proxy(expr->operand);
     return load(expr->type);
@@ -401,91 +437,162 @@ auto Generator::store(Type *type) -> void {
   case TypeKind::array:
   case TypeKind::function:
   case TypeKind::kw_void:
-    std::abort();
+    assert(false);
   }
 }
 
-auto Generator::add(Type *type) -> void {
+auto Generator::add(BinaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (type->kind) {
+    case IntegerKind::word:
+      return println("  addw a0, a0, a1");
+    case IntegerKind::dword:
+      return println("  add a0, a0, a1");
+    default:
+      assert(false);
+    }
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fadd.s fa0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  fadd.d fa0, fa0, fa1");
+    }
+  };
+  auto type = expr->type;
   switch (type->kind) {
   case TypeKind::integer:
-    return add_integer(cast<IntegerType>(type));
+    visit(expr);
+    return integer(cast<IntegerType>(type));
   case TypeKind::array:
   case TypeKind::pointer:
+    visit(expr);
     return println("  add a0, a0, a1");
   case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
   case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::function:
   case TypeKind::record:
-    std::abort();
-  }
-}
-
-auto Generator::add_integer(IntegerType *type) -> void {
-  switch (type->kind) {
-  case IntegerKind::word:
-    return println("  addw a0, a0, a1");
-  case IntegerKind::dword:
-    return println("  add a0, a0, a1");
-  default:
     assert(false);
   }
 }
-
-auto Generator::subtract(Type *type) -> void {
+auto Generator::subtract(BinaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (type->kind) {
+    case IntegerKind::word:
+      return println("  subw a0, a0, a1");
+    case IntegerKind::dword:
+      return println("  sub a0, a0, a1");
+    default:
+      assert(false);
+    }
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fsub.s fa0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  fsub.d fa0, fa0, fa1");
+    }
+  };
+  auto type = expr->type;
   switch (type->kind) {
   case TypeKind::integer:
-    return subtract_integer(cast<IntegerType>(type));
+    visit(expr);
+    return integer(cast<IntegerType>(type));
   case TypeKind::array:
   case TypeKind::pointer:
+    visit(expr);
     return println("  sub a0, a0, a1");
   case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
   case TypeKind::boolean:
   case TypeKind::kw_void:
   case TypeKind::function:
   case TypeKind::record:
-    std::abort();
+    assert(false);
   }
 }
 
-auto Generator::subtract_integer(IntegerType *type) -> void {
+auto Generator::multiply(BinaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (type->kind) {
+    case IntegerKind::word:
+      return println("  mulw a0, a0, a1");
+    case IntegerKind::dword:
+      return println("  mul a0, a0, a1");
+    default:
+      assert(false);
+    }
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fmul.s fa0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  fmul.d fa0, fa0, fa1");
+    }
+  };
+  auto type = expr->type;
   switch (type->kind) {
-  case IntegerKind::word:
-    return println("  subw a0, a0, a1");
-  case IntegerKind::dword:
-    return println("  sub a0, a0, a1");
-  default:
+  case TypeKind::integer:
+    visit(expr);
+    return integer(cast<IntegerType>(type));
+  case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::record:
     assert(false);
   }
 }
 
-auto Generator::multiply(Type *type) -> void {
-  assert(type->kind == TypeKind::integer);
-  auto integer = cast<IntegerType>(type);
-  switch (integer->kind) {
-  case IntegerKind::word:
-    return println("  mulw a0, a0, a1");
-  case IntegerKind::dword:
-    return println("  mul a0, a0, a1");
-  default:
-    assert(false);
-  }
-}
-
-auto Generator::divide(Type *type) -> void {
-  assert(type->kind == TypeKind::integer);
-  auto integer = cast<IntegerType>(type);
-  switch (pattern(integer->kind, integer->sign)) {
-  case Scalar::int32:
-    return println("  divw a0, a0, a1");
-  case Scalar::int64:
-    return println("  div a0, a0, a1");
-  case Scalar::uint32:
-    return println("  divuw a0, a0, a1");
-  case Scalar::uint64:
-    return println("  divu a0, a0, a1");
-  default:
-    assert(false);
+auto Generator::divide(BinaryExpr *expr) -> void {
+  auto integer = [&](IntegerType *type) {
+    switch (pattern(type->kind, type->sign)) {
+    case Scalar::int32:
+      return println("  divw a0, a0, a1");
+    case Scalar::int64:
+      return println("  div a0, a0, a1");
+    case Scalar::uint32:
+      return println("  divuw a0, a0, a1");
+    case Scalar::uint64:
+      return println("  divu a0, a0, a1");
+    default:
+      assert(false);
+    }
+  };
+  auto floating = [&](FloatingType *type) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fdiv.s fa0, fa0, fa1");
+    case FloatingKind::float64:
+      return println("  fdiv.d fa0, fa0, fa1");
+    }
+  };
+  auto type = expr->type;
+  switch (type->kind) {
+  case TypeKind::integer:
+    visit(expr);
+    return integer(cast<IntegerType>(type));
+  case TypeKind::floating:
+    visitf(expr);
+    return floating(cast<FloatingType>(type));
+  case TypeKind::kw_void:
+  case TypeKind::boolean:
+  case TypeKind::pointer:
+  case TypeKind::function:
+  case TypeKind::array:
+  case TypeKind::record:
+    break;
   }
 }
 
@@ -664,17 +771,13 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
 
   switch (expr->kind) {
   case BinaryKind::add:
-    rvalue();
-    return add(expr->type);
+    return add(expr);
   case BinaryKind::subtract:
-    rvalue();
-    return subtract(expr->type);
+    return subtract(expr);
   case BinaryKind::multiply:
-    rvalue();
-    return multiply(expr->type);
+    return multiply(expr);
   case BinaryKind::divide:
-    rvalue();
-    return divide(expr->type);
+    return divide(expr);
   case BinaryKind::modulo:
     rvalue();
     return modulo(expr->type);

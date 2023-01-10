@@ -58,6 +58,8 @@ private:
   auto member_addr(MemberExpr *expr) -> void;
   auto addr_proxy(Expr *expr) -> void;
 
+  auto cmp_zero(Type *type) -> void;
+
   auto expr_stmt(ExprStmt *stmt) -> void;
   auto for_stmt(ForStmt *stmt) -> void;
   auto if_stmt(IfStmt *stmt) -> void;

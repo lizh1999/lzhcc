@@ -14,6 +14,7 @@ auto Generator::for_stmt(ForStmt *stmt) -> void {
   println(".L.begin.%d:", label);
   if (stmt->cond) {
     expr_proxy(stmt->cond);
+    cmp_zero(stmt->cond->type);
     println("  beqz a0, %.*s", (int)break_name.size(), break_name.data());
   }
   stmt_proxy(stmt->then);
@@ -27,6 +28,7 @@ auto Generator::for_stmt(ForStmt *stmt) -> void {
 
 auto Generator::if_stmt(IfStmt *stmt) -> void {
   expr_proxy(stmt->cond);
+  cmp_zero(stmt->cond->type);
   int label = counter_++;
   println("  beqz a0, .L.else.%d", label);
   stmt_proxy(stmt->then);
@@ -99,6 +101,7 @@ auto Generator::do_stmt(DoStmt *stmt) -> void {
   println("%.*s:", (int)continue_name.size(), continue_name.data());
   stmt_proxy(stmt->then);
   expr_proxy(stmt->cond);
+  cmp_zero(stmt->cond->type);
   println("  bne a0, zero, %.*s", (int)continue_name.size(),
           continue_name.data());
   println("%.*s:", (int)break_name.size(), break_name.data());

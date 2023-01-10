@@ -320,6 +320,7 @@ auto Generator::cast(Type *src, Type *dest) -> void {
     return;
   }
   if (dest->kind == TypeKind::boolean) {
+    cmp_zero(src);
     return println("  snez a0, a0");
   }
   int lhs = type_id(src);
@@ -380,6 +381,7 @@ auto Generator::unary_expr(UnaryExpr *expr) -> void {
     return cast(expr->operand->type, expr->type);
   case UnaryKind::logical_not:
     expr_proxy(expr->operand);
+    cmp_zero(expr->operand->type);
     return println("  seqz a0, a0");
   case UnaryKind::bitwise_not:
     expr_proxy(expr->operand);
@@ -818,16 +820,20 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
   case BinaryKind::logical_and: {
     int label = counter_++;
     expr_proxy(expr->lhs);
+    cmp_zero(expr->lhs->type);
     println("  beq a0, zero, .L.and.%d", label);
     expr_proxy(expr->rhs);
+    cmp_zero(expr->lhs->type);
     println(".L.and.%d:", label);
     return println("  snez a0, a0");
   }
   case BinaryKind::logical_or: {
     int label = counter_++;
     expr_proxy(expr->lhs);
+    cmp_zero(expr->lhs->type);
     println("  bne a0, zero, .L.or.%d", label);
     expr_proxy(expr->rhs);
+    cmp_zero(expr->lhs->type);
     println(".L.or.%d:", label);
     return println("  snez a0, a0");
   }
@@ -859,6 +865,7 @@ auto Generator::member_expr(MemberExpr *expr) -> void {
 
 auto Generator::condition_expr(ConditionExpr *expr) -> void {
   expr_proxy(expr->cond);
+  cmp_zero(expr->cond->type);
   int label = counter_++;
   println("  beqz a0, .L.else.%d", label);
   expr_proxy(expr->then);
@@ -926,6 +933,24 @@ auto Generator::expr_proxy(Expr *expr) -> void {
     return member_expr(cast<MemberExpr>(expr));
   case ExperKind::condition:
     return condition_expr(cast<ConditionExpr>(expr));
+  }
+}
+
+auto Generator::cmp_zero(Type *type) -> void {
+  if (type->kind != TypeKind::floating) {
+    return;
+  }
+  switch (cast<FloatingType>(type)->kind) {
+  case FloatingKind::float32:
+    println("  fmv.w.x fa1, zero");
+    println("  feq.s a0, fa0, fa1");
+    println("  xori a0, a0, 1");
+    break;
+  case FloatingKind::float64:
+    println("  fmv.d.x fa1, zero");
+    println("  feq.d a0, fa0, fa1");
+    println("  xori a0, a0, 1");
+    break;
   }
 }
 

@@ -115,10 +115,10 @@ auto Parser::init(Type *type) -> Init * {
   case TypeKind::integer:
   case TypeKind::pointer:
   case TypeKind::function:
+  case TypeKind::floating:
     return scalar_init();
   case TypeKind::record:
     return record_init(cast<RecordType>(type));
-  case TypeKind::floating:
   case TypeKind::kw_void:
     assert(false);
   }
@@ -168,10 +168,10 @@ auto Parser::init2(Type *type) -> Init * {
   case TypeKind::integer:
   case TypeKind::pointer:
   case TypeKind::function:
+  case TypeKind::floating:
     return scalar_init();
   case TypeKind::record:
     return record_init2(cast<RecordType>(type));
-  case TypeKind::floating:
   case TypeKind::kw_void:
     assert(false);
   }
@@ -1076,14 +1076,11 @@ auto low_shift_right_op(Context *context, Expr *lhs, Expr *rhs, int loc)
 
 auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
   switch (pattern(lhs->type->kind, rhs->type->kind)) {
-  case pattern(TypeKind::integer, TypeKind::integer): {
-    auto src = cast<IntegerType>(rhs);
-    auto dest = cast<IntegerType>(lhs);
-    if (src->kind != dest->kind) {
-      rhs = low_cast_op(context, lhs->type, rhs);
-    }
-    return context->assign(lhs->type, lhs, rhs);
-  }
+  case pattern(TypeKind::integer, TypeKind::integer):
+  case pattern(TypeKind::floating, TypeKind::floating):
+  case pattern(TypeKind::integer, TypeKind::floating):
+  case pattern(TypeKind::floating, TypeKind::integer):
+  case pattern(TypeKind::boolean, TypeKind::floating):
   case pattern(TypeKind::boolean, TypeKind::integer):
   case pattern(TypeKind::boolean, TypeKind::pointer):
   case pattern(TypeKind::boolean, TypeKind::array):

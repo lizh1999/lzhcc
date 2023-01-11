@@ -10,8 +10,7 @@ public:
   auto codegen(GValue *gvalue) -> void;
 
 private:
-  auto store(Type *type, int src, int offset) -> void;
-  auto store_integer(IntegerType *type, int src, int offset) -> void;
+  auto store(Type *type, int& gp, int &fp, int offset) -> void;
 
   auto store(Type *type) -> void;
   auto store_integer(IntegerType *type) -> void;

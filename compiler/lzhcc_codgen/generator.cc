@@ -51,28 +51,36 @@ auto Generator::codegen(GValue *gvalue) -> void {
   }
 }
 
-auto Generator::store_integer(IntegerType *type, int src, int offset) -> void {
-  switch (type->kind) {
-  case IntegerKind::byte:
-    return println("  sb a%d, %d(sp)", src, offset);
-  case IntegerKind::half:
-    return println("  sh a%d, %d(sp)", src, offset);
-  case IntegerKind::word:
-    return println("  sw a%d, %d(sp)", src, offset);
-  case IntegerKind::dword:
-    return println("  sd a%d, %d(sp)", src, offset);
-  }
-}
-
-auto Generator::store(Type *type, int src, int offset) -> void {
+auto Generator::store(Type *type, int &gp, int &fp, int offset) -> void {
+  auto integer = [&](IntegerType *type) -> void {
+    switch (type->kind) {
+    case IntegerKind::byte:
+      return println("  sb a%d, %d(sp)", gp++, offset);
+    case IntegerKind::half:
+      return println("  sh a%d, %d(sp)", gp++, offset);
+    case IntegerKind::word:
+      return println("  sw a%d, %d(sp)", gp++, offset);
+    case IntegerKind::dword:
+      return println("  sd a%d, %d(sp)", gp++, offset);
+    }
+  };
+  auto floating = [&](FloatingType *type) -> void {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fsw fa%d, %d(sp)", fp++, offset);
+    case FloatingKind::float64:
+      return println("  fsd fa%d, %d(sp)", fp++, offset);
+    }
+  };
   switch (type->kind) {
   case TypeKind::integer:
-    return store_integer(cast<IntegerType>(type), src, offset);
+    return integer(cast<IntegerType>(type));
   case TypeKind::boolean:
-    return println("  sb a%d, %d(sp)", src, offset);
+    return println("  sb a%d, %d(sp)", gp++, offset);
   case TypeKind::pointer:
-    return println("  sd a%d, %d(sp)", src, offset);
+    return println("  sd a%d, %d(sp)", gp++, offset);
   case TypeKind::floating:
+    return floating(cast<FloatingType>(type));
   case TypeKind::function:
   case TypeKind::array:
   case TypeKind::record:
@@ -101,12 +109,12 @@ auto Generator::codegen(Function *function) -> void {
   println("  add sp, sp, t0");
   println("  mv fp, sp");
 
-  auto &params = function->params;
-  int i = 0;
-  for (; i < params.size(); i++) {
-    store(params[i]->type, i, params[i]->offset);
+  int gp = 0, fp = 0;
+  for (auto param : function->params) {
+    store(param->type, gp, fp, param->offset);
   }
   if (function->va_area) {
+    int i = function->params.size();
     for (int j = 0; i < 8; i++, j += 8) {
       println("  sd a%d, %d(sp)", i, function->va_area->offset + j);
     }

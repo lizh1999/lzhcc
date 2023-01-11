@@ -841,15 +841,27 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
 }
 
 auto Generator::call_expr(CallExpr *expr) -> void {
+  int floating = 0, integer = 0;
   for (auto arg : expr->args) {
     expr_proxy(arg);
-    push("a0");
+    if (arg->type->kind == TypeKind::floating) {
+      pushf("fa0");
+      floating++;
+    } else {
+      push("a0");
+      integer++;
+    }
   }
-  char reg[] = "a0";
+  char reg[] = "fa0";
   for (int i = expr->args.size(); i--;) {
-    reg[1] += i;
-    pop(reg);
-    reg[1] -= i;
+    if (expr->args[i]->type->kind == TypeKind::floating) {
+      reg[2] += --floating;
+      popf(reg);
+    } else {
+      reg[2] += --integer;
+      pop(reg + 1);
+    }
+    reg[2] = '0';
   }
   println("  call %.*s", (int)expr->name.size(), expr->name.data());
 }

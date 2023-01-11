@@ -59,10 +59,10 @@ int add_all(int n, ...);
 
 typedef void *va_list;
 
-int sprintf(char *buf, char *fmt, ...);
-int vsprintf(char *buf, char *fmt, va_list ap);
+int sprintf(char *buf, const char *fmt, ...);
+int vsprintf(char *buf, const char *fmt, va_list ap);
 
-char *fmt(char *buf, char *fmt, ...) {
+char *fmt(char *buf, const char *fmt, ...) {
   va_list ap = __va_area__;
   vsprintf(buf, fmt, ap);
 }
@@ -134,7 +134,8 @@ int main() {
   ASSERT(7, add_double3(2.5, 2.5, 2.5));
 
   ASSERT(0, ({ char buf[100]; sprintf(buf, "%.1f", (float)3.5); strcmp(buf, "3.5"); }));
-  
+  ASSERT(0, ({ char buf[100]; fmt(buf, "%.1f", (float)3.5); strcmp(buf, "3.5"); }));
+
 
   printf("OK\n");
   return 0;

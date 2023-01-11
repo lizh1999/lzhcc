@@ -65,11 +65,15 @@ auto Generator::store(Type *type, int &gp, int &fp, int offset) -> void {
     }
   };
   auto floating = [&](FloatingType *type) -> void {
+    IntegerType int32(IntegerKind::word, Sign::sign);
+    IntegerType int64(IntegerKind::dword, Sign::sign);
     switch (type->kind) {
     case FloatingKind::float32:
-      return println("  fsw fa%d, %d(sp)", fp++, offset);
+      return fp == 8 ? integer(&int32)
+                     : println("  fsw fa%d, %d(sp)", fp++, offset);
     case FloatingKind::float64:
-      return println("  fsd fa%d, %d(sp)", fp++, offset);
+      return fp == 8 ? integer(&int64)
+                     : println("  fsd fa%d, %d(sp)", fp++, offset);
     }
   };
   switch (type->kind) {

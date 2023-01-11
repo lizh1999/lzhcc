@@ -356,7 +356,7 @@ struct IntegerExpr : Expr {
 
 struct FloatingExpr : Expr {
   FloatingExpr(Type *type, double value)
-    : Expr(ExperKind::floating, type), value(value) {}
+      : Expr(ExperKind::floating, type), value(value) {}
   double value;
 };
 
@@ -412,10 +412,13 @@ struct BinaryExpr : Expr {
 };
 
 struct CallExpr : Expr {
-  CallExpr(std::string_view name, Type *type, std::vector<Expr *> argus)
-      : Expr(ExperKind::call, type), name(name), args(std::move(argus)) {}
+  CallExpr(std::string_view name, Type *type, std::vector<Expr *> args,
+           int arg_num)
+      : Expr(ExperKind::call, type), name(name), args(std::move(args)),
+        arg_num(arg_num) {}
   std::string_view name;
   std::vector<Expr *> args;
+  int arg_num;
 };
 
 struct MemberExpr : Expr {
@@ -682,8 +685,8 @@ public:
   auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto condition(Type *type, Expr *cond, Expr *then, Expr *else_) -> Expr *;
 
-  auto call(std::string_view name, Type *type, std::vector<Expr *> args)
-      -> Expr *;
+  auto call(std::string_view name, Type *type, std::vector<Expr *> args,
+            int arg_num) -> Expr *;
 
   auto member(Type *type, Expr *record, int offset) -> Expr *;
 

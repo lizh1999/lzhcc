@@ -841,27 +841,40 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
 }
 
 auto Generator::call_expr(CallExpr *expr) -> void {
-  int floating = 0, integer = 0;
-  for (auto arg : expr->args) {
-    expr_proxy(arg);
-    if (arg->type->kind == TypeKind::floating) {
+  auto &args = expr->args;
+  for (int i = args.size(); i--;) {
+    expr_proxy(args[i]);
+    if (args[i]->type->kind == TypeKind::floating) {
       pushf("fa0");
-      floating++;
     } else {
       push("a0");
-      integer++;
     }
   }
-  char reg[] = "fa0";
-  for (int i = expr->args.size(); i--;) {
-    if (expr->args[i]->type->kind == TypeKind::floating) {
-      reg[2] += --floating;
-      popf(reg);
+  int gp = 0, fp = 0;
+  auto integer = [&] {
+    assert(gp < 8);
+    char reg[] = "a0";
+    reg[1] += gp++;
+    pop(reg);
+  };
+  auto floating = [&] {
+    if (fp == 8) {
+      integer();
     } else {
-      reg[2] += --integer;
-      pop(reg + 1);
+      char reg[] = "fa0";
+      reg[2] += fp++;
+      return popf(reg);
     }
-    reg[2] = '0';
+  };
+  for (int i = 0; i < expr->arg_num; i++) {
+    if (args[i]->type->kind == TypeKind::floating) {
+      floating();
+    } else {
+      integer();
+    }
+  }
+  for (int i = expr->arg_num; i < args.size(); i++) {
+    integer();
   }
   println("  call %.*s", (int)expr->name.size(), expr->name.data());
 }

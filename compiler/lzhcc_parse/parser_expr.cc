@@ -317,7 +317,13 @@ auto Parser::call(Token *token) -> Expr * {
   for (int i = 0; i < params.size(); i++) {
     args[i] = context_->cast(params[i], args[i]);
   }
-  return context_->call(name, function_type->ret, std::move(args));
+  for (int i = params.size(); i < args.size(); i++) {
+    if (args[i]->type->kind == TypeKind::floating) {
+      args[i] = context_->cast(context_->float64(), args[i]);
+    }
+  }
+  return context_->call(name, function_type->ret, std::move(args),
+                        params.size());
 }
 
 auto Parser::primary() -> Expr * {

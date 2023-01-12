@@ -309,9 +309,8 @@ auto Parser::init_global(Init *init, std::span<uint8_t> out,
   }
 }
 
-auto Parser::call(Token *token) -> Expr * {
-  auto name = context_->storage(token->inner);
-  consume(TokenKind::open_paren);
+auto Parser::call(Expr *func, FunctionType *type) -> Expr * {
+  auto token = consume(TokenKind::open_paren);
   std::vector<Expr *> args;
   while (!consume_if(TokenKind::close_paren)) {
     if (!args.empty()) {
@@ -319,16 +318,11 @@ auto Parser::call(Token *token) -> Expr * {
     }
     args.push_back(assignment());
   }
-  auto var = find_value(token->inner);
-  if (var->type->kind != TypeKind::function) {
-    context_->fatal(token->inner, "");
-  }
-  auto function_type = cast<FunctionType>(var->type);
-  auto &params = function_type->params;
+  auto &params = type->params;
   if (args.size() < params.size()) {
     context_->fatal(token->location, "");
   }
-  if (args.size() > params.size() && !function_type->is_variadic) {
+  if (args.size() > params.size() && !type->is_variadic) {
     context_->fatal(token->location, "");
   }
   for (int i = 0; i < params.size(); i++) {
@@ -339,8 +333,7 @@ auto Parser::call(Token *token) -> Expr * {
       args[i] = context_->cast(context_->float64(), args[i]);
     }
   }
-  return context_->call(name, function_type->ret, std::move(args),
-                        params.size());
+  return context_->call(type->ret, func, std::move(args), params.size());
 }
 
 auto Parser::primary() -> Expr * {
@@ -370,17 +363,13 @@ auto Parser::primary() -> Expr * {
   }
   case TokenKind::identifier: {
     auto token = consume();
-    if (next_is(TokenKind::open_paren)) {
-      return call(token);
+    auto var = find_var(token->inner);
+    if (Value *value = var; value) {
+      return context_->value(value);
+    } else if (int value; var.get(&value)) {
+      return context_->integer(value);
     } else {
-      auto var = find_var(token->inner);
-      if (Value *value = var; value) {
-        return context_->value(value);
-      } else if (int value; var.get(&value)) {
-        return context_->integer(value);
-      } else {
-        context_->fatal(token->location, "");
-      }
+      context_->fatal(token->location, "");
     }
   }
   case TokenKind::string:
@@ -603,6 +592,20 @@ loop:
     lhs = low_add_op(context_, lhs, rhs, token->location);
     lhs = low_deref_op(context_, lhs, token->location);
     goto loop;
+  }
+  case TokenKind::open_paren: {
+    auto type = lhs->type;
+    if (type->kind == TypeKind::function) {
+      lhs = call(lhs, cast<FunctionType>(type));
+      goto loop;
+    } else if (type->kind == TypeKind::pointer) {
+      auto pointer = cast<PointerType>(type);
+      if (pointer->base->kind == TypeKind::function) {
+        lhs = call(lhs, cast<FunctionType>(pointer->base));
+        goto loop;
+      }
+    }
+    context_->fatal(position_->location, "");
   }
   case TokenKind::dot: {
     auto token = consume();
@@ -1111,6 +1114,7 @@ auto low_assign_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
     return context->assign(lhs->type, lhs, rhs);
   case pattern(TypeKind::pointer, TypeKind::pointer):
   case pattern(TypeKind::pointer, TypeKind::array):
+  case pattern(TypeKind::pointer, TypeKind::function):
   case pattern(TypeKind::record, TypeKind::record):
     return context->assign(lhs->type, lhs, rhs);
   default:

@@ -212,6 +212,8 @@ static auto is_valid(int mask) -> bool {
 
   case kw_double:
 
+  case kw_long + kw_double:
+
   case other:
     return true;
   default:
@@ -371,6 +373,7 @@ loop:
   case kw_float:
     return context_->float32();
   case kw_double:
+  case kw_long + kw_double:
     return context_->float64();
   default:
     assert(result);

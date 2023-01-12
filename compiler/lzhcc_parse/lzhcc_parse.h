@@ -80,7 +80,7 @@ private:
   auto cook_string() -> std::string;
   auto string() -> Expr *;
   auto character() -> Expr *;
-  auto call(Token *name) -> Expr *;
+  auto call(Expr *func, FunctionType *type) -> Expr *;
   auto primary() -> Expr *;
   auto unary() -> Expr *;
   auto cast() -> Expr *;

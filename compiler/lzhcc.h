@@ -412,11 +412,10 @@ struct BinaryExpr : Expr {
 };
 
 struct CallExpr : Expr {
-  CallExpr(std::string_view name, Type *type, std::vector<Expr *> args,
-           int arg_num)
-      : Expr(ExperKind::call, type), name(name), args(std::move(args)),
+  CallExpr(Type *type, Expr *func, std::vector<Expr *> args, int arg_num)
+      : Expr(ExperKind::call, type), func(func), args(std::move(args)),
         arg_num(arg_num) {}
-  std::string_view name;
+  Expr *func;
   std::vector<Expr *> args;
   int arg_num;
 };
@@ -685,8 +684,8 @@ public:
   auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto condition(Type *type, Expr *cond, Expr *then, Expr *else_) -> Expr *;
 
-  auto call(std::string_view name, Type *type, std::vector<Expr *> args,
-            int arg_num) -> Expr *;
+  auto call(Type *type, Expr *func, std::vector<Expr *> args, int arg_num)
+      -> Expr *;
 
   auto member(Type *type, Expr *record, int offset) -> Expr *;
 

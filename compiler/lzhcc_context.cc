@@ -435,9 +435,9 @@ auto Context::shift_right(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
   return create<BinaryExpr>(BinaryKind::shift_right, type, lhs, rhs);
 }
 
-auto Context::call(std::string_view name, Type *type, std::vector<Expr *> args,
+auto Context::call(Type *type, Expr *func, std::vector<Expr *> args,
                    int arg_num) -> Expr * {
-  return create<CallExpr>(name, type, std::move(args), arg_num);
+  return create<CallExpr>(type, func, std::move(args), arg_num);
 }
 
 auto Context::member(Type *type, Expr *record, int offset) -> Expr * {

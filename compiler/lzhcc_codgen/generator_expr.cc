@@ -841,6 +841,8 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
 }
 
 auto Generator::call_expr(CallExpr *expr) -> void {
+  expr_proxy(expr->func);
+  push("a0");
   auto &args = expr->args;
   for (int i = args.size(); i--;) {
     expr_proxy(args[i]);
@@ -876,7 +878,8 @@ auto Generator::call_expr(CallExpr *expr) -> void {
   for (int i = expr->arg_num; i < args.size(); i++) {
     integer();
   }
-  println("  call %.*s", (int)expr->name.size(), expr->name.data());
+  pop("t0");
+  println("  jalr t0");
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {

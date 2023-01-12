@@ -1,4 +1,5 @@
 #include "lzhcc_parse.h"
+#include <bit>
 
 namespace lzhcc {
 
@@ -7,10 +8,15 @@ using LabelRef = std::string_view **;
 static auto const_addr(Expr *, int64_t *, LabelRef) -> bool;
 
 static auto const_int(Expr *, int64_t *, LabelRef) -> bool;
+static auto const_float(Expr *, double *) -> bool;
+static auto const_value_float(ValueExpr *, double *) -> bool;
 static auto const_value_int(ValueExpr *, int64_t *, LabelRef) -> bool;
 static auto const_member_int(MemberExpr *, int64_t *, LabelRef) -> bool;
+static auto const_unary_float(UnaryExpr *, double *) -> bool;
 static auto const_unary_int(UnaryExpr *, int64_t *, LabelRef) -> bool;
+static auto const_binary_float(BinaryExpr *, double *) -> bool;
 static auto const_binary_int(BinaryExpr *, int64_t *, LabelRef) -> bool;
+static auto const_condition_float(ConditionExpr *, double *) -> bool;
 static auto const_condition_int(ConditionExpr *, int64_t *, LabelRef) -> bool;
 
 auto Parser::const_int(int64_t *value) -> bool {
@@ -22,7 +28,19 @@ auto Parser::const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
   return lzhcc::const_int(expr, value, label);
 }
 
+auto Parser::const_float(Expr *expr, double *value) -> bool {
+  return lzhcc::const_float(expr, value);
+}
+
 auto const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
+  if (expr->type->kind == TypeKind::floating) {
+    double floating;
+    if (!const_float(expr, &floating)) {
+      return false;
+    }
+    *value = floating;
+    return true;
+  }
   switch (expr->kind) {
   case ExperKind::integer:
     *value = cast<IntegerExpr>(expr)->value;
@@ -41,6 +59,39 @@ auto const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
   case ExperKind::call:
   case ExperKind::stmt:
   case ExperKind::floating:
+    return false;
+  }
+}
+
+auto const_float(Expr *expr, double *value) -> bool {
+  if (expr->type->kind == TypeKind::integer) {
+    int64_t integer;
+    if (!const_int(expr, &integer, nullptr)) {
+      return false;
+    }
+    if (cast<IntegerType>(expr->type)->sign == Sign::unsign) {
+      *value = std::bit_cast<uint64_t>(integer);
+    } else {
+      *value = integer;
+    }
+    return true;
+  }
+  switch (expr->kind) {
+  case ExperKind::floating:
+    *value = cast<FloatingExpr>(expr)->value;
+    return true;
+  case ExperKind::unary:
+    return const_unary_float(cast<UnaryExpr>(expr), value);
+  case ExperKind::binary:
+    return const_binary_float(cast<BinaryExpr>(expr), value);
+  case ExperKind::condition:
+    return const_condition_float(cast<ConditionExpr>(expr), value);
+  case ExperKind::zero:
+  case ExperKind::value:
+  case ExperKind::integer:
+  case ExperKind::call:
+  case ExperKind::stmt:
+  case ExperKind::member:
     return false;
   }
 }
@@ -107,23 +158,54 @@ static auto const_cast_int(int64_t *value, Type *type) -> bool {
   }
 }
 
+auto const_unary_float(UnaryExpr *expr, double *value) -> bool {
+  switch (expr->kind) {
+  case UnaryKind::negative:
+    if (const_float(expr->operand, value)) {
+      *value = -*value;
+      return true;
+    } else {
+      return false;
+    }
+  case UnaryKind::cast:
+    return const_float(expr->operand, value);
+  case UnaryKind::refrence:
+  case UnaryKind::deref:
+  case UnaryKind::logical_not:
+  case UnaryKind::bitwise_not:
+    return false;
+  }
+}
+
 auto const_unary_int(UnaryExpr *expr, int64_t *value, LabelRef label) -> bool {
   switch (expr->kind) {
   case UnaryKind::negative:
-    const_int(expr->operand, value, nullptr);
-    *value = -*value;
-    return true;
+    if (const_int(expr->operand, value, nullptr)) {
+      *value = -*value;
+      return true;
+    } else {
+      return false;
+    }
   case UnaryKind::cast:
-    const_int(expr->operand, value, label);
-    return const_cast_int(value, expr->type);
+    if (const_int(expr->operand, value, label)) {
+      return const_cast_int(value, expr->type);
+    } else {
+      return false;
+    }
   case UnaryKind::logical_not:
-    const_int(expr->operand, value, nullptr);
-    *value = !*value;
-    return true;
+    if (const_int(expr->operand, value, nullptr)) {
+      *value = !*value;
+      return true;
+    } else {
+      return false;
+    }
   case UnaryKind::bitwise_not:
-    const_int(expr->operand, value, nullptr);
-    *value = ~*value;
-    return true;
+    if (const_int(expr->operand, value, nullptr)) {
+      *value = ~*value;
+      return true;
+    } else {
+      return false;
+    }
   case UnaryKind::refrence:
     return label ? const_addr(expr->operand, value, label) : false;
   case UnaryKind::deref:
@@ -185,6 +267,47 @@ auto const_binary_int(BinaryExpr *expr, int64_t *value, LabelRef label)
   case BinaryKind::assign:
     return false;
   }
+#undef eval
+}
+
+auto const_binary_float(BinaryExpr *expr, double *value) -> bool {
+#define eval(op)                                                               \
+  ({                                                                           \
+    bool success = false;                                                      \
+    double lhs, rhs;                                                           \
+    if (const_float(expr->lhs, &lhs) && const_float(expr->rhs, &rhs)) {        \
+      *value = lhs op rhs;                                                     \
+      success = true;                                                          \
+    }                                                                          \
+    success;                                                                   \
+  })
+  switch (expr->kind) {
+  case BinaryKind::add:
+    return eval(+);
+  case BinaryKind::subtract:
+    return eval(-);
+  case BinaryKind::multiply:
+    return eval(*);
+  case BinaryKind::divide:
+    return eval(/);
+  case BinaryKind::comma:
+    return const_float(expr->rhs, value);
+  case BinaryKind::modulo:
+  case BinaryKind::less_than:
+  case BinaryKind::less_equal:
+  case BinaryKind::equal:
+  case BinaryKind::not_equal:
+  case BinaryKind::assign:
+  case BinaryKind::bitwise_or:
+  case BinaryKind::bitwise_xor:
+  case BinaryKind::bitwise_and:
+  case BinaryKind::logical_and:
+  case BinaryKind::logical_or:
+  case BinaryKind::shift_left:
+  case BinaryKind::shift_right:
+    return false;
+  }
+#undef eval
 }
 
 auto const_condition_int(ConditionExpr *expr, int64_t *value, LabelRef label)
@@ -194,6 +317,15 @@ auto const_condition_int(ConditionExpr *expr, int64_t *value, LabelRef label)
   } else {
     return *value ? const_int(expr->then, value, label)
                   : const_int(expr->else_, value, label);
+  }
+}
+
+auto const_condition_float(ConditionExpr *expr, double *value) -> bool {
+  if (int64_t tmp; !const_int(expr->cond, &tmp, nullptr)) {
+    return false;
+  } else {
+    return tmp ? const_float(expr->then, value)
+               : const_float(expr->else_, value);
   }
 }
 

@@ -229,32 +229,49 @@ auto Parser::init_local(Expr *expr, Init *init, int loc) -> Expr * {
 auto Parser::init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
                                 std::vector<Relocation> &relocations, int loc)
     -> void {
-  int64_t value;
-  std::string_view *label = nullptr;
-  if (!const_int(init->expr, &value, &label)) {
-    context_->fatal(loc, "");
-  }
-  if (label) {
-    assert(out.size() == 8);
-    int64_t index = reinterpret_cast<int64_t>(&out[0]);
-    relocations.push_back({index, *label, value});
-    return;
-  }
   auto write = [&](auto value) mutable {
     using T = decltype(value);
     *reinterpret_cast<T *>(&out[0]) = value;
   };
-  switch (out.size()) {
-  case 1:
-    return write(static_cast<uint8_t>(value));
-  case 2:
-    return write(static_cast<uint16_t>(value));
-  case 4:
-    return write(static_cast<uint32_t>(value));
-  case 8:
-    return write(static_cast<uint64_t>(value));
-  default:
-    assert(false);
+  if (init->expr->type->kind == TypeKind::floating) {
+    double value;
+    if (!const_float(init->expr, (double *)&value)) {
+      context_->fatal(loc, "");
+    }
+    switch (out.size()) {
+    case 4:
+      return write(static_cast<float>(value));
+    case 8:
+      return write(static_cast<double>(value));
+    default:
+      assert(false);
+    }
+  } else {
+    int64_t value;
+    std::string_view *label = nullptr;
+
+    if (!const_int(init->expr, &value, &label)) {
+      context_->fatal(loc, "");
+    }
+    if (label) {
+      assert(out.size() == 8);
+      int64_t index = reinterpret_cast<int64_t>(&out[0]);
+      relocations.push_back({index, *label, value});
+      return;
+    }
+
+    switch (out.size()) {
+    case 1:
+      return write(static_cast<uint8_t>(value));
+    case 2:
+      return write(static_cast<uint16_t>(value));
+    case 4:
+      return write(static_cast<uint32_t>(value));
+    case 8:
+      return write(static_cast<uint64_t>(value));
+    default:
+      assert(false);
+    }
   }
 }
 

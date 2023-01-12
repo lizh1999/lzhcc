@@ -906,12 +906,22 @@ auto low_cast_op(Context *context, Type *type, Expr *operand) -> Expr * {
 
 auto convert(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> std::tuple<Expr *, Expr *, Type *> {
-  if (lhs->type->kind == TypeKind::boolean) {
-    lhs = context->cast(context->int32(), lhs);
-  }
-  if (rhs->type->kind == TypeKind::boolean) {
-    rhs = context->cast(context->int32(), rhs);
-  }
+  auto cast_expr = [&](Expr *expr) {
+    if (expr->type->kind == TypeKind::boolean) {
+      return context->cast(context->int32(), lhs);
+    } else if (expr->type->kind == TypeKind::function) {
+      auto type = context->pointer_to(expr->type);
+      return context->cast(type, expr);
+    } else if (expr->type->kind == TypeKind::array) {
+      auto array = cast<ArrayType>(expr->type);
+      auto type = context->pointer_to(array->base);
+      return context->cast(type, expr);
+    } else {
+      return expr;
+    }
+  };
+  lhs = cast_expr(lhs);
+  rhs = cast_expr(rhs);
   auto floating = [&] {
     auto lhs_type = cast<FloatingType>(lhs->type);
     auto rhs_type = cast<FloatingType>(rhs->type);
@@ -966,6 +976,8 @@ auto convert(Context *context, Expr *lhs, Expr *rhs, int loc)
     break;
   case pattern(TypeKind::floating, TypeKind::integer):
     rhs = low_cast_op(context, lhs->type, rhs);
+    break;
+  case pattern(TypeKind::pointer, TypeKind::pointer):
     break;
   default:
     context->fatal(loc, "");

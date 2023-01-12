@@ -454,6 +454,8 @@ auto Parser::function_parameters(Type *base, ParamNames *param_names)
     if (param->kind == TypeKind::array) {
       auto array = cast<ArrayType>(param);
       param = context_->pointer_to(array->base);
+    } else if (param->kind == TypeKind::function) {
+      param = context_->pointer_to(param);
     }
     params.push_back(param);
   }

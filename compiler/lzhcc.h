@@ -723,6 +723,7 @@ public:
     bool opt_cc1 = false;
     bool opt_hash_hash_hash = false;
     bool opt_S = false;
+    bool opt_c = false;
   } arg;
 
 private:

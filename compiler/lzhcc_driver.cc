@@ -4,6 +4,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define push(args, str) args.push_back(const_cast<char *>(str))
+#define gcc_lib_path "/home/lizh/riscv/lib/gcc/riscv64-unknown-linux-gnu/11.1.0"
+#define lib_path "/home/lizh/riscv/sysroot/usr/lib"
+#define sysroot "/home/lizh/riscv/sysroot"
+
 namespace lzhcc {
 
 [[noreturn]] static void usage(int status) {
@@ -60,6 +65,10 @@ static auto parse_args(std::span<char *> args, Context *context) {
       result.opt_S = true;
       continue;
     }
+    if (arg == "-c") {
+      result.opt_c = true;
+      continue;
+    }
     if (arg == "-o") {
       if (i + 1 == args.size()) {
         usage(EXIT_FAILURE);
@@ -105,18 +114,15 @@ static auto cc1(Context &context) {
 
 static auto run_cc1(std::vector<char *> args, Context &context,
                     const char *input, const char *output) {
-  static char cc1[] = "-cc1";
-  args.push_back(cc1);
+  push(args, "-cc1");
 
   if (input) {
-    static char cc1_input[] = "-cc1-input";
-    args.push_back(cc1_input);
+    push(args, "-cc1-input");
     args.push_back(const_cast<char *>(input));
   }
 
   if (output) {
-    static char cc1_output[] = "-cc1-output";
-    args.push_back(cc1_output);
+    push(args, "-cc1-output");
     args.push_back(const_cast<char *>(output));
   }
 
@@ -124,12 +130,46 @@ static auto run_cc1(std::vector<char *> args, Context &context,
   run_subprocess(args, context);
 }
 
+static auto run_linker(Context &context, std::span<std::string> inputs,
+                       const char *output) {
+  std::vector<char *> args;
+  push(args, "riscv64-unknown-linux-gnu-ld");
+  push(args, "-o");
+  push(args, output);
+  push(args, "-m");
+  push(args, "elf64lriscv");
+  push(args, "-dynamic-linker");
+  push(args, sysroot "/lib/ld-linux-riscv64-lp64d.so.1");
+  push(args, lib_path "/crt1.o");
+  push(args, gcc_lib_path "/crti.o");
+  push(args, gcc_lib_path "/crtbegin.o");
+  push(args, "-L" gcc_lib_path);
+  push(args, "-L" lib_path);
+  push(args, "-L/home/lizh/riscv/riscv64-unknown-linux-gnu/lib");
+  push(args, "-L" sysroot "/lib");
+  for (auto &input : inputs) {
+    push(args, input.c_str());
+  }
+  push(args, "-lc");
+  push(args, "-lgcc");
+  push(args, "--as-need");
+  push(args, "-lgcc_s");
+  push(args, "--no-as-need");
+  push(args, gcc_lib_path "/crtend.o");
+  push(args, lib_path "/crtn.o");
+  args.push_back(0);
+  run_subprocess(args, context);
+}
+
 static auto assemble(Context &context, const char *input, const char *output) {
-  char as[] = "riscv64-unknown-linux-gnu-as", c[] = "-c", o[] = "-o";
-  char *cmd[] = {
-      as, c, const_cast<char *>(input), o, const_cast<char *>(output), 0,
-  };
-  run_subprocess(cmd, context);
+  std::vector<char *> args;
+  push(args, "riscv64-unknown-linux-gnu-as");
+  push(args, "-c");
+  push(args, input);
+  push(args, "-o");
+  push(args, output);
+  args.push_back(0);
+  run_subprocess(args, context);
 }
 
 auto main(std::span<char *> args) -> int {
@@ -140,11 +180,13 @@ auto main(std::span<char *> args) -> int {
     return 0;
   }
 
-  if (1 < context.arg.input_paths.size() && context.arg.opt_o) {
+  if (1 < context.arg.input_paths.size() && context.arg.opt_o &&
+      (context.arg.opt_c || context.arg.opt_S)) {
     fprintf(stderr, "cannot specify '-o' with multiple files\n");
     exit(EXIT_FAILURE);
   }
 
+  std::vector<std::string> ld_args;
   for (auto input : context.arg.input_paths) {
     std::string output;
     if (context.arg.opt_o) {
@@ -155,13 +197,40 @@ auto main(std::span<char *> args) -> int {
       output = replace_extn(input, ".o");
     }
 
+    std::string_view view = input;
+    if (view.ends_with(".o")) {
+      ld_args.push_back(input);
+      continue;
+    }
+
+    if (view.ends_with(".s")) {
+      if (!context.arg.opt_S) {
+        assemble(context, input, output.c_str());
+      }
+      continue;
+    }
+
+    if (!view.ends_with(".c") && view != "-") {
+      fprintf(stderr, "unknown file extension: %s\n", input);
+      exit(EXIT_FAILURE);
+    }
+
     if (context.arg.opt_S) {
       run_cc1({args.begin(), args.end()}, context, input, output.c_str());
-    } else {
+    } else if (context.arg.opt_c) {
       std::string tmpfile = context.create_tmpfile();
       run_cc1({args.begin(), args.end()}, context, input, tmpfile.c_str());
       assemble(context, tmpfile.c_str(), output.c_str());
+    } else {
+      auto tmp1 = context.create_tmpfile();
+      auto tmp2 = context.create_tmpfile();
+      run_cc1({args.begin(), args.end()}, context, input, tmp1.c_str());
+      assemble(context, tmp1.c_str(), tmp2.c_str());
+      ld_args.push_back(tmp2);
     }
+  }
+  if (!ld_args.empty()) {
+    run_linker(context, ld_args, context.arg.opt_o ?: "a.out");
   }
   return 0;
 }

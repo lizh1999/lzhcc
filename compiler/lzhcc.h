@@ -713,7 +713,10 @@ public:
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
+    const char *input = nullptr;
     const char *opt_o = nullptr;
+    bool opt_cc1 = false;
+    bool opt_hash_hash_hash = false;
   } arg;
 
 private:
@@ -749,6 +752,6 @@ private:
 // lzhcc_driver.cc
 //
 
-auto main(std::span<const char *> args) -> int;
+auto main(std::span<char *> args) -> int;
 
 } // namespace lzhcc

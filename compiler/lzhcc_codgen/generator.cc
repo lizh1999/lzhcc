@@ -8,7 +8,7 @@ namespace lzhcc {
 Generator::Generator(Context *context)
     : depth_(0), counter_(0), return_label_(0), context_(context) {
   using namespace std::string_view_literals;
-  const char *path = context_->arg.opt_o;
+  const char *path = context_->arg.output_file;
   if (!path || path == "-"sv) {
     out_ = stdout;
   } else {

@@ -43,7 +43,7 @@ static auto replace_extn(std::string tmpl, const char *extn) {
 
 static auto parse_args(std::span<char *> args, Context *context) {
   auto &result = context->arg;
-  for (int i = 0; i < args.size(); i++) {
+  for (int i = 1; i < args.size(); i++) {
     std::string_view arg = args[i];
     if (arg == "--help") {
       usage(EXIT_SUCCESS);
@@ -73,13 +73,23 @@ static auto parse_args(std::span<char *> args, Context *context) {
       continue;
     }
 
+    if (arg == "-cc1-input") {
+      result.base_file = args[++i];
+      continue;
+    }
+
+    if (arg == "-cc1-output") {
+      result.output_file = args[++i];
+      continue;
+    }
+
     if (arg[0] == '-' && arg.size() > 1) {
       fprintf(stderr, "unknow argument: %s\n", args[i]);
       exit(EXIT_FAILURE);
     }
-    result.input = args[i];
+    result.input_paths.push_back(args[i]);
   }
-  if (!result.input) {
+  if (result.input_paths.empty()) {
     fprintf(stderr, "no input files.\n");
     exit(EXIT_FAILURE);
   }
@@ -87,7 +97,7 @@ static auto parse_args(std::span<char *> args, Context *context) {
 }
 
 static auto cc1(Context &context) {
-  auto chars = context.append_file(context.arg.input);
+  auto chars = context.append_file(context.arg.base_file);
   auto tokens = lex(std::move(chars), context);
   auto tree = parse(tokens, context);
   codegen(tree, context);
@@ -99,12 +109,14 @@ static auto run_cc1(std::vector<char *> args, Context &context,
   args.push_back(cc1);
 
   if (input) {
+    static char cc1_input[] = "-cc1-input";
+    args.push_back(cc1_input);
     args.push_back(const_cast<char *>(input));
   }
 
   if (output) {
-    static char o[] = "-o";
-    args.push_back(o);
+    static char cc1_output[] = "-cc1-output";
+    args.push_back(cc1_output);
     args.push_back(const_cast<char *>(output));
   }
 
@@ -128,25 +140,29 @@ auto main(std::span<char *> args) -> int {
     return 0;
   }
 
-  std::string output;
-  if (context.arg.opt_o) {
-    output = context.arg.opt_o;
-  } else if (context.arg.opt_S) {
-    output = replace_extn(context.arg.input, ".s");
-  } else {
-    output = replace_extn(context.arg.input, ".o");
+  if (1 < context.arg.input_paths.size() && context.arg.opt_o) {
+    fprintf(stderr, "cannot specify '-o' with multiple files\n");
+    exit(EXIT_FAILURE);
   }
 
-  if (context.arg.opt_S) {
-    run_cc1({args.begin(), args.end()}, context, context.arg.input,
-            output.c_str());
-    return 0;
-  }
+  for (auto input : context.arg.input_paths) {
+    std::string output;
+    if (context.arg.opt_o) {
+      output = context.arg.opt_o;
+    } else if (context.arg.opt_S) {
+      output = replace_extn(input, ".s");
+    } else {
+      output = replace_extn(input, ".o");
+    }
 
-  std::string tmpfile = context.create_tmpfile();
-  run_cc1({args.begin(), args.end()}, context, context.arg.input,
-          tmpfile.c_str());
-  assemble(context, tmpfile.c_str(), output.c_str());
+    if (context.arg.opt_S) {
+      run_cc1({args.begin(), args.end()}, context, input, output.c_str());
+    } else {
+      std::string tmpfile = context.create_tmpfile();
+      run_cc1({args.begin(), args.end()}, context, input, tmpfile.c_str());
+      assemble(context, tmpfile.c_str(), output.c_str());
+    }
+  }
   return 0;
 }
 

@@ -716,7 +716,9 @@ public:
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
-    const char *input = nullptr;
+    std::vector<const char *> input_paths;
+    const char *output_file = nullptr;
+    const char *base_file = nullptr;
     const char *opt_o = nullptr;
     bool opt_cc1 = false;
     bool opt_hash_hash_hash = false;

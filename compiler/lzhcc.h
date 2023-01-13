@@ -605,6 +605,7 @@ auto codegen(Module &module, Context &context) -> void;
 class Context {
 public:
   Context();
+  ~Context();
   auto append_file(std::string path) -> CharCursorFn;
   auto append_text(std::string text) -> CharCursorFn;
   auto push_literal(std::string literal) -> int;
@@ -710,6 +711,8 @@ public:
   auto record_init(RecordInit::Children children) -> Init *;
   auto scalar_init(Expr *expr) -> Init *;
 
+  auto create_tmpfile() -> std::string;
+
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
@@ -717,6 +720,7 @@ public:
     const char *opt_o = nullptr;
     bool opt_cc1 = false;
     bool opt_hash_hash_hash = false;
+    bool opt_S = false;
   } arg;
 
 private:
@@ -724,6 +728,7 @@ private:
   std::deque<std::string> text_;
   std::unordered_map<std::string_view, int> identifier_map_;
   std::vector<TokenKind> keyword_map_;
+  std::vector<std::string> tmpfile_;
 
   template <typename T, typename... Args> auto create(Args &&...args) -> T * {
     auto smart_ptr =

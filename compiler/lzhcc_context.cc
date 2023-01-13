@@ -1,7 +1,11 @@
 #include "lzhcc.h"
 
 #include <cassert>
+#include <cerrno>
 #include <cstdarg>
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
 
 namespace lzhcc {
 
@@ -109,6 +113,12 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_void);
   keyword_map_.push_back(TokenKind::kw_volatile);
   keyword_map_.push_back(TokenKind::kw_while);
+}
+
+Context::~Context() {
+  for (auto &tmp : tmpfile_) {
+    unlink(tmp.c_str());
+  }
 }
 
 auto Context::append_file(std::string path) -> CharCursorFn {
@@ -504,6 +514,18 @@ auto Context::record_init(RecordInit::Children children) -> Init * {
 
 auto Context::scalar_init(Expr *expr) -> Init * {
   return create<ScalarInit>(expr);
+}
+
+auto Context::create_tmpfile() -> std::string {
+  std::string path = "/tmp/lzhcc-XXXXXX";
+  int fd = mkstemp(const_cast<char *>(path.c_str()));
+  if (fd == -1) {
+    fprintf(stderr, "mkstemp failed %s\n", strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+  close(fd);
+  tmpfile_.push_back(path);
+  return path;
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

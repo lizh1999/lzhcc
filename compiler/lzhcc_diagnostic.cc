@@ -10,7 +10,6 @@
 namespace lzhcc {
 
 void fatal(Diagnostic loc, const char *message) {
-  std::abort();
   fprintf(stderr, "%.*s:%d:%d: " RED "error: " NONE "%s\n",
           (int)loc.filename.size(), loc.filename.data(), loc.line_number + 1,
           loc.column_number + 1, message);

@@ -47,6 +47,7 @@ enum class TokenKind : uint8_t {
   greater_equal,         // ">="
   greater_greater,       // ">>"
   greater_greater_equal, // ">>="
+  hash,                  // "#"
   less,                  // "<"
   less_equal,            // "<="
   less_less,             // "<<"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lzhcc.h"
+#include <stack>
 
 namespace lzhcc {
 
@@ -32,6 +33,25 @@ private:
   char current_;
   int location_;
   Cursor cursor_;
+  Context *context_;
+};
+
+class TokenCursor {
+  using Cursor = SourceCursor;
+
+public:
+  TokenCursor(CharCursorFn cursor, Context *context);
+
+  auto text_fn() -> std::function<Token()>;
+  auto text() -> Token;
+
+private:
+  auto advance_top_token() -> void;
+
+  Token top_token_;
+  Cursor top_cursor_;
+  std::stack<Token> token_stack_;
+  std::stack<Cursor> cursor_stack_;
   Context *context_;
 };
 

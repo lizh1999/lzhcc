@@ -48,14 +48,14 @@ loop:
     int location = location_;
     advance_current();
     switch (current_) {
-      case '.':
-        advance_current();
-        advance_current();
-        return token(TokenKind::dotdotdot, location);
-      case '0' ... '9':
-        return numeric(".");
-      default:
-        return token(TokenKind::dot, location);
+    case '.':
+      advance_current();
+      advance_current();
+      return token(TokenKind::dotdotdot, location);
+    case '0' ... '9':
+      return numeric(".");
+    default:
+      return token(TokenKind::dot, location);
     }
   }
   case '0' ... '9':
@@ -201,6 +201,9 @@ auto SourceCursor::punctuator() -> Token {
     default:
       return token(TokenKind::amp, location);
     }
+  case '#':
+    advance_current();
+    return token(TokenKind::hash, location);
   case '|':
     advance_current();
     switch (current_) {

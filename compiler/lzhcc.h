@@ -613,6 +613,7 @@ public:
   auto push_identifier(std::string literal) -> int;
   auto storage(int index) const -> std::string_view;
   auto into_keyword(int index) const -> TokenKind;
+  auto to_string(Token &token) -> std::string_view;
 
   // type
   auto void_type() -> Type *;
@@ -726,6 +727,7 @@ public:
     bool opt_hash_hash_hash = false;
     bool opt_S = false;
     bool opt_c = false;
+    bool opt_E = false;
   } arg;
 
 private:

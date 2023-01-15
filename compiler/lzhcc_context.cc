@@ -122,6 +122,107 @@ Context::~Context() {
   }
 }
 
+auto Context::to_string(Token &token) -> std::string_view {
+  switch (token.kind) {
+  case TokenKind::amp:
+    return "&";
+  case TokenKind::amp_amp:
+    return "&&";
+  case TokenKind::amp_equal:
+    return "&=";
+  case TokenKind::arrow:
+    return "->";
+  case TokenKind::caret:
+    return "^";
+  case TokenKind::caret_equal:
+    return "^=";
+  case TokenKind::comma:
+    return ",";
+  case TokenKind::colon:
+    return ":";
+  case TokenKind::dot:
+    return ".";
+  case TokenKind::dotdotdot:
+    return "...";
+  case TokenKind::equal:
+    return "=";
+  case TokenKind::equal_equal:
+    return "==";
+  case TokenKind::exclaim:
+    return "!";
+  case TokenKind::exclaim_equal:
+    return "!=";
+  case TokenKind::greater:
+    return ">";
+  case TokenKind::greater_equal:
+    return ">=";
+  case TokenKind::greater_greater:
+    return ">>";
+  case TokenKind::greater_greater_equal:
+    return ">>>";
+  case TokenKind::hash:
+    return "#";
+  case TokenKind::less:
+    return "<";
+  case TokenKind::less_equal:
+    return "<=";
+  case TokenKind::less_less:
+    return "<<";
+  case TokenKind::less_less_equal:
+    return "<<<";
+  case TokenKind::minus:
+    return "-";
+  case TokenKind::minus_equal:
+    return "-=";
+  case TokenKind::minus_minus:
+    return "--";
+  case TokenKind::percent:
+    return "%";
+  case TokenKind::percent_equal:
+    return "%=";
+  case TokenKind::pipe:
+    return "|";
+  case TokenKind::pipe_equal:
+    return "|=";
+  case TokenKind::pipe_pipe:
+    return "||";
+  case TokenKind::plus:
+    return "+";
+  case TokenKind::plus_equal:
+    return "+=";
+  case TokenKind::plus_plus:
+    return "++";
+  case TokenKind::question:
+    return "?";
+  case TokenKind::semi:
+    return ";";
+  case TokenKind::slash:
+    return "/";
+  case TokenKind::slash_equal:
+    return "/=";
+  case TokenKind::star:
+    return "*";
+  case TokenKind::star_equal:
+    return "*=";
+  case TokenKind::tilde:
+    return "~";
+  case TokenKind::open_paren:
+    return "(";
+  case TokenKind::close_paren:
+    return ")";
+  case TokenKind::open_bracket:
+    return "[";
+  case TokenKind::close_bracket:
+    return "]";
+  case TokenKind::open_brace:
+    return "{";
+  case TokenKind::close_brace:
+    return "}";
+  default:
+    return storage_[token.inner];
+  }
+}
+
 auto Context::append_file(std::string path) -> CharCursorFn {
   FILE *in = nullptr;
   if (path == "-") {

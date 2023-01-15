@@ -69,6 +69,10 @@ static auto parse_args(std::span<char *> args, Context *context) {
       result.opt_c = true;
       continue;
     }
+    if (arg == "-E") {
+      result.opt_E = true;
+      continue;
+    }
     if (arg == "-o") {
       if (i + 1 == args.size()) {
         usage(EXIT_FAILURE);
@@ -105,9 +109,30 @@ static auto parse_args(std::span<char *> args, Context *context) {
   return context;
 }
 
+static auto print_token(std::span<Token> tokens, Context &context) {
+  FILE *out = stdout;
+  if (context.arg.opt_o) {
+    out = fopen(context.arg.opt_o, "w");
+  }
+  for (auto &token : tokens.first(tokens.size() - 1)) {
+    auto str = context.to_string(token);
+    if (token.start_of_line) {
+      fprintf(out, "\n");
+    }
+    if (token.leading_space) {
+      fprintf(out, " ");
+    }
+    fprintf(out, "%.*s", (int)str.size(), str.data());
+  }
+  fprintf(out, "\n");
+}
+
 static auto cc1(Context &context) {
   auto chars = context.append_file(context.arg.base_file);
   auto tokens = lex(std::move(chars), context);
+  if (context.arg.opt_E) {
+    return print_token(tokens, context);
+  }
   auto tree = parse(tokens, context);
   codegen(tree, context);
 }
@@ -181,7 +206,7 @@ auto main(std::span<char *> args) -> int {
   }
 
   if (1 < context.arg.input_paths.size() && context.arg.opt_o &&
-      (context.arg.opt_c || context.arg.opt_S)) {
+      (context.arg.opt_c || context.arg.opt_S || context.arg.opt_E)) {
     fprintf(stderr, "cannot specify '-o' with multiple files\n");
     exit(EXIT_FAILURE);
   }
@@ -221,6 +246,8 @@ auto main(std::span<char *> args) -> int {
       std::string tmpfile = context.create_tmpfile();
       run_cc1({args.begin(), args.end()}, context, input, tmpfile.c_str());
       assemble(context, tmpfile.c_str(), output.c_str());
+    } else if (context.arg.opt_E) {
+      run_cc1({args.begin(), args.end()}, context, input, 0);
     } else {
       auto tmp1 = context.create_tmpfile();
       auto tmp2 = context.create_tmpfile();

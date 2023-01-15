@@ -1,5 +1,6 @@
 #include "lzhcc.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cerrno>
 #include <cstdarg>
@@ -125,8 +126,10 @@ auto Context::append_file(std::string path) -> CharCursorFn {
   FILE *in = nullptr;
   if (path == "-") {
     in = stdin;
+    filename_.push_back("<stdin>");
   } else {
     in = fopen(path.c_str(), "r");
+    filename_.push_back(path);
   }
   std::string text;
   enum { buffer_size = 4096 };
@@ -144,9 +147,18 @@ auto Context::append_file(std::string path) -> CharCursorFn {
 
 auto Context::append_text(std::string text) -> CharCursorFn {
   int location = 0;
-  for (int i = 0; i < text_.size(); i++) {
-    location += text_[i].size();
+  if (!file_location_.empty()) {
+    location = file_location_.back() + text_.back().size();
   }
+  std::vector<int> line = {0};
+  for (int i = 0; i < text.size(); i++) {
+    if (text[i] == '\n') {
+      line.push_back(i + 1);
+    }
+  }
+  line.push_back(text.size());
+  file_location_.push_back(location);
+  line_location_.push_back(std::move(line));
   text_.push_back(std::move(text));
   return CharCursor(text_.back().c_str(), location);
 }
@@ -528,26 +540,29 @@ auto Context::create_tmpfile() -> std::string {
   return path;
 }
 
-auto Context::fatal(int loc, const char *fmt, ...) -> void {
-  int file_id = 0;
-  while (file_id < text_.size() && text_[file_id].size() <= loc) {
-    loc -= text_[file_id++].size();
-  }
-  assert(file_id != text_.size());
-  // std::string_view filename = filename_[file_id];
-  std::string_view line = text_[file_id];
-  int line_number = 0;
-  auto pos = line.find('\n');
-  while (pos < loc) {
-    line.remove_prefix(pos + 1);
-    loc -= pos + 1;
-    line_number++;
-    pos = line.find('\n');
-  }
-  if (pos != std::string_view::npos) {
-    line = line.substr(0, pos);
-  }
+auto Context::filename(int loc) -> std::string_view {
+  int file_id =
+      std::upper_bound(file_location_.begin(), file_location_.end(), loc) -
+      file_location_.begin() - 1;
+  return filename_[file_id];
+}
 
+auto Context::fatal(int loc, const char *fmt, ...) -> void {
+  int file_id =
+      std::upper_bound(file_location_.begin(), file_location_.end(), loc) -
+      file_location_.begin() - 1;
+  loc -= file_location_[file_id];
+  std::string_view filename = filename_[file_id];
+  int line_number = std::upper_bound(line_location_[file_id].begin(),
+                                     line_location_[file_id].end(), loc) -
+                    line_location_[file_id].begin() - 1;
+  loc -= line_location_[file_id][line_number];
+  std::string_view line(
+      text_[file_id].data() + line_location_[file_id][line_number],
+      text_[file_id].data() + line_location_[file_id][line_number + 1]);
+  if (line.back() == '\n') {
+    line.remove_suffix(1);
+  }
   char *message;
   size_t length;
   FILE *out = open_memstream(&message, &length);
@@ -558,7 +573,7 @@ auto Context::fatal(int loc, const char *fmt, ...) -> void {
   va_end(args);
 
   fclose(out);
-  lzhcc::fatal({"", line, line_number, loc}, message);
+  lzhcc::fatal({filename, line, line_number, loc}, message);
 }
 
 } // namespace lzhcc

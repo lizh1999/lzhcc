@@ -714,6 +714,7 @@ public:
 
   auto create_tmpfile() -> std::string;
 
+  auto filename(int loc) -> std::string_view;
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
@@ -730,6 +731,9 @@ public:
 private:
   std::deque<std::string> storage_;
   std::deque<std::string> text_;
+  std::vector<std::string> filename_;
+  std::vector<int> file_location_;
+  std::vector<std::vector<int>> line_location_;
   std::unordered_map<std::string_view, int> identifier_map_;
   std::vector<TokenKind> keyword_map_;
   std::vector<std::string> tmpfile_;

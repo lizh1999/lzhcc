@@ -46,7 +46,10 @@ public:
   auto text() -> Token;
 
 private:
+  const int sb_include;
+
   auto advance_top_token() -> void;
+  auto include_file() -> void;
 
   Token top_token_;
   Cursor top_cursor_;

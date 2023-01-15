@@ -1,4 +1,3 @@
-#include "lzhcc.h"
 #include "lzhcc_lex.h"
 #include <cassert>
 #include <filesystem>
@@ -55,6 +54,15 @@ auto TokenCursor::advance_top_token() -> void {
   }
 }
 
+auto TokenCursor::skip_line() -> void {
+  if (top_token_.start_of_line) {
+    return;
+  }
+  while (!top_token_.start_of_line) {
+    advance_top_token();
+  }
+}
+
 auto TokenCursor::include_file() -> void {
   auto token = top_token_;
   advance_top_token();
@@ -63,6 +71,7 @@ auto TokenCursor::include_file() -> void {
   }
   fs::path path = context_->filename(token.location);
   auto name = context_->storage(token.inner);
+  skip_line();
   name.remove_prefix(1);
   name.remove_suffix(1);
   path = path.parent_path() / name;

@@ -49,6 +49,7 @@ private:
   const int sb_include;
 
   auto advance_top_token() -> void;
+  auto skip_line() -> void;
   auto include_file() -> void;
 
   Token top_token_;

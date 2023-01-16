@@ -136,6 +136,9 @@ struct Token {
 using CharCursorFn = std::function<std::pair<char, int>()>;
 auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
 
+auto const_int(std::span<Token> tokens, Context &context, int64_t *value)
+    -> bool;
+
 enum class TypeKind {
   kw_void,
   boolean,

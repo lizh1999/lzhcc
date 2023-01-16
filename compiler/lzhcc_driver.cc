@@ -198,7 +198,7 @@ static auto assemble(Context &context, const char *input, const char *output) {
 }
 
 auto main(std::span<char *> args) -> int {
-  Context context;
+  static Context context;
   parse_args(args, &context);
   if (context.arg.opt_cc1) {
     cc1(context);

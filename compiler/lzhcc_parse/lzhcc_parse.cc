@@ -7,4 +7,10 @@ auto parse(std::span<Token> tokens, Context &context) -> Module {
   return parser();
 }
 
+auto const_int(std::span<Token> tokens, Context &context, int64_t *value)
+    -> bool {
+  Parser parser(tokens.data(), &context);
+  return parser.const_int(value);
+}
+
 } // namespace lzhcc

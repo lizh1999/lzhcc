@@ -8,7 +8,9 @@ namespace lzhcc {
 
 TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
     : sb_include(context->push_identifier("include")),
-      top_cursor_(cursor, context), context_(context) {
+      sb_if(context->push_identifier("if")),
+      sb_endif(context->push_identifier("endif")), top_cursor_(cursor, context),
+      context_(context) {
   top_token_ = top_cursor_();
 }
 
@@ -39,6 +41,17 @@ auto TokenCursor::text() -> Token {
       include_file();
       return text();
     }
+    if (directive == sb_if) {
+      handle_if(token.location);
+      return text();
+    }
+    if (directive == sb_endif) {
+      if (cond_stack_.empty()) {
+        context_->fatal(token.location, "");
+      }
+      cond_stack_.pop();
+      return text();
+    }
     assert(false);
   }
 }
@@ -60,6 +73,23 @@ auto TokenCursor::skip_line() -> void {
   }
   while (!top_token_.start_of_line) {
     advance_top_token();
+  }
+}
+
+auto TokenCursor::skip_cond() -> void {
+  while (top_token_.kind != TokenKind::eof) {
+    if (!top_token_.start_of_line || top_token_.kind != TokenKind::hash) {
+      advance_top_token();
+      continue;
+    }
+    advance_top_token();
+    if (top_token_.kind != TokenKind::identifier) {
+      continue;
+    }
+    if (top_token_.inner == sb_endif) {
+      advance_top_token();
+      break;
+    }
   }
 }
 
@@ -90,6 +120,27 @@ auto TokenCursor::include_file() -> void {
     top_cursor_ = std::move(cursor_stack_.top());
     token_stack_.pop();
     cursor_stack_.pop();
+  }
+}
+
+auto TokenCursor::handle_if(int loc) -> void {
+  std::vector<Token> tokens;
+  while (!top_token_.start_of_line) {
+    tokens.push_back(top_token_);
+    advance_top_token();
+  }
+  tokens.push_back(Token{
+      .kind = TokenKind::eof,
+      .start_of_line = true,
+  });
+  int64_t value;
+  if (!const_int(tokens, *context_, &value)) {
+    context_->fatal(loc, "");
+  }
+  if (!value) {
+    skip_cond();
+  } else {
+    cond_stack_.push(loc);
   }
 }
 

@@ -47,7 +47,8 @@ public:
   Parser(Token *position, Context *context)
       : position_(position), context_(context) {}
   auto operator()() -> Module;
-
+  auto const_int(int64_t *value) -> bool;
+  
 private:
   auto scalar_init() -> Init *;
   auto array_init(ArrayType *array) -> Init *;
@@ -100,7 +101,6 @@ private:
   auto assignment() -> Expr *;
   auto expression() -> Expr *;
 
-  auto const_int(int64_t *value) -> bool;
   auto const_int(Expr *expr, int64_t *value, std::string_view **lable) -> bool;
   auto const_float(Expr *expr, double *value) -> bool;
 

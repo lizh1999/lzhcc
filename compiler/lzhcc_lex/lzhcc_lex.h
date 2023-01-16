@@ -47,15 +47,20 @@ public:
 
 private:
   const int sb_include;
+  const int sb_if;
+  const int sb_endif;
 
   auto advance_top_token() -> void;
   auto skip_line() -> void;
+  auto skip_cond() -> void;
   auto include_file() -> void;
+  auto handle_if(int loc) -> void;
 
   Token top_token_;
   Cursor top_cursor_;
   std::stack<Token> token_stack_;
   std::stack<Cursor> cursor_stack_;
+  std::stack<int> cond_stack_;
   Context *context_;
 };
 

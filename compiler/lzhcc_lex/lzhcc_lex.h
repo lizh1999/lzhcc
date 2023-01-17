@@ -47,6 +47,7 @@ public:
 
 private:
   const int sb_define;
+  const int sb_undef;
   const int sb_include;
   const int sb_if;
   const int sb_else;
@@ -59,6 +60,7 @@ private:
   auto include_file() -> void;
   auto handle_if() -> void;
   auto define_macro() -> void;
+  auto remove_macro() -> void;
 
   Token top_token_;
   Cursor top_cursor_;

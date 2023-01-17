@@ -634,6 +634,7 @@ public:
   auto into_keyword(int index) const -> TokenKind;
   auto to_string(Token &token) -> std::string_view;
 
+  auto remove_macro(int name) -> void;
   auto find_macro(int name) -> Macro *;
   auto object_macro(int name, std::vector<Token> replace) -> void;
 

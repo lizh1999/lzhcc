@@ -223,6 +223,8 @@ auto Context::to_string(Token &token) -> std::string_view {
   }
 }
 
+auto Context::remove_macro(int name) -> void { macro_map_.erase(name); }
+
 auto Context::find_macro(int name) -> Macro * {
   auto it = macro_map_.find(name);
   return it == macro_map_.end() ? nullptr : it->second;

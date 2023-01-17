@@ -8,6 +8,7 @@ namespace lzhcc {
 
 TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
     : sb_define(context->push_identifier("define")),
+      sb_undef(context->push_identifier("undef")),
       sb_include(context->push_identifier("include")),
       sb_if(context->push_identifier("if")),
       sb_else(context->push_identifier("else")),
@@ -46,6 +47,10 @@ auto TokenCursor::text() -> Token {
     }
     if (directive == sb_define) {
       define_macro();
+      return text();
+    }
+    if (directive == sb_undef) {
+      remove_macro();
       return text();
     }
     if (directive == sb_if) {
@@ -221,6 +226,15 @@ auto TokenCursor::define_macro() -> void {
     advance_top_token();
   }
   context_->object_macro(name, std::move(replace));
+}
+
+auto TokenCursor::remove_macro() -> void {
+  if (top_token_.kind != TokenKind::identifier) {
+    context_->fatal(top_token_.location, "");
+  }
+  int name = top_token_.inner;
+  context_->remove_macro(name);
+  skip_line();
 }
 
 } // namespace lzhcc

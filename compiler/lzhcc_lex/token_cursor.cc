@@ -9,6 +9,7 @@ namespace lzhcc {
 TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
     : sb_include(context->push_identifier("include")),
       sb_if(context->push_identifier("if")),
+      sb_else(context->push_identifier("else")),
       sb_endif(context->push_identifier("endif")), top_cursor_(cursor, context),
       context_(context) {
   top_token_ = top_cursor_();
@@ -42,7 +43,16 @@ auto TokenCursor::text() -> Token {
       return text();
     }
     if (directive == sb_if) {
-      handle_if(token.location);
+      cond_stack_.push(token.location);
+      handle_if();
+      return text();
+    }
+    if (directive == sb_else) {
+      if (cond_stack_.empty()) {
+        context_->fatal(token.location, "");
+      }
+      cond_stack_.pop();
+      skip_cond();
       return text();
     }
     if (directive == sb_endif) {
@@ -77,6 +87,7 @@ auto TokenCursor::skip_line() -> void {
 }
 
 auto TokenCursor::skip_cond() -> void {
+  int depth = 1;
   while (top_token_.kind != TokenKind::eof) {
     if (!top_token_.start_of_line || top_token_.kind != TokenKind::hash) {
       advance_top_token();
@@ -86,9 +97,14 @@ auto TokenCursor::skip_cond() -> void {
     if (top_token_.kind != TokenKind::identifier) {
       continue;
     }
+    if (top_token_.inner == sb_if) {
+      depth++;
+    }
     if (top_token_.inner == sb_endif) {
       advance_top_token();
-      break;
+      if (--depth == 0) {
+        break;
+      }
     }
   }
 }
@@ -123,7 +139,7 @@ auto TokenCursor::include_file() -> void {
   }
 }
 
-auto TokenCursor::handle_if(int loc) -> void {
+auto TokenCursor::handle_if() -> void {
   std::vector<Token> tokens;
   while (!top_token_.start_of_line) {
     tokens.push_back(top_token_);
@@ -135,12 +151,38 @@ auto TokenCursor::handle_if(int loc) -> void {
   });
   int64_t value;
   if (!const_int(tokens, *context_, &value)) {
-    context_->fatal(loc, "");
+    context_->fatal(cond_stack_.top(), "");
   }
-  if (!value) {
-    skip_cond();
-  } else {
-    cond_stack_.push(loc);
+  if (value) {
+    return;
+  }
+  int depth = 1;
+  while (top_token_.kind != TokenKind::eof) {
+     if (!top_token_.start_of_line || top_token_.kind != TokenKind::hash) {
+      advance_top_token();
+      continue;
+    }
+    advance_top_token();
+    if (top_token_.kind != TokenKind::identifier) {
+      continue;
+    }
+    if (top_token_.inner == sb_if) {
+      ++depth;
+      advance_top_token();
+      continue;
+    }
+    if (top_token_.inner == sb_else) {
+      advance_top_token();
+      if (depth == 1) {
+        break;
+      }
+    } else if (top_token_.inner == sb_endif) {
+      advance_top_token();
+      if (--depth == 0) {
+        cond_stack_.pop();
+        break;
+      }
+    }
   }
 }
 

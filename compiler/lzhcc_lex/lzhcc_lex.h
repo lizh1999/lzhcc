@@ -48,13 +48,14 @@ public:
 private:
   const int sb_include;
   const int sb_if;
+  const int sb_else;
   const int sb_endif;
 
   auto advance_top_token() -> void;
   auto skip_line() -> void;
   auto skip_cond() -> void;
   auto include_file() -> void;
-  auto handle_if(int loc) -> void;
+  auto handle_if() -> void;
 
   Token top_token_;
   Cursor top_cursor_;

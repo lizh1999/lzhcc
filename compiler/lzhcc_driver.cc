@@ -111,7 +111,8 @@ static auto parse_args(std::span<char *> args, Context *context) {
 
 static auto print_token(std::span<Token> tokens, Context &context) {
   FILE *out = stdout;
-  if (context.arg.opt_o) {
+  using namespace std::literals;
+  if (context.arg.opt_o && context.arg.opt_o != "-"sv) {
     out = fopen(context.arg.opt_o, "w");
   }
   for (auto &token : tokens.first(tokens.size() - 1)) {

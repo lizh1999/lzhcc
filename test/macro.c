@@ -1,8 +1,8 @@
-int assert(int expected, int actual, char *code);
-int printf(char *fmt, ...);
-int sprintf(char *buf, char *fmt, ...);
-int strcmp(char *p, char *q);
-int memcmp(char *p, char *q, long n);
+int assert(int expected, int actual, const char *code);
+int printf(const char *fmt, ...);
+int sprintf(const char *buf, char *fmt, ...);
+int strcmp(const char *p, const char *q);
+int memcmp(const char *p, const char *q, long n);
 
 #include "include1.h"
 
@@ -99,6 +99,25 @@ int main() {
   m = 5;
 #endif
   assert(2, m, "m");
+
+  int M1 = 5;
+
+#define M1 3
+  assert(3, M1, "M1");
+#define M1 4
+  assert(4, M1, "M1");
+
+#define M1 3 + 4 +
+  assert(12, M1 5, "5");
+
+#define M1 3 + 4
+  assert(23, M1 * 5, "5");
+
+#define ASSERT_ assert(
+#define if 5
+#define five "5"
+#define END )
+  ASSERT_ 5, if, five END;
 
   printf("OK\n");
   return 0;

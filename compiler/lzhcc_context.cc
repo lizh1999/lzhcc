@@ -223,6 +223,16 @@ auto Context::to_string(Token &token) -> std::string_view {
   }
 }
 
+auto Context::find_macro(int name) -> Macro * {
+  auto it = macro_map_.find(name);
+  return it == macro_map_.end() ? nullptr : it->second;
+}
+
+auto Context::object_macro(int name, std::vector<Token> replace) -> void {
+  auto macro = create<ObjectMacro>(std::move(replace));
+  macro_map_[name] = macro;
+}
+
 auto Context::append_file(std::string path) -> CharCursorFn {
   FILE *in = nullptr;
   if (path == "-") {

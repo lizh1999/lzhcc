@@ -7,7 +7,8 @@ namespace fs = std::filesystem;
 namespace lzhcc {
 
 TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
-    : sb_include(context->push_identifier("include")),
+    : sb_define(context->push_identifier("define")),
+      sb_include(context->push_identifier("include")),
       sb_if(context->push_identifier("if")),
       sb_else(context->push_identifier("else")),
       sb_elif(context->push_identifier("elif")),
@@ -41,6 +42,10 @@ auto TokenCursor::text() -> Token {
     auto directive = token.inner;
     if (directive == sb_include) {
       include_file();
+      return text();
+    }
+    if (directive == sb_define) {
+      define_macro();
       return text();
     }
     if (directive == sb_if) {
@@ -202,6 +207,20 @@ auto TokenCursor::handle_if() -> void {
       }
     }
   }
+}
+
+auto TokenCursor::define_macro() -> void {
+  if (top_token_.kind != TokenKind::identifier) {
+    context_->fatal(top_token_.location, "");
+  }
+  int name = top_token_.inner;
+  advance_top_token();
+  std::vector<Token> replace;
+  while (!top_token_.start_of_line) {
+    replace.push_back(top_token_);
+    advance_top_token();
+  }
+  context_->object_macro(name, std::move(replace));
 }
 
 } // namespace lzhcc

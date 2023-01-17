@@ -46,6 +46,7 @@ public:
   auto text() -> Token;
 
 private:
+  const int sb_define;
   const int sb_include;
   const int sb_if;
   const int sb_else;
@@ -57,12 +58,37 @@ private:
   auto skip_cond() -> void;
   auto include_file() -> void;
   auto handle_if() -> void;
+  auto define_macro() -> void;
 
   Token top_token_;
   Cursor top_cursor_;
   std::stack<Token> token_stack_;
   std::stack<Cursor> cursor_stack_;
   std::stack<int> cond_stack_;
+  Context *context_;
+};
+
+class ExpandCursor {
+  using Cursor = std::function<Token()>;
+  static auto into(std::vector<Token> tokens) -> Cursor;
+
+public:
+  ExpandCursor(Cursor cursor, Context *context);
+
+  auto operator()() -> Token;
+
+private:
+  auto advance() -> Token;
+  auto advance_top_token() -> void;
+  auto push(Macro *macro, Cursor cursor) -> void;
+
+  auto expand(ObjectMacro *macro, Token origin) -> void;
+
+  Token top_token_;
+  Cursor top_cursor_;
+  std::stack<Macro *> macro_stack_;
+  std::stack<Token> token_stack_;
+  std::stack<Cursor> cursor_stack_;
   Context *context_;
 };
 

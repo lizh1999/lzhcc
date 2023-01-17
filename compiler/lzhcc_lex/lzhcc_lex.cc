@@ -5,10 +5,11 @@ namespace lzhcc {
 
 auto lex(CharCursorFn chars, Context &context) -> std::vector<Token> {
   std::vector<Token> tokens;
-  TokenCursor cursor(std::move(chars), &context);
+  TokenCursor base(std::move(chars), &context);
+  ExpandCursor cursor(base.text_fn(), &context);
   std::stack<int> stack;
   do {
-    auto token = cursor.text();
+    auto token = cursor();
     switch (token.kind) {
     case TokenKind::identifier:
       token.kind = context.into_keyword(token.inner);

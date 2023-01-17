@@ -129,6 +129,22 @@ struct Token {
   int inner;
 };
 
+enum class MacroKind : uint8_t {
+  object,
+};
+
+struct Macro {
+  Macro(MacroKind kind) : kind(kind), expand_disable(false) {}
+  MacroKind kind;
+  bool expand_disable;
+};
+
+struct ObjectMacro : Macro {
+  ObjectMacro(std::vector<Token> replace)
+      : Macro(MacroKind::object), replace(std::move(replace)) {}
+  std::vector<Token> replace;
+};
+
 //
 // lzhcc_lex/lzhcc_lex.cc
 //
@@ -618,6 +634,9 @@ public:
   auto into_keyword(int index) const -> TokenKind;
   auto to_string(Token &token) -> std::string_view;
 
+  auto find_macro(int name) -> Macro *;
+  auto object_macro(int name, std::vector<Token> replace) -> void;
+
   // type
   auto void_type() -> Type *;
   auto boolean() -> Type *;
@@ -742,6 +761,7 @@ private:
   std::unordered_map<std::string_view, int> identifier_map_;
   std::vector<TokenKind> keyword_map_;
   std::vector<std::string> tmpfile_;
+  std::unordered_map<int, Macro *> macro_map_;
 
   template <typename T, typename... Args> auto create(Args &&...args) -> T * {
     auto smart_ptr =

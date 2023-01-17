@@ -360,7 +360,7 @@ auto SourceCursor::token(TokenKind kind, int location, int inner) -> Token {
       .kind = kind,
       .leading_space = leading_space_,
       .start_of_line = start_of_line_,
-      .expand_disable = true,
+      .expand_disable = false,
       .location = location,
       .inner = inner,
   };

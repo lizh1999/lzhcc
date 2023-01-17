@@ -10,6 +10,7 @@ TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
     : sb_include(context->push_identifier("include")),
       sb_if(context->push_identifier("if")),
       sb_else(context->push_identifier("else")),
+      sb_elif(context->push_identifier("elif")),
       sb_endif(context->push_identifier("endif")), top_cursor_(cursor, context),
       context_(context) {
   top_token_ = top_cursor_();
@@ -47,7 +48,7 @@ auto TokenCursor::text() -> Token {
       handle_if();
       return text();
     }
-    if (directive == sb_else) {
+    if (directive == sb_else || directive == sb_elif) {
       if (cond_stack_.empty()) {
         context_->fatal(token.location, "");
       }
@@ -158,7 +159,7 @@ auto TokenCursor::handle_if() -> void {
   }
   int depth = 1;
   while (top_token_.kind != TokenKind::eof) {
-     if (!top_token_.start_of_line || top_token_.kind != TokenKind::hash) {
+    if (!top_token_.start_of_line || top_token_.kind != TokenKind::hash) {
       advance_top_token();
       continue;
     }
@@ -174,6 +175,23 @@ auto TokenCursor::handle_if() -> void {
     if (top_token_.inner == sb_else) {
       advance_top_token();
       if (depth == 1) {
+        break;
+      }
+    } else if (top_token_.inner == sb_elif) {
+      advance_top_token();
+      tokens.clear();
+      while (!top_token_.start_of_line) {
+        tokens.push_back(top_token_);
+        advance_top_token();
+      }
+      tokens.push_back(Token{
+          .kind = TokenKind::eof,
+          .start_of_line = true,
+      });
+      if (!const_int(tokens, *context_, &value)) {
+        context_->fatal(cond_stack_.top(), "");
+      }
+      if (value && depth == 1) {
         break;
       }
     } else if (top_token_.inner == sb_endif) {

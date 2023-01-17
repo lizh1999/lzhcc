@@ -49,6 +49,7 @@ private:
   const int sb_include;
   const int sb_if;
   const int sb_else;
+  const int sb_elif;
   const int sb_endif;
 
   auto advance_top_token() -> void;

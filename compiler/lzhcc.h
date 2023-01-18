@@ -48,6 +48,7 @@ enum class TokenKind : uint8_t {
   greater_greater,       // ">>"
   greater_greater_equal, // ">>="
   hash,                  // "#"
+  hash_hash,             // "##"
   less,                  // "<"
   less_equal,            // "<="
   less_less,             // "<<"
@@ -83,6 +84,7 @@ enum class TokenKind : uint8_t {
   identifier,            // identifier
   expand_arg,            // expand argument
   raw_arg,               // raw argument
+  placeholder,           // placeholder
   eof,                   // eof
   kw_alignas,            // "_Alignas"
   kw_alignof,            // "_Alignof"
@@ -646,7 +648,7 @@ public:
   Context();
   ~Context();
   auto append_file(std::string path) -> CharCursorFn;
-  auto append_text(std::string text) -> CharCursorFn;
+  auto append_text(std::string text, std::string name) -> CharCursorFn;
   auto push_literal(std::string literal) -> int;
   auto push_identifier(std::string literal) -> int;
   auto storage(int index) const -> std::string_view;

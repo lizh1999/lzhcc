@@ -92,6 +92,7 @@ private:
   auto push(Macro *macro, Cursor cursor) -> void;
 
   auto stringize(std::span<Token> in, Token hash) -> Token;
+  auto paste(Token lhs, Token rhs) -> Token;
   auto expand(ObjectMacro *macro, Token origin) -> void;
   auto expand(FunctionMacro *macro, Token origin) -> void;
 

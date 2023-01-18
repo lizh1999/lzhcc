@@ -79,15 +79,43 @@ auto ExpandCursor::stringize(std::span<Token> in, Token hash) -> Token {
   };
 }
 
+auto ExpandCursor::paste(Token lhs, Token rhs) -> Token {
+  std::string text;
+  text.append(context_->to_string(lhs));
+  text.append(context_->to_string(rhs));
+  auto chars = context_->append_text(std::move(text), "");
+  SourceCursor source(std::move(chars), context_);
+  Token token = source();
+  Token dummy = source();
+  if (dummy.kind != TokenKind::eof) {
+    context_->fatal(lhs.location, "");
+  }
+  token.location = lhs.location;
+  token.leading_space = lhs.leading_space;
+  token.start_of_line = lhs.start_of_line;
+  return token;
+}
+
 auto ExpandCursor::expand(ObjectMacro *macro, Token origin) -> void {
   assert(!macro->expand_disable);
-  auto replace = macro->replace;
-  if (!replace.empty()) {
-    auto &first = replace.front();
+  std::vector<Token> result;
+  for (auto token : macro->replace) {
+    if (!result.empty() && result.back().kind == TokenKind::hash_hash) {
+      result.pop_back();
+      assert(!result.empty());
+      auto lhs = result.back();
+      auto rhs = result.back();
+      result.back() = paste(lhs, rhs);
+    } else {
+      result.push_back(token);
+    }
+  }
+  if (!result.empty()) {
+    auto &first = result.front();
     first.leading_space = origin.leading_space;
     first.start_of_line = origin.start_of_line;
   }
-  return push(macro, into(std::move(replace)));
+  return push(macro, into(std::move(result)));
 }
 
 auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
@@ -145,7 +173,7 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
 
   std::vector<Token> result;
   for (auto token : macro->replace) {
-    if (token.kind == TokenKind::hash) {
+    if (token.kind == TokenKind::hash || token.kind == TokenKind::hash_hash) {
       result.push_back(token);
       continue;
     }
@@ -155,10 +183,39 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
       token = stringize(arg, result.back());
       result.pop_back();
     }
+    if (!result.empty() && result.back().kind == TokenKind::hash_hash) {
+      result.pop_back();
+      assert(!result.empty());
+      if (result.back().kind == TokenKind::placeholder) {
+        result.pop_back();
+      } else if (token.kind == TokenKind::raw_arg) {
+        auto &arg = args[token.inner];
+        if (!arg.empty()) {
+          auto lhs = result.back(), rhs = arg.front();
+          result.back() = paste(lhs, rhs);
+          result.insert(result.end(), arg.begin() + 1, arg.end());
+        }
+        continue;
+      } else {
+        auto lhs = result.back(), rhs = token;
+        result.back() = paste(lhs, rhs);
+        continue;
+      }
+    }
 
-    assert(token.kind != TokenKind::raw_arg);
-
-    if (token.kind == TokenKind::expand_arg) {
+    if (token.kind == TokenKind::raw_arg) {
+      auto &arg = args[token.inner];
+      if (arg.empty()) {
+        result.push_back({.kind = TokenKind::placeholder});
+      } else {
+        int first = result.size();
+        result.insert(result.end(), arg.begin(), arg.end());
+        if (!arg.empty()) {
+          result[first].start_of_line = token.start_of_line;
+          result[first].leading_space = token.leading_space;
+        }
+      }
+    } else if (token.kind == TokenKind::expand_arg) {
       auto &arg = expand[token.inner];
       int first = result.size();
       result.insert(result.end(), arg.begin(), arg.end());
@@ -170,12 +227,15 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
       result.push_back(token);
     }
   }
+  auto new_end = std::remove_if(result.begin(), result.end(), [](Token token) {
+    return token.kind == TokenKind::placeholder;
+  });
+  result.erase(new_end, result.end());
   if (!result.empty()) {
     auto &first = result.front();
     first.leading_space = origin.leading_space;
     first.start_of_line = origin.start_of_line;
   }
-
   push(macro, into(std::move(result)));
 }
 

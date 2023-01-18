@@ -291,11 +291,16 @@ auto TokenCursor::define_macro() -> void {
     }
     std::vector<ParamKind> param(param_map.size(), ParamKind::none);
     for (int i = 1; i < replace.size(); i++) {
+      using enum TokenKind;
       auto &lhs = replace[i - 1], &rhs = replace[i];
       if (lhs.kind == TokenKind::hash) {
         if (rhs.kind != TokenKind::expand_arg) {
           context_->fatal(rhs.inner, "");
         }
+        rhs.kind = TokenKind::raw_arg;
+      } else if (lhs.kind == expand_arg && rhs.kind == hash_hash) {
+        lhs.kind = TokenKind::raw_arg;
+      } else if (lhs.kind == hash_hash && rhs.kind == expand_arg) {
         rhs.kind = TokenKind::raw_arg;
       }
     }

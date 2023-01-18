@@ -203,7 +203,13 @@ auto SourceCursor::punctuator() -> Token {
     }
   case '#':
     advance_current();
-    return token(TokenKind::hash, location);
+    switch (current_) {
+    case '#':
+      advance_current();
+      return token(TokenKind::hash_hash, location);
+    default:
+      return token(TokenKind::hash, location);
+    }
   case '|':
     advance_current();
     switch (current_) {

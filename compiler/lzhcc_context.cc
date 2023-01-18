@@ -162,6 +162,8 @@ auto Context::to_string(Token &token) -> std::string_view {
     return ">>>";
   case TokenKind::hash:
     return "#";
+  case TokenKind::hash_hash:
+    return "##";
   case TokenKind::less:
     return "<";
   case TokenKind::less_equal:
@@ -247,10 +249,8 @@ auto Context::append_file(std::string path) -> CharCursorFn {
   FILE *in = nullptr;
   if (path == "-") {
     in = stdin;
-    filename_.push_back("<stdin>");
   } else {
     in = fopen(path.c_str(), "r");
-    filename_.push_back(path);
   }
   std::string text;
   enum { buffer_size = 4096 };
@@ -263,10 +263,11 @@ auto Context::append_file(std::string path) -> CharCursorFn {
   if (in != stdin) {
     fclose(in);
   }
-  return append_text(std::move(text));
+  return append_text(std::move(text), path == "-" ? "<stdin>" : path);
 }
 
-auto Context::append_text(std::string text) -> CharCursorFn {
+auto Context::append_text(std::string text, std::string name) -> CharCursorFn {
+  filename_.push_back(name);
   int location = 0;
   if (!file_location_.empty()) {
     location = file_location_.back() + text_.back().size();

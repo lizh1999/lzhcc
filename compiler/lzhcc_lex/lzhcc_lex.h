@@ -50,6 +50,8 @@ private:
   const int sb_undef;
   const int sb_include;
   const int sb_if;
+  const int sb_ifdef;
+  const int sb_ifndef;
   const int sb_else;
   const int sb_elif;
   const int sb_endif;
@@ -59,6 +61,9 @@ private:
   auto skip_cond() -> void;
   auto include_file() -> void;
   auto handle_if() -> void;
+  auto handle_ifdef() -> void;
+  auto handle_ifndef() -> void;
+  auto if_group() -> void;
   auto collect_param() -> std::unordered_map<int, int>;
   auto define_macro() -> void;
   auto remove_macro() -> void;
@@ -77,6 +82,7 @@ class ExpandCursor {
 
 public:
   ExpandCursor(Cursor cursor, Context *context);
+  ExpandCursor(std::vector<Token> tokens, Context *context);
 
   auto operator()() -> Token;
 

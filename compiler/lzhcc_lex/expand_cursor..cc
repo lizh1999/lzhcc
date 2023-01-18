@@ -19,6 +19,9 @@ auto ExpandCursor::into(std::vector<Token> tokens) -> Cursor {
 ExpandCursor::ExpandCursor(Cursor cursor, Context *context)
     : top_token_(cursor()), top_cursor_(std::move(cursor)), context_(context) {}
 
+ExpandCursor::ExpandCursor(std::vector<Token> tokens, Context *context)
+    : ExpandCursor(into(std::move(tokens)), context) {}
+
 auto ExpandCursor::operator()() -> Token { return advance(); }
 
 auto ExpandCursor::advance() -> Token {
@@ -105,7 +108,7 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
 
   std::vector<std::vector<Token>> expand(macro->arg_num);
   for (int i = 0; i < args.size(); i++) {
-    ExpandCursor cursor(into(args[i]), context_);
+    ExpandCursor cursor(args[i], context_);
     do {
       auto token = cursor();
       expand[i].push_back(token);

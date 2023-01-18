@@ -130,6 +130,72 @@ int main() {
 
   if (0);
 
+#define M 5
+#if M
+  m = 5;
+#else
+  m = 6;
+#endif
+  assert(5, m, "m");
+
+#define M 5
+#if M-5
+  m = 6;
+#elif M
+  m = 5;
+#endif
+  assert(5, m, "m");
+
+  int M2 = 6;
+#define M2 M2 + 3
+  assert(9, M2, "M2");
+
+#define M3 M2 + 3
+  assert(12, M3, "M3");
+
+  int M4 = 3;
+#define M4 M5 * 5
+#define M5 M4 + 2
+  assert(13, M4, "M4");
+
+#ifdef M6
+  m = 5;
+#else
+  m = 3;
+#endif
+  assert(3, m, "m");
+
+#define M6
+#ifdef M6
+  m = 5;
+#else
+  m = 3;
+#endif
+  assert(5, m, "m");
+
+#ifndef M7
+  m = 3;
+#else
+  m = 5;
+#endif
+  assert(3, m, "m");
+
+#define M7
+#ifndef M7
+  m = 3;
+#else
+  m = 5;
+#endif
+  assert(5, m, "m");
+
+#if 0
+#ifdef NO_SUCH_MACRO
+#endif
+#ifndef NO_SUCH_MACRO
+#endif
+#else
+#endif
+
 #define M7() 1
   int M7 = 5;
   assert(1, M7(), "M7()");

@@ -351,6 +351,11 @@ auto SourceCursor::punctuator() -> Token {
     default:
       return token(TokenKind::exclaim, location);
     }
+  default: {
+    char current = current_;
+    advance_current();
+    return token(TokenKind::unknown, location, current);
+  }
   }
   context_->fatal(location, "error token");
 }

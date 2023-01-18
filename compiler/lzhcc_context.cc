@@ -218,6 +218,8 @@ auto Context::to_string(Token &token) -> std::string_view {
     return "{";
   case TokenKind::close_brace:
     return "}";
+  case TokenKind::unknown:
+    return {reinterpret_cast<const char *>(&token.inner), 1};
   default:
     return storage_[token.inner];
   }
@@ -235,9 +237,9 @@ auto Context::object_macro(int name, std::vector<Token> replace) -> void {
   macro_map_[name] = macro;
 }
 
-auto Context::function_macro(int name, int arg_num, std::vector<Token> replace)
-    -> void {
-  auto macro = create<FunctionMacro>(arg_num, std::move(replace));
+auto Context::function_macro(int name, std::vector<ParamKind> param,
+                             std::vector<Token> replace) -> void {
+  auto macro = create<FunctionMacro>(std::move(param), std::move(replace));
   macro_map_[name] = macro;
 }
 

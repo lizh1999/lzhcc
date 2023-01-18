@@ -76,11 +76,13 @@ enum class TokenKind : uint8_t {
   close_bracket,         // "]"
   open_brace,            // "{"
   close_brace,           // "}"
+  unknown,               // unknown punctuator
   string,                // string literal
   character,             // character literal
   numeric,               // numeric literal
   identifier,            // identifier
-  argument,              // macro argument
+  expand_arg,            // expand argument
+  raw_arg,               // raw argument
   eof,                   // eof
   kw_alignas,            // "_Alignas"
   kw_alignof,            // "_Alignof"
@@ -147,11 +149,18 @@ struct ObjectMacro : Macro {
   std::vector<Token> replace;
 };
 
+enum class ParamKind {
+  none = 0x00,
+  raw = 0x01,
+  expand = 0x02,
+  mixed = 0x03,
+};
+
 struct FunctionMacro : Macro {
-  FunctionMacro(int arg_num, std::vector<Token> replace)
-      : Macro(MacroKind::function), arg_num(arg_num),
+  FunctionMacro(std::vector<ParamKind> param, std::vector<Token> replace)
+      : Macro(MacroKind::function), param(std::move(param)),
         replace(std::move(replace)) {}
-  int arg_num;
+  std::vector<ParamKind> param;
   std::vector<Token> replace;
 };
 
@@ -647,7 +656,8 @@ public:
   auto remove_macro(int name) -> void;
   auto find_macro(int name) -> Macro *;
   auto object_macro(int name, std::vector<Token> replace) -> void;
-  auto function_macro(int name, int arg_num, std::vector<Token> replace) -> void;
+  auto function_macro(int name, std::vector<ParamKind> param,
+                      std::vector<Token> replace) -> void;
 
   // type
   auto void_type() -> Type *;

@@ -226,6 +226,18 @@ int main() {
 #define M10(x) dbl(x) + 3
   assert(10, dbl(2), "dbl(2)");
 
+#define M11(x) #x
+  assert('a', M11( a!b  `""_c)[0], "M11( a!b  `\"\"_c)[0]");
+  assert('!', M11( a!b  `""_c)[1], "M11( a!b  `\"\"_c)[1]");
+  assert('b', M11( a!b  `""_c)[2], "M11( a!b  `\"\"_c)[2]");
+  assert(' ', M11( a!b  `""_c)[3], "M11( a!b  `\"\"_c)[3]");
+  assert('`', M11( a!b  `""_c)[4], "M11( a!b  `\"\"_c)[4]");
+  assert('"', M11( a!b  `""_c)[5], "M11( a!b  `\"\"_c)[5]");
+  assert('"', M11( a!b  `""_c)[6], "M11( a!b  `\"\"_c)[6]");
+  assert('_', M11( a!b  `""_c)[7], "M11( a!b  `\"\"_c)[7]");
+  assert('c', M11( a!b  `""_c)[8], "M11( a!b  `\"\"_c)[8]");
+  assert(0, M11( a!b  `""_c)[9], "M11( a!b  `\"\"_c)[9]");
+
   printf("OK\n");
   return 0;
 }

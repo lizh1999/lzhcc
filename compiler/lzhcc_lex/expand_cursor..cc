@@ -1,5 +1,7 @@
 #include "lzhcc_lex.h"
 #include <cassert>
+#include <iomanip>
+#include <sstream>
 
 namespace lzhcc {
 
@@ -55,6 +57,28 @@ auto ExpandCursor::advance() -> Token {
   return advance();
 }
 
+auto ExpandCursor::stringize(std::span<Token> in, Token hash) -> Token {
+  std::string text;
+  bool is_first = true;
+  for (auto token : in) {
+    if (!is_first && token.leading_space) {
+      text.push_back(' ');
+    }
+    is_first = false;
+    text.append(context_->to_string(token));
+  }
+  std::stringstream stream;
+  stream << std::quoted(text);
+  return Token{
+      .kind = TokenKind::string,
+      .leading_space = hash.leading_space,
+      .start_of_line = hash.start_of_line,
+      .expand_disable = false,
+      .location = hash.location,
+      .inner = context_->push_literal(stream.str()),
+  };
+}
+
 auto ExpandCursor::expand(ObjectMacro *macro, Token origin) -> void {
   assert(!macro->expand_disable);
   auto replace = macro->replace;
@@ -71,7 +95,7 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
   advance_top_token();
 
   std::vector<std::vector<Token>> args;
-  if (macro->arg_num == 0) {
+  if (macro->param.empty()) {
     if (top_token_.kind != TokenKind::close_paren) {
       context_->fatal(origin.location, "");
     }
@@ -102,26 +126,43 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
     }
   }
 
-  if (args.size() != macro->arg_num) {
+  if (args.size() != macro->param.size()) {
     context_->fatal(origin.location, "");
   }
 
-  std::vector<std::vector<Token>> expand(macro->arg_num);
+  std::vector<std::vector<Token>> expand(macro->param.size());
   for (int i = 0; i < args.size(); i++) {
+    if (macro->param[i] != ParamKind::expand &&
+        macro->param[i] != ParamKind::mixed) {
+      continue;
+    }
     ExpandCursor cursor(args[i], context_);
-    do {
-      auto token = cursor();
+    for (auto token = cursor(); token.kind != TokenKind::eof;) {
       expand[i].push_back(token);
-    } while (expand[i].back().kind != TokenKind::eof);
+      token = cursor();
+    }
   }
 
   std::vector<Token> result;
   for (auto token : macro->replace) {
-    if (token.kind == TokenKind::argument) {
+    if (token.kind == TokenKind::hash) {
+      result.push_back(token);
+      continue;
+    }
+    if (!result.empty() && result.back().kind == TokenKind::hash) {
+      assert(token.kind == TokenKind::raw_arg);
+      auto &arg = args[token.inner];
+      token = stringize(arg, result.back());
+      result.pop_back();
+    }
+
+    assert(token.kind != TokenKind::raw_arg);
+
+    if (token.kind == TokenKind::expand_arg) {
       auto &arg = expand[token.inner];
       int first = result.size();
-      result.insert(result.end(), arg.begin(), --arg.end());
-      if (arg.size() > 1) {
+      result.insert(result.end(), arg.begin(), arg.end());
+      if (!arg.empty()) {
         result[first].start_of_line = token.start_of_line;
         result[first].leading_space = token.leading_space;
       }

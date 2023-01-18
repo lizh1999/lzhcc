@@ -257,6 +257,10 @@ auto TokenCursor::if_group() -> void {
   }
 }
 
+static auto join(ParamKind lhs, ParamKind rhs) {
+  return static_cast<ParamKind>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
 auto TokenCursor::define_macro() -> void {
   if (top_token_.kind != TokenKind::identifier) {
     context_->fatal(top_token_.location, "");
@@ -278,14 +282,32 @@ auto TokenCursor::define_macro() -> void {
       if (top_token_.kind == TokenKind::identifier) {
         auto it = param_map.find(top_token_.inner);
         if (it != param_map.end()) {
-          top_token_.kind = TokenKind::argument;
+          top_token_.kind = TokenKind::expand_arg;
           top_token_.inner = it->second;
         }
       }
       replace.push_back(top_token_);
       advance_top_token();
     }
-    context_->function_macro(name, param_map.size(), std::move(replace));
+    std::vector<ParamKind> param(param_map.size(), ParamKind::none);
+    for (int i = 1; i < replace.size(); i++) {
+      auto &lhs = replace[i - 1], &rhs = replace[i];
+      if (lhs.kind == TokenKind::hash) {
+        if (rhs.kind != TokenKind::expand_arg) {
+          context_->fatal(rhs.inner, "");
+        }
+        rhs.kind = TokenKind::raw_arg;
+      }
+    }
+    for (auto &token : replace) {
+      if (token.kind == TokenKind::expand_arg) {
+        param[token.inner] = join(param[token.inner], ParamKind::expand);
+      } else if (token.kind == TokenKind::raw_arg) {
+        param[token.inner] = join(param[token.inner], ParamKind::raw);
+      }
+    }
+
+    context_->function_macro(name, std::move(param), std::move(replace));
   }
 }
 

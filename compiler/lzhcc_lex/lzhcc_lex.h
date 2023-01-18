@@ -59,6 +59,7 @@ private:
   auto skip_cond() -> void;
   auto include_file() -> void;
   auto handle_if() -> void;
+  auto collect_param() -> std::unordered_map<int, int>;
   auto define_macro() -> void;
   auto remove_macro() -> void;
 
@@ -85,6 +86,7 @@ private:
   auto push(Macro *macro, Cursor cursor) -> void;
 
   auto expand(ObjectMacro *macro, Token origin) -> void;
+  auto expand(FunctionMacro *macro, Token origin) -> void;
 
   Token top_token_;
   Cursor top_cursor_;

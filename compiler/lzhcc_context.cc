@@ -235,6 +235,12 @@ auto Context::object_macro(int name, std::vector<Token> replace) -> void {
   macro_map_[name] = macro;
 }
 
+auto Context::function_macro(int name, int arg_num, std::vector<Token> replace)
+    -> void {
+  auto macro = create<FunctionMacro>(arg_num, std::move(replace));
+  macro_map_[name] = macro;
+}
+
 auto Context::append_file(std::string path) -> CharCursorFn {
   FILE *in = nullptr;
   if (path == "-") {

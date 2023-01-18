@@ -80,6 +80,7 @@ enum class TokenKind : uint8_t {
   character,             // character literal
   numeric,               // numeric literal
   identifier,            // identifier
+  argument,              // macro argument
   eof,                   // eof
   kw_alignas,            // "_Alignas"
   kw_alignof,            // "_Alignof"
@@ -131,6 +132,7 @@ struct Token {
 
 enum class MacroKind : uint8_t {
   object,
+  function,
 };
 
 struct Macro {
@@ -142,6 +144,14 @@ struct Macro {
 struct ObjectMacro : Macro {
   ObjectMacro(std::vector<Token> replace)
       : Macro(MacroKind::object), replace(std::move(replace)) {}
+  std::vector<Token> replace;
+};
+
+struct FunctionMacro : Macro {
+  FunctionMacro(int arg_num, std::vector<Token> replace)
+      : Macro(MacroKind::function), arg_num(arg_num),
+        replace(std::move(replace)) {}
+  int arg_num;
   std::vector<Token> replace;
 };
 
@@ -637,6 +647,7 @@ public:
   auto remove_macro(int name) -> void;
   auto find_macro(int name) -> Macro *;
   auto object_macro(int name, std::vector<Token> replace) -> void;
+  auto function_macro(int name, int arg_num, std::vector<Token> replace) -> void;
 
   // type
   auto void_type() -> Type *;

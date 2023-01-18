@@ -220,12 +220,63 @@ auto TokenCursor::define_macro() -> void {
   }
   int name = top_token_.inner;
   advance_top_token();
-  std::vector<Token> replace;
-  while (!top_token_.start_of_line) {
-    replace.push_back(top_token_);
-    advance_top_token();
+  if (top_token_.start_of_line || top_token_.leading_space ||
+      top_token_.kind != TokenKind::open_paren) {
+    std::vector<Token> replace;
+    while (!top_token_.start_of_line) {
+      replace.push_back(top_token_);
+      advance_top_token();
+    }
+    context_->object_macro(name, std::move(replace));
+  } else {
+    auto param_map = collect_param();
+    std::vector<Token> replace;
+    while (!top_token_.start_of_line) {
+      if (top_token_.kind == TokenKind::identifier) {
+        auto it = param_map.find(top_token_.inner);
+        if (it != param_map.end()) {
+          top_token_.kind = TokenKind::argument;
+          top_token_.inner = it->second;
+        }
+      }
+      replace.push_back(top_token_);
+      advance_top_token();
+    }
+    context_->function_macro(name, param_map.size(), std::move(replace));
   }
-  context_->object_macro(name, std::move(replace));
+}
+
+auto TokenCursor::collect_param() -> std::unordered_map<int, int> {
+  int open = top_token_.location;
+  advance_top_token();
+  if (top_token_.kind == TokenKind::close_paren) {
+    advance_top_token();
+    return {};
+  }
+  std::unordered_map<int, int> param_map;
+  while (true) {
+    if (top_token_.kind == TokenKind::identifier) {
+      int index = param_map.size();
+      int ident = top_token_.inner;
+      if (param_map.contains(ident)) {
+        context_->fatal(top_token_.location, "");
+      }
+      param_map.emplace(ident, index);
+      advance_top_token();
+    } else {
+      assert(false);
+    }
+    if (top_token_.kind == TokenKind::comma) {
+      advance_top_token();
+      continue;
+    }
+    if (top_token_.kind == TokenKind::close_paren) {
+      advance_top_token();
+      break;
+    }
+    context_->fatal(top_token_.location, "");
+  }
+  return param_map;
 }
 
 auto TokenCursor::remove_macro() -> void {

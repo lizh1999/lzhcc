@@ -38,7 +38,17 @@ auto ExpandCursor::advance() -> Token {
   }
 
   advance_top_token();
-  expand(cast<ObjectMacro>(macro), consume);
+
+  if (macro->kind == MacroKind::object) {
+    expand(cast<ObjectMacro>(macro), consume);
+    return advance();
+  }
+
+  if (top_token_.leading_space || top_token_.kind != TokenKind::open_paren) {
+    return consume;
+  }
+
+  expand(cast<FunctionMacro>(macro), consume);
   return advance();
 }
 
@@ -51,6 +61,78 @@ auto ExpandCursor::expand(ObjectMacro *macro, Token origin) -> void {
     first.start_of_line = origin.start_of_line;
   }
   return push(macro, into(std::move(replace)));
+}
+
+auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
+  assert(!macro->expand_disable);
+  advance_top_token();
+
+  std::vector<std::vector<Token>> args;
+  if (macro->arg_num == 0) {
+    if (top_token_.kind != TokenKind::close_paren) {
+      context_->fatal(origin.location, "");
+    }
+    advance_top_token();
+  } else {
+    int nested_level = 1;
+    std::vector<Token> arg;
+    while (true) {
+      auto consume = top_token_;
+      advance_top_token();
+      if (consume.kind == TokenKind::eof) {
+        context_->fatal(origin.location, "");
+      }
+      if (consume.kind == TokenKind::open_paren) {
+        ++nested_level;
+      } else if (consume.kind == TokenKind::close_paren) {
+        --nested_level;
+      }
+      if (nested_level == 0) {
+        args.push_back(std::move(arg));
+        break;
+      }
+      if (1 < nested_level || consume.kind != TokenKind::comma) {
+        arg.push_back(consume);
+        continue;
+      }
+      args.push_back(std::move(arg));
+    }
+  }
+
+  if (args.size() != macro->arg_num) {
+    context_->fatal(origin.location, "");
+  }
+
+  std::vector<std::vector<Token>> expand(macro->arg_num);
+  for (int i = 0; i < args.size(); i++) {
+    ExpandCursor cursor(into(args[i]), context_);
+    do {
+      auto token = cursor();
+      expand[i].push_back(token);
+    } while (expand[i].back().kind != TokenKind::eof);
+  }
+
+  std::vector<Token> result;
+  for (auto token : macro->replace) {
+    if (token.kind == TokenKind::argument) {
+      auto &arg = expand[token.inner];
+      int first = result.size();
+      result.insert(result.end(), arg.begin(), --arg.end());
+      if (arg.size() > 1) {
+        result[first].start_of_line = token.start_of_line;
+        result[first].leading_space = token.leading_space;
+      }
+    } else {
+      result.push_back(token);
+    }
+  }
+  if (!result.empty()) {
+    auto &first = result.front();
+    first.leading_space = origin.leading_space;
+    first.start_of_line = origin.start_of_line;
+  }
+
+  push(macro, into(std::move(result)));
 }
 
 auto ExpandCursor::advance_top_token() -> void {

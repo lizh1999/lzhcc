@@ -88,6 +88,10 @@ const char *func_fn(void) {
   return __func__;
 }
 
+const char *function_fn(void) {
+  return __FUNCTION__;
+}
+
 int main() {
   ASSERT(3, ret3());
   ASSERT(8, add2(3, 5));
@@ -156,6 +160,9 @@ int main() {
   ASSERT(5, sizeof(__func__));
   ASSERT(0, strcmp("main", __func__));
   ASSERT(0, strcmp("func_fn", func_fn()));
+
+  ASSERT(0, strcmp("main", __FUNCTION__));
+  ASSERT(0, strcmp("function_fn", function_fn()));
 
   printf("OK\n");
   return 0;

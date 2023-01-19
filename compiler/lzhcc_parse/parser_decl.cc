@@ -713,12 +713,16 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
     va_area = create_local("__va_area__", type);
   }
 
-  auto function_name = context_->c_str(name->inner);
-  int length = strlen(function_name);
-  auto name_type = context_->array_of(context_->int8(), length + 1);
-  scopes_.back().var_map.emplace(
-      context_->push_identifier("__func__"),
-      create_anon_global(name_type, (uint8_t *)function_name, {}));
+  {
+    auto function_name = context_->c_str(name->inner);
+    int length = strlen(function_name);
+    auto name_type = context_->array_of(context_->int8(), length + 1);
+    auto value = create_anon_global(name_type, (uint8_t *)function_name, {});
+    int func1 = context_->push_identifier("__func__");
+    int func2 = context_->push_identifier("__FUNCTION__");
+    scopes_.back().var_map.emplace(func1, value);
+    scopes_.back().var_map.emplace(func2, value);
+  }
 
   auto stmt = block_stmt();
   leave_scope();

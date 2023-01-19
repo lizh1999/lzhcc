@@ -46,6 +46,7 @@ public:
   auto text() -> Token;
 
 private:
+  const int sb_defined;
   const int sb_define;
   const int sb_undef;
   const int sb_include;
@@ -60,6 +61,7 @@ private:
   auto skip_line() -> void;
   auto skip_cond() -> void;
   auto include_file() -> void;
+  auto const_int() -> bool;
   auto handle_if() -> void;
   auto handle_ifdef() -> void;
   auto handle_ifndef() -> void;

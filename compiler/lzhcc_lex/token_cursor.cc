@@ -7,7 +7,8 @@ namespace fs = std::filesystem;
 namespace lzhcc {
 
 TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
-    : sb_define(context->push_identifier("define")),
+    : sb_defined(context->push_identifier("defined")),
+      sb_define(context->push_identifier("define")),
       sb_undef(context->push_identifier("undef")),
       sb_include(context->push_identifier("include")),
       sb_if(context->push_identifier("if")),
@@ -162,22 +163,56 @@ auto TokenCursor::include_file() -> void {
   }
 }
 
-auto TokenCursor::handle_if() -> void {
+auto TokenCursor::const_int() -> bool {
   std::vector<Token> tokens;
   while (!top_token_.start_of_line) {
     tokens.push_back(top_token_);
     advance_top_token();
   }
+  auto new_end = tokens.begin();
+  for (int i = 0; i < tokens.size(); i++) {
+    if (tokens[i].kind != TokenKind::identifier ||
+        tokens[i].inner != sb_defined) {
+      *new_end++ = tokens[i];
+      continue;
+    }
+    int loc = tokens[i++].location;
+    bool has_paren = false;
+    if (tokens[i].kind == TokenKind::open_paren) {
+      has_paren = true;
+      ++i;
+    }
+    if (tokens[i].kind != TokenKind::identifier) {
+      context_->fatal(loc, "");
+    }
+    bool value = context_->find_macro(tokens[i].inner);
+    if (has_paren) {
+      if (tokens[++i].kind != TokenKind::close_paren) {
+        context_->fatal(loc, "");
+      }
+    }
+    *new_end++ = Token{
+        .kind = TokenKind::numeric,
+        .location = loc,
+        .inner = context_->push_literal(value ? "1" : "0"),
+    };
+  }
+  tokens.erase(new_end, tokens.end());
   ExpandCursor cursor(std::move(tokens), context_);
   do {
     auto token = cursor();
     tokens.push_back(token);
   } while (tokens.back().kind != TokenKind::eof);
+
   int64_t value;
-  if (!const_int(tokens, *context_, &value)) {
+  if (!lzhcc::const_int(tokens, *context_, &value)) {
     context_->fatal(cond_stack_.top(), "");
   }
-  if (!value) {
+  return value;
+}
+
+auto TokenCursor::handle_if() -> void {
+  if (!const_int()) {
     if_group();
   }
 }
@@ -230,21 +265,7 @@ auto TokenCursor::if_group() -> void {
       }
     } else if (top_token_.inner == sb_elif) {
       advance_top_token();
-      std::vector<Token> tokens;
-      while (!top_token_.start_of_line) {
-        tokens.push_back(top_token_);
-        advance_top_token();
-      }
-      ExpandCursor cursor(std::move(tokens), context_);
-      do {
-        auto token = cursor();
-        tokens.push_back(token);
-      } while (tokens.back().kind != TokenKind::eof);
-      int64_t value;
-      if (!const_int(tokens, *context_, &value)) {
-        context_->fatal(cond_stack_.top(), "");
-      }
-      if (value && depth == 1) {
+      if (const_int() && depth == 1) {
         break;
       }
     } else if (top_token_.inner == sb_endif) {

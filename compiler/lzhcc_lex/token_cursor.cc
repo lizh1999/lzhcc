@@ -45,7 +45,7 @@ auto TokenCursor::text() -> Token {
     }
     auto directive = token.inner;
     if (directive == sb_include) {
-      include_file();
+      include_file(token.location);
       return text();
     }
     if (directive == sb_define) {
@@ -133,20 +133,46 @@ auto TokenCursor::skip_cond() -> void {
   }
 }
 
-auto TokenCursor::include_file() -> void {
-  auto token = top_token_;
-  advance_top_token();
-  if (token.kind != TokenKind::string) {
-    context_->fatal(token.location, "");
+auto TokenCursor::include_file(int loc) -> void {
+  std::vector<Token> tokens;
+  {
+    while (!top_token_.start_of_line) {
+      tokens.push_back(top_token_);
+      advance_top_token();
+    }
+    ExpandCursor cursor(std::move(tokens), context_);
+    for (auto token = cursor(); token.kind != TokenKind::eof;) {
+      tokens.push_back(token);
+      token = cursor();
+    }
   }
-  fs::path path = context_->filename(token.location);
-  auto name = context_->storage(token.inner);
-  skip_line();
-  name.remove_prefix(1);
-  name.remove_suffix(1);
-  path = path.parent_path() / name;
+  if (tokens.empty()) {
+    context_->fatal(loc, "");
+  }
+
+  fs::path path;
+  if (tokens.front().kind == TokenKind::string) {
+    auto token = tokens.front();
+    path = context_->filename(token.location);
+    auto name = context_->storage(token.inner);
+    name.remove_prefix(1);
+    name.remove_suffix(1);
+    path = path.parent_path() / name;
+  } else {
+    if (tokens.front().kind != TokenKind::less ||
+        tokens.back().kind != TokenKind::greater) {
+      context_->fatal(loc, "");
+    }
+    path = context_->filename(tokens.front().location);
+    std::string name = "";
+    for (int i = 1; i + 1 < tokens.size(); i++) {
+      name.append(context_->to_string(tokens[i]));
+    }
+    path = path.parent_path() / name;
+  }
+
   if (!fs::exists(path)) {
-    context_->fatal(token.location, "");
+    context_->fatal(loc, "");
   }
   cursor_stack_.push(std::move(top_cursor_));
   token_stack_.push(top_token_);

@@ -60,7 +60,7 @@ private:
   auto advance_top_token() -> void;
   auto skip_line() -> void;
   auto skip_cond() -> void;
-  auto include_file() -> void;
+  auto include_file(int loc) -> void;
   auto const_int() -> bool;
   auto handle_if() -> void;
   auto handle_ifdef() -> void;

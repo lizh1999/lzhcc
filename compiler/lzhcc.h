@@ -658,6 +658,7 @@ public:
   auto remove_macro(int name) -> void;
   auto find_macro(int name) -> Macro *;
   auto object_macro(int name, std::vector<Token> replace) -> void;
+  auto define_macro(const char *name, const char *text) -> void;
   auto function_macro(int name, std::vector<ParamKind> param,
                       std::vector<Token> replace) -> void;
 

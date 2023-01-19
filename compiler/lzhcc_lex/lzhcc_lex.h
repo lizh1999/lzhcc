@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lzhcc.h"
-#include <stack>
 
 namespace lzhcc {
 
@@ -76,6 +75,8 @@ private:
   std::stack<Token> token_stack_;
   std::stack<Cursor> cursor_stack_;
   std::stack<int> cond_stack_;
+  std::stack<std::string> file_;
+  std::stack<int> line_;
   Context *context_;
 };
 

@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <stack>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -137,6 +138,7 @@ struct Token {
 enum class MacroKind : uint8_t {
   object,
   function,
+  builtin,
 };
 
 struct Macro {
@@ -164,6 +166,12 @@ struct FunctionMacro : Macro {
         replace(std::move(replace)) {}
   std::vector<ParamKind> param;
   std::vector<Token> replace;
+};
+
+struct BuiltinMacro : Macro {
+  BuiltinMacro(std::function<Token(Token)> handle)
+      : Macro(MacroKind::builtin), handle(std::move(handle)) {}
+  std::function<Token(Token)> handle;
 };
 
 //
@@ -661,6 +669,8 @@ public:
   auto define_macro(const char *name, const char *text) -> void;
   auto function_macro(int name, std::vector<ParamKind> param,
                       std::vector<Token> replace) -> void;
+  auto builtin_macro(const char *name, std::function<Token(Token)> handle)
+      -> void;
 
   // type
   auto void_type() -> Type *;
@@ -763,6 +773,7 @@ public:
   auto create_tmpfile() -> std::string;
 
   auto filename(int loc) -> std::string_view;
+  auto line_number(int loc) -> int;
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
@@ -788,6 +799,8 @@ private:
   std::vector<TokenKind> keyword_map_;
   std::vector<std::string> tmpfile_;
   std::unordered_map<int, Macro *> macro_map_;
+  std::stack<std::string> file_;
+  std::stack<int> line_;
 
   template <typename T, typename... Args> auto create(Args &&...args) -> T * {
     auto smart_ptr =

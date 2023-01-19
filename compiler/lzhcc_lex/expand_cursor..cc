@@ -30,30 +30,36 @@ auto ExpandCursor::advance() -> Token {
   if (top_token_.kind == TokenKind::eof) {
     return top_token_;
   }
-  auto consume = top_token_;
-  if (consume.kind != TokenKind::identifier || consume.expand_disable) {
+  if (top_token_.kind != TokenKind::identifier || top_token_.expand_disable) {
+    auto result = top_token_;
     advance_top_token();
-    return consume;
+    return result;
   }
-  auto macro = context_->find_macro(consume.inner);
+  auto macro = context_->find_macro(top_token_.inner);
   if (!macro || macro->expand_disable) {
+    auto result = top_token_;
     advance_top_token();
-    consume.expand_disable = true;
-    return consume;
+    result.expand_disable = true;
+    return result;
+  }
+
+  auto origin = top_token_;
+  if (macro->kind == MacroKind::object) {
+    advance_top_token();
+    expand(cast<ObjectMacro>(macro), origin);
+    return advance();
+  } else if (macro->kind == MacroKind::builtin) {
+    auto result = cast<BuiltinMacro>(macro)->handle(origin);
+    advance_top_token();
+    return result;
   }
 
   advance_top_token();
-
-  if (macro->kind == MacroKind::object) {
-    expand(cast<ObjectMacro>(macro), consume);
-    return advance();
-  }
-
   if (top_token_.leading_space || top_token_.kind != TokenKind::open_paren) {
-    return consume;
+    return origin;
   }
 
-  expand(cast<FunctionMacro>(macro), consume);
+  expand(cast<FunctionMacro>(macro), origin);
   return advance();
 }
 
@@ -114,6 +120,9 @@ auto ExpandCursor::expand(ObjectMacro *macro, Token origin) -> void {
     auto &first = result.front();
     first.leading_space = origin.leading_space;
     first.start_of_line = origin.start_of_line;
+  }
+  for (auto &token : result) {
+    token.location = origin.location;
   }
   return push(macro, into(std::move(result)));
 }
@@ -235,6 +244,9 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
     auto &first = result.front();
     first.leading_space = origin.leading_space;
     first.start_of_line = origin.start_of_line;
+  }
+  for (auto &token : result) {
+    token.location = origin.location;
   }
   push(macro, into(std::move(result)));
 }

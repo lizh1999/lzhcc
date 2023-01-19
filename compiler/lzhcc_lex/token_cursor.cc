@@ -20,6 +20,30 @@ TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
       sb_error(context->push_identifier("error")), top_cursor_(cursor, context),
       context_(context) {
   top_token_ = top_cursor_();
+  fs::path path = context_->filename(top_token_.location);
+  file_.push(path);
+  line_.push(0);
+  context_->builtin_macro("__LINE__", [&](Token in) -> Token {
+    int n = line_.top() + context_->line_number(in.location) + 1;
+    return Token{
+        .kind = TokenKind::numeric,
+        .leading_space = in.leading_space,
+        .start_of_line = in.start_of_line,
+        .expand_disable = false,
+        .location = in.location,
+        .inner = context_->push_literal(std::to_string(n)),
+    };
+  });
+  context_->builtin_macro("__FILE__", [&](Token in) -> Token {
+    return Token{
+        .kind = TokenKind::string,
+        .leading_space = in.leading_space,
+        .start_of_line = in.start_of_line,
+        .expand_disable = true,
+        .location = in.location,
+        .inner = context_->push_literal("\"" + file_.top() + "\""),
+    };
+  });
 }
 
 auto TokenCursor::text_fn() -> std::function<Token()> {
@@ -102,6 +126,8 @@ auto TokenCursor::advance_top_token() -> void {
     top_cursor_ = cursor_stack_.top();
     token_stack_.pop();
     cursor_stack_.pop();
+    file_.pop();
+    line_.pop();
   }
 }
 
@@ -194,19 +220,20 @@ auto TokenCursor::include_file(int loc) -> void {
   }
   context_->fatal(loc, "");
 include:
-  cursor_stack_.push(std::move(top_cursor_));
-  token_stack_.push(top_token_);
   auto chars = context_->append_file(path);
   SourceCursor cursor(std::move(chars), context_);
 
-  top_cursor_ = std::move(cursor);
-  top_token_ = top_cursor_();
+  auto cache = top_token_;
+  top_token_ = cursor();
   if (top_token_.kind == TokenKind::eof) {
-    top_token_ = token_stack_.top();
-    top_cursor_ = std::move(cursor_stack_.top());
-    token_stack_.pop();
-    cursor_stack_.pop();
+    top_token_ = cache;
+    return;
   }
+  file_.push(path);
+  line_.push(0);
+  token_stack_.push(cache);
+  cursor_stack_.push(std::move(top_cursor_));
+  top_cursor_ = std::move(cursor);
 }
 
 auto TokenCursor::const_int() -> bool {

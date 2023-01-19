@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lzhcc.h"
-#include <stack>
 
 namespace lzhcc {
 
@@ -48,7 +47,7 @@ public:
       : position_(position), context_(context) {}
   auto operator()() -> Module;
   auto const_int(int64_t *value) -> bool;
-  
+
 private:
   auto scalar_init() -> Init *;
   auto array_init(ArrayType *array) -> Init *;

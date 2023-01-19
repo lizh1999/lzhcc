@@ -245,6 +245,12 @@ auto Context::function_macro(int name, std::vector<ParamKind> param,
   macro_map_[name] = macro;
 }
 
+auto Context::builtin_macro(const char *name,
+                            std::function<Token(Token)> handle) -> void {
+  auto macro = create<BuiltinMacro>(std::move(handle));
+  macro_map_[push_identifier(name)] = macro;
+}
+
 auto Context::append_file(std::string path) -> CharCursorFn {
   FILE *in = nullptr;
   if (path == "-") {
@@ -667,6 +673,16 @@ auto Context::filename(int loc) -> std::string_view {
       std::upper_bound(file_location_.begin(), file_location_.end(), loc) -
       file_location_.begin() - 1;
   return filename_[file_id];
+}
+
+auto Context::line_number(int loc) -> int {
+  int file_id =
+      std::upper_bound(file_location_.begin(), file_location_.end(), loc) -
+      file_location_.begin() - 1;
+  loc -= file_location_[file_id];
+  return std::upper_bound(line_location_[file_id].begin(),
+                          line_location_[file_id].end(), loc) -
+         line_location_[file_id].begin() - 1;
 }
 
 auto Context::fatal(int loc, const char *fmt, ...) -> void {

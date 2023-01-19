@@ -70,6 +70,10 @@ auto Parser::cook_string() -> std::string {
 
 auto Parser::string() -> Expr * {
   auto init = cook_string();
+  while (next_is(TokenKind::string)) {
+    init.pop_back();
+    init.append(cook_string());
+  }
   auto type = context_->array_of(context_->int8(), init.size());
   int index = context_->push_literal(std::move(init));
   auto init_view = context_->storage(index);

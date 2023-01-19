@@ -303,6 +303,10 @@ auto Context::storage(int index) const -> std::string_view {
   return storage_[index];
 }
 
+auto Context::c_str(int index) const -> const char * {
+  return storage_[index].c_str();
+}
+
 auto Context::push_identifier(std::string literal) -> int {
   if (auto it = identifier_map_.find(literal); it != identifier_map_.end()) {
     return it->second;

@@ -662,6 +662,7 @@ public:
   auto push_literal(std::string literal) -> int;
   auto push_identifier(std::string literal) -> int;
   auto storage(int index) const -> std::string_view;
+  auto c_str(int index) const -> const char *;
   auto into_keyword(int index) const -> TokenKind;
   auto to_string(Token &token) -> std::string_view;
 

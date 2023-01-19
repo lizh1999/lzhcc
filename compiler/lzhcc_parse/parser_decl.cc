@@ -1,5 +1,6 @@
 #include "lzhcc_parse.h"
 #include <cassert>
+#include <cstring>
 
 namespace lzhcc {
 
@@ -711,6 +712,13 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
     auto type = context_->array_of(context_->int8(), 64);
     va_area = create_local("__va_area__", type);
   }
+
+  auto function_name = context_->c_str(name->inner);
+  int length = strlen(function_name);
+  auto name_type = context_->array_of(context_->int8(), length + 1);
+  scopes_.back().var_map.emplace(
+      context_->push_identifier("__func__"),
+      create_anon_global(name_type, (uint8_t *)function_name, {}));
 
   auto stmt = block_stmt();
   leave_scope();

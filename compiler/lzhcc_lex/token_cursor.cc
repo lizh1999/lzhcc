@@ -16,7 +16,8 @@ TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
       sb_ifndef(context->push_identifier("ifndef")),
       sb_else(context->push_identifier("else")),
       sb_elif(context->push_identifier("elif")),
-      sb_endif(context->push_identifier("endif")), top_cursor_(cursor, context),
+      sb_endif(context->push_identifier("endif")),
+      sb_error(context->push_identifier("error")), top_cursor_(cursor, context),
       context_(context) {
   top_token_ = top_cursor_();
 }
@@ -85,6 +86,9 @@ auto TokenCursor::text() -> Token {
       }
       cond_stack_.pop();
       return text();
+    }
+    if (directive == sb_error) {
+      context_->fatal(token.location, "error");
     }
     assert(false);
   }

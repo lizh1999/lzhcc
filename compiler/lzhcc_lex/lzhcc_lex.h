@@ -56,6 +56,7 @@ private:
   const int sb_else;
   const int sb_elif;
   const int sb_endif;
+  const int sb_error;
 
   auto advance_top_token() -> void;
   auto skip_line() -> void;

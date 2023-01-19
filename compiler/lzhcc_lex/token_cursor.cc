@@ -199,8 +199,13 @@ auto TokenCursor::const_int() -> bool {
   }
   tokens.erase(new_end, tokens.end());
   ExpandCursor cursor(std::move(tokens), context_);
+
   do {
     auto token = cursor();
+    if (token.kind == TokenKind::identifier) {
+      token.kind = TokenKind::numeric;
+      token.inner = context_->push_identifier("0");
+    }
     tokens.push_back(token);
   } while (tokens.back().kind != TokenKind::eof);
 

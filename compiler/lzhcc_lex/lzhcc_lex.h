@@ -66,7 +66,7 @@ private:
   auto handle_ifdef() -> void;
   auto handle_ifndef() -> void;
   auto if_group() -> void;
-  auto collect_param() -> std::unordered_map<int, int>;
+  auto collect_param(bool *is_variadic) -> std::unordered_map<int, int>;
   auto define_macro() -> void;
   auto remove_macro() -> void;
 

@@ -161,11 +161,13 @@ enum class ParamKind {
 };
 
 struct FunctionMacro : Macro {
-  FunctionMacro(std::vector<ParamKind> param, std::vector<Token> replace)
+  FunctionMacro(std::vector<ParamKind> param, std::vector<Token> replace,
+                bool is_variadic)
       : Macro(MacroKind::function), param(std::move(param)),
-        replace(std::move(replace)) {}
+        replace(std::move(replace)), is_variadic(is_variadic) {}
   std::vector<ParamKind> param;
   std::vector<Token> replace;
+  bool is_variadic;
 };
 
 struct BuiltinMacro : Macro {
@@ -668,7 +670,7 @@ public:
   auto object_macro(int name, std::vector<Token> replace) -> void;
   auto define_macro(const char *name, const char *text) -> void;
   auto function_macro(int name, std::vector<ParamKind> param,
-                      std::vector<Token> replace) -> void;
+                      std::vector<Token> replace, bool is_variadic) -> void;
   auto builtin_macro(const char *name, std::function<Token(Token)> handle)
       -> void;
 

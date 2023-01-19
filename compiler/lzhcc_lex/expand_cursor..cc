@@ -159,8 +159,16 @@ auto ExpandCursor::expand(FunctionMacro *macro, Token origin) -> void {
         arg.push_back(consume);
         continue;
       }
-      args.push_back(std::move(arg));
+      bool is_last_arg = args.size() + 1 == macro->param.size();
+      if (macro->is_variadic && is_last_arg) {
+        arg.push_back(consume);
+      } else {
+        args.push_back(std::move(arg));
+      }
     }
+  }
+  if (args.size() + 1 == macro->param.size() && macro->is_variadic) {
+    args.push_back({});
   }
 
   if (args.size() != macro->param.size()) {

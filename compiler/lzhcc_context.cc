@@ -240,8 +240,10 @@ auto Context::object_macro(int name, std::vector<Token> replace) -> void {
 }
 
 auto Context::function_macro(int name, std::vector<ParamKind> param,
-                             std::vector<Token> replace) -> void {
-  auto macro = create<FunctionMacro>(std::move(param), std::move(replace));
+                             std::vector<Token> replace, bool is_variadic)
+    -> void {
+  auto macro =
+      create<FunctionMacro>(std::move(param), std::move(replace), is_variadic);
   macro_map_[name] = macro;
 }
 

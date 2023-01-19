@@ -364,6 +364,7 @@ auto TokenCursor::define_macro() -> void {
   if (top_token_.kind != TokenKind::identifier) {
     context_->fatal(top_token_.location, "");
   }
+  bool is_variadic = false;
   int name = top_token_.inner;
   advance_top_token();
   if (top_token_.start_of_line || top_token_.leading_space ||
@@ -375,7 +376,7 @@ auto TokenCursor::define_macro() -> void {
     }
     context_->object_macro(name, std::move(replace));
   } else {
-    auto param_map = collect_param();
+    auto param_map = collect_param(&is_variadic);
     std::vector<Token> replace;
     while (!top_token_.start_of_line) {
       if (top_token_.kind == TokenKind::identifier) {
@@ -411,11 +412,13 @@ auto TokenCursor::define_macro() -> void {
       }
     }
 
-    context_->function_macro(name, std::move(param), std::move(replace));
+    context_->function_macro(name, std::move(param), std::move(replace),
+                             is_variadic);
   }
 }
 
-auto TokenCursor::collect_param() -> std::unordered_map<int, int> {
+auto TokenCursor::collect_param(bool *is_variadic)
+    -> std::unordered_map<int, int> {
   int open = top_token_.location;
   advance_top_token();
   if (top_token_.kind == TokenKind::close_paren) {
@@ -433,7 +436,19 @@ auto TokenCursor::collect_param() -> std::unordered_map<int, int> {
       param_map.emplace(ident, index);
       advance_top_token();
     } else {
-      assert(false);
+      *is_variadic = true;
+      if (top_token_.kind != TokenKind::dotdotdot) {
+        context_->fatal(top_token_.location, "");
+      }
+      int index = param_map.size();
+      int ident = context_->push_identifier("__VA_ARGS__");
+      param_map.emplace(ident, index);
+      advance_top_token();
+      if (top_token_.kind != TokenKind::close_paren) {
+        context_->fatal(top_token_.location, "");
+      }
+      advance_top_token();
+      break;
     }
     if (top_token_.kind == TokenKind::comma) {
       advance_top_token();

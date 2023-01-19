@@ -6,7 +6,7 @@ TEST_SRCS=$(wildcard *.c)
 TESTS=$(TEST_SRCS:.c=.exe)
 
 %.exe: %.c
-	$(LZHCC) -c -o $*.o $*.c
+	$(LZHCC) -c -o $*.o $*.c -I.
 	$(CC) -o $@ $*.o -xc common
 
 test: $(TESTS)

@@ -765,6 +765,7 @@ public:
   [[noreturn, gnu::format(printf, 3, 4)]] void fatal(int, const char *, ...);
 
   struct {
+    std::vector<const char *> include_paths;
     std::vector<const char *> input_paths;
     const char *output_file = nullptr;
     const char *base_file = nullptr;

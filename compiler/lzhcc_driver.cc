@@ -81,8 +81,20 @@ static auto parse_args(std::span<char *> args, Context *context) {
       continue;
     }
 
+    if (arg == "-I") {
+      if (i + 1 == args.size()) {
+        usage(EXIT_FAILURE);
+      }
+      result.include_paths.push_back(args[++i]);
+    }
+
     if (arg.starts_with("-o")) {
       result.opt_o = args[i] + 2;
+      continue;
+    }
+
+    if (arg.starts_with("-I")) {
+      result.include_paths.push_back(args[i] + 2);
       continue;
     }
 

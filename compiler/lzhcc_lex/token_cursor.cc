@@ -150,30 +150,46 @@ auto TokenCursor::include_file(int loc) -> void {
     context_->fatal(loc, "");
   }
 
-  fs::path path;
+  std::string name;
+  bool is_dquote = false;
   if (tokens.front().kind == TokenKind::string) {
     auto token = tokens.front();
-    path = context_->filename(token.location);
-    auto name = context_->storage(token.inner);
-    name.remove_prefix(1);
-    name.remove_suffix(1);
-    path = path.parent_path() / name;
+    auto view = context_->storage(token.inner);
+    name.assign(view.begin() + 1, view.end() - 1);
+    is_dquote = true;
   } else {
     if (tokens.front().kind != TokenKind::less ||
         tokens.back().kind != TokenKind::greater) {
       context_->fatal(loc, "");
     }
-    path = context_->filename(tokens.front().location);
-    std::string name = "";
     for (int i = 1; i + 1 < tokens.size(); i++) {
       name.append(context_->to_string(tokens[i]));
     }
-    path = path.parent_path() / name;
   }
 
-  if (!fs::exists(path)) {
-    context_->fatal(loc, "");
+  fs::path path;
+  if (name[0] == '/') {
+    path = name;
+    if (fs::exists(path)) {
+      goto include;
+    }
+  } else {
+    if (is_dquote) {
+      path = context_->filename(loc);
+      path = path.parent_path() / name;
+      if (fs::exists(path)) {
+        goto include;
+      }
+    }
+    for (fs::path base : context_->arg.include_paths) {
+      path = base / name;
+      if (fs::exists(path)) {
+        goto include;
+      }
+    }
   }
+  context_->fatal(loc, "");
+include:
   cursor_stack_.push(std::move(top_cursor_));
   token_stack_.push(top_token_);
   auto chars = context_->append_file(path);

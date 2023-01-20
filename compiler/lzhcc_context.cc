@@ -10,30 +10,23 @@
 
 namespace lzhcc {
 
-class CharCursor {
-public:
-  CharCursor(const char *cursor, int position)
-      : cursor_(cursor), position_(position) {}
+CharCursor::CharCursor(const char *cursor, int position)
+    : cursor_(cursor), position_(position) {}
 
-  auto operator()() -> std::pair<char, int> {
-    if (*cursor_ != 0 && *cursor_ != '\\') {
-      return std::pair(*cursor_++, position_++);
-    }
-    while (*cursor_ == '\\' && cursor_[1] == '\n') [[unlikely]] {
-      cursor_ += 2;
-      position_ += 2;
-    }
-    if (*cursor_ == 0) {
-      return std::pair(*cursor_, position_);
-    } else [[likely]] {
-      return std::pair(*cursor_++, position_++);
-    }
+auto CharCursor::operator()() -> std::pair<char, int> {
+  if (*cursor_ != 0 && *cursor_ != '\\') {
+    return std::pair(*cursor_++, position_++);
   }
-
-private:
-  const char *cursor_;
-  int position_;
-};
+  while (*cursor_ == '\\' && cursor_[1] == '\n') [[unlikely]] {
+    cursor_ += 2;
+    position_ += 2;
+  }
+  if (*cursor_ == 0) {
+    return std::pair(*cursor_, position_);
+  } else [[likely]] {
+    return std::pair(*cursor_++, position_++);
+  }
+}
 
 Context::Context() {
   push_identifier("_Alignas");
@@ -253,7 +246,7 @@ auto Context::builtin_macro(const char *name,
   macro_map_[push_identifier(name)] = macro;
 }
 
-auto Context::append_file(std::string path) -> CharCursorFn {
+auto Context::append_file(std::string path) -> CharCursor {
   FILE *in = nullptr;
   if (path == "-") {
     in = stdin;
@@ -274,7 +267,7 @@ auto Context::append_file(std::string path) -> CharCursorFn {
   return append_text(std::move(text), path == "-" ? "<stdin>" : path);
 }
 
-auto Context::append_text(std::string text, std::string name) -> CharCursorFn {
+auto Context::append_text(std::string text, std::string name) -> CharCursor {
   filename_.push_back(name);
   int location = 0;
   if (!file_location_.empty()) {

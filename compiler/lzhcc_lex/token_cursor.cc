@@ -6,7 +6,7 @@ namespace fs = std::filesystem;
 
 namespace lzhcc {
 
-TokenCursor::TokenCursor(CharCursorFn cursor, Context *context)
+TokenCursor::TokenCursor(CharCursor cursor, Context *context)
     : sb_defined(context->push_identifier("defined")),
       sb_define(context->push_identifier("define")),
       sb_undef(context->push_identifier("undef")),

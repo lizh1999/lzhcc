@@ -2,7 +2,7 @@
 
 namespace lzhcc {
 
-auto lex(CharCursorFn chars, Context &context) -> std::vector<Token> {
+auto lex(CharCursor chars, Context &context) -> std::vector<Token> {
   context.define_macro("_LP64", "1");
   context.define_macro("__C99_MACRO_WITH_VA_ARGS", "1");
   context.define_macro("__ELF__", "1");

@@ -5,7 +5,7 @@
 namespace lzhcc {
 
 class SourceCursor {
-  using Cursor = CharCursorFn;
+  using Cursor = CharCursor;
 
 public:
   SourceCursor(Cursor cursor, Context *context);
@@ -24,6 +24,8 @@ private:
 
   auto token(TokenKind kind, int location, int inner = -1) -> Token;
 
+  auto first() -> char;
+  auto second() -> char;
   template <class Pred> auto eat_while(Pred &&pred) -> void;
   auto advance_current() -> void;
 
@@ -39,7 +41,7 @@ class TokenCursor {
   using Cursor = SourceCursor;
 
 public:
-  TokenCursor(CharCursorFn cursor, Context *context);
+  TokenCursor(CharCursor cursor, Context *context);
 
   auto text_fn() -> std::function<Token()>;
   auto text() -> Token;

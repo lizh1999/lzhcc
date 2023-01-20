@@ -180,8 +180,17 @@ struct BuiltinMacro : Macro {
 // lzhcc_lex/lzhcc_lex.cc
 //
 
-using CharCursorFn = std::function<std::pair<char, int>()>;
-auto lex(CharCursorFn chars, Context &context) -> std::vector<Token>;
+class CharCursor {
+public:
+  CharCursor(const char *cursor, int position);
+  auto operator()() -> std::pair<char, int>;
+
+private:
+  const char *cursor_;
+  int position_;
+};
+
+auto lex(CharCursor chars, Context &context) -> std::vector<Token>;
 
 auto const_int(std::span<Token> tokens, Context &context, int64_t *value)
     -> bool;
@@ -657,8 +666,8 @@ class Context {
 public:
   Context();
   ~Context();
-  auto append_file(std::string path) -> CharCursorFn;
-  auto append_text(std::string text, std::string name) -> CharCursorFn;
+  auto append_file(std::string path) -> CharCursor;
+  auto append_text(std::string text, std::string name) -> CharCursor;
   auto push_literal(std::string literal) -> int;
   auto push_identifier(std::string literal) -> int;
   auto storage(int index) const -> std::string_view;

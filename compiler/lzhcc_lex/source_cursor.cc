@@ -176,8 +176,14 @@ auto SourceCursor::identifier() -> Token {
       return false;
     }
   });
-  int literal = context_->push_identifier(std::move(text));
-  return token(TokenKind::identifier, location, literal);
+  if (text == "L" && current_ == '"') {
+    return string();
+  } else if (text == "L" && current_ == '\'') {
+    return character();
+  } else {
+    int literal = context_->push_identifier(std::move(text));
+    return token(TokenKind::identifier, location, literal);
+  }
 }
 
 auto SourceCursor::punctuator() -> Token {
@@ -382,6 +388,17 @@ auto SourceCursor::token(TokenKind kind, int location, int inner) -> Token {
 
 auto SourceCursor::advance_current() -> void {
   std::tie(current_, location_) = cursor_();
+}
+
+auto SourceCursor::first() -> char {
+  auto tmp = cursor_;
+  return tmp().first;
+}
+
+auto SourceCursor::second() -> char {
+  auto tmp = cursor_;
+  tmp();
+  return tmp().first;
 }
 
 template <class Pred> auto SourceCursor::eat_while(Pred &&pred) -> void {

@@ -841,9 +841,25 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
 }
 
 auto Generator::call_expr(CallExpr *expr) -> void {
-  expr_proxy(expr->func);
-  push("a0");
   auto &args = expr->args;
+  int gp = 0, fp = 0, stack = 0;
+  enum { FP_MAX = 8, GP_MAX = 8 };
+  for (int i = 0; i < expr->arg_num; i++) {
+    if (args[i]->type->kind == TypeKind::floating && fp < FP_MAX) {
+      fp++;
+    } else if (gp < GP_MAX) {
+      gp++;
+    } else {
+      stack++;
+    }
+  }
+  int av_arg_num = expr->args.size() - expr->arg_num;
+  stack += std::max(0, av_arg_num + gp - GP_MAX);
+  if (depth_ % 2 != stack % 2) {
+    stack++;
+    println("  addi sp, sp, -8");
+  }
+
   for (int i = args.size(); i--;) {
     expr_proxy(args[i]);
     if (args[i]->type->kind == TypeKind::floating) {
@@ -852,34 +868,25 @@ auto Generator::call_expr(CallExpr *expr) -> void {
       push("a0");
     }
   }
-  int gp = 0, fp = 0;
-  auto integer = [&] {
-    assert(gp < 8);
-    char reg[] = "a0";
-    reg[1] += gp++;
-    pop(reg);
-  };
-  auto floating = [&] {
-    if (fp == 8) {
-      integer();
-    } else {
-      char reg[] = "fa0";
-      reg[2] += fp++;
-      return popf(reg);
-    }
-  };
+  expr_proxy(expr->func);
+  println("  mv t0, a0");
+
+  gp = fp = 0;
   for (int i = 0; i < expr->arg_num; i++) {
-    if (args[i]->type->kind == TypeKind::floating) {
-      floating();
-    } else {
-      integer();
+    if (args[i]->type->kind == TypeKind::floating && fp < FP_MAX) {
+      popf(fp++);
+    } else if (gp < GP_MAX) {
+      pop(gp++);
     }
   }
   for (int i = expr->arg_num; i < args.size(); i++) {
-    integer();
+    char reg[] = "a0";
+    if (gp < GP_MAX) {
+      pop(gp++);
+    }
   }
-  pop("t0");
   println("  jalr t0");
+  println("  addi sp, sp, %d", stack * 8);
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {
@@ -904,39 +911,33 @@ auto Generator::condition_expr(ConditionExpr *expr) -> void {
 }
 
 auto Generator::push(const char *reg) -> void {
-  if (depth_++ % 2 == 0) {
-    println("  addi sp, sp, -16");
-    println("  sd %s, 8(sp)", reg);
-  } else {
-    println("  sd %s, 0(sp)", reg);
-  }
+  println("  addi sp, sp, -8");
+  println("  sd %s, 0(sp)", reg);
 }
 
 auto Generator::pop(const char *reg) -> void {
-  if (--depth_ % 2 == 0) {
-    println("  ld %s, 8(sp)", reg);
-    println("  addi sp, sp, 16");
-  } else {
-    println("  ld %s, 0(sp)", reg);
-  }
+  println("  ld %s, 0(sp)", reg);
+  println("  addi sp, sp, 8");
 }
 
 auto Generator::pushf(const char *reg) -> void {
-  if (depth_++ % 2 == 0) {
-    println("  addi sp, sp, -16");
-    println("  fsd %s, 8(sp)", reg);
-  } else {
-    println("  fsd %s, 0(sp)", reg);
-  }
+  println("  addi sp, sp, -8");
+  println("  fsd %s, 0(sp)", reg);
 }
 
 auto Generator::popf(const char *reg) -> void {
-  if (--depth_ % 2 == 0) {
-    println("  fld %s, 8(sp)", reg);
-    println("  addi sp, sp, 16");
-  } else {
-    println("  fld %s, 0(sp)", reg);
-  }
+  println("  fld %s, 0(sp)", reg);
+  println("  addi sp, sp, 8");
+}
+
+auto Generator::pop(int reg) -> void {
+  println("  ld a%d, 0(sp)", reg);
+  println("  addi sp, sp, 8");
+}
+
+auto Generator::popf(int reg) -> void {
+  println("  fld fa%d, 0(sp)", reg);
+  println("  addi sp, sp, 8");
 }
 
 auto Generator::expr_proxy(Expr *expr) -> void {

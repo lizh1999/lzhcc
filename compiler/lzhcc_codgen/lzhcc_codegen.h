@@ -77,6 +77,9 @@ private:
   auto pushf(const char *reg) -> void;
   auto popf(const char *reg) -> void;
 
+  auto pop(int reg) -> void;
+  auto popf(int reg) -> void;
+
   [[gnu::format(printf, 2, 3)]] auto println(const char *, ...) -> void;
 
   [[noreturn]] auto expect_lvalue() -> void { std::abort(); }

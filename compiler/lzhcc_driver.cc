@@ -215,6 +215,7 @@ auto main(std::span<char *> args) -> int {
   parse_args(args, &context);
   if (context.arg.opt_cc1) {
     context.arg.include_paths.push_back("/home/lizh/riscv/sysroot/usr/include");
+    context.arg.include_paths.push_back("/home/lizh/lzhcc/include");
     cc1(context);
     return 0;
   }

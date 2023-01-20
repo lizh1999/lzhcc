@@ -151,7 +151,8 @@ auto TokenCursor::skip_cond() -> void {
     if (top_token_.kind != TokenKind::identifier) {
       continue;
     }
-    if (top_token_.inner == sb_if) {
+    if (top_token_.inner == sb_if || top_token_.inner == sb_ifdef ||
+        top_token_.inner == sb_ifndef) {
       depth++;
     }
     if (top_token_.inner == sb_endif) {

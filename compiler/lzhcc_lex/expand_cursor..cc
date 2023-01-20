@@ -55,7 +55,7 @@ auto ExpandCursor::advance() -> Token {
   }
 
   advance_top_token();
-  if (top_token_.leading_space || top_token_.kind != TokenKind::open_paren) {
+  if (top_token_.kind != TokenKind::open_paren) {
     return origin;
   }
 

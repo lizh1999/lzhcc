@@ -215,6 +215,8 @@ auto Context::to_string(Token &token) -> std::string_view {
     return "}";
   case TokenKind::unknown:
     return {reinterpret_cast<const char *>(&token.inner), 1};
+  case TokenKind::eof:
+    return "\n";
   default:
     return storage_[token.inner];
   }

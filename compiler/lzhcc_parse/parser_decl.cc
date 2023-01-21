@@ -567,19 +567,18 @@ auto Parser::declaration() -> Stmt * {
       }
       align_bytes = attr.align_bytes;
     }
-    auto value = create_local(name, type, align_bytes);
     if (auto token = consume_if(TokenKind::equal)) {
-      auto lhs = context_->value(value);
-
-      auto rhs = init(value->type);
-      if (value->type->kind == TypeKind::array) {
-        auto array_type = cast<ArrayType>(value->type);
+      auto rhs = init(type);
+      if (type->kind == TypeKind::array) {
+        auto array_type = cast<ArrayType>(type);
         auto array_init = cast<ArrayInit>(rhs);
         if (array_type->length == -1) {
           int length = array_init->children.size();
-          value->type = context_->array_of(array_type->base, length);
+          type = context_->array_of(array_type->base, length);
         }
       }
+      auto value = create_local(name, type, align_bytes);
+      auto lhs = context_->value(value);
 
       int64_t size_bytes = context_->size_of(value->type);
       auto zero_expr = context_->zero(lhs, size_bytes);
@@ -588,6 +587,8 @@ auto Parser::declaration() -> Stmt * {
       if (auto expr = init_local(lhs, rhs, token->location)) {
         stmts.push_back(context_->expr_stmt(expr));
       }
+    } else {
+      create_local(name, type, align_bytes);
     }
   }
   return context_->block_stmt(std::move(stmts));

@@ -1,5 +1,6 @@
 #include "lzhcc_codegen.h"
 
+#include <cassert>
 #include <cstdarg>
 #include <cstring>
 
@@ -112,10 +113,69 @@ auto Generator::codegen(Function *function) -> void {
   println("  li t0, -%d", function->stack_size);
   println("  add sp, sp, t0");
   println("  mv fp, sp");
-
-  int gp = 0, fp = 0;
+  // 226641842
+  int gp = 0, fp = 0, stack = function->stack_size + 16;
+  enum { GP_MAX = 8, FP_MAX = 8 };
   for (auto param : function->params) {
-    store(param->type, gp, fp, param->offset);
+    if (param->type->kind == TypeKind::floating && fp < FP_MAX) {
+      switch (cast<FloatingType>(param->type)->kind) {
+      case FloatingKind::float32:
+        println("  fsw fa%d, %d(sp)", fp++, param->offset);
+        break;
+      case FloatingKind::float64:
+        println("  fsd fa%d, %d(sp)", fp++, param->offset);
+        break;
+      }
+    } else if (gp < GP_MAX) {
+      if (param->type->kind == TypeKind::floating) {
+        switch (cast<FloatingType>(param->type)->kind) {
+        case FloatingKind::float32:
+          println("  sw a%d, %d(sp)", gp++, param->offset);
+          break;
+        case FloatingKind::float64:
+          println("  sd a%d, %d(sp)", gp++, param->offset);
+          break;
+        }
+      } else if (param->type->kind == TypeKind::integer) {
+        switch (cast<IntegerType>(param->type)->kind) {
+        case IntegerKind::byte:
+          println("  sb a%d, %d(sp)", gp++, param->offset);
+          break;
+        case IntegerKind::half:
+          println("  sh a%d, %d(sp)", gp++, param->offset);
+          break;
+        case IntegerKind::word:
+          println("  sw a%d, %d(sp)", gp++, param->offset);
+          break;
+        case IntegerKind::dword:
+          println("  sd a%d, %d(sp)", gp++, param->offset);
+          break;
+        }
+      } else if (param->type->kind == TypeKind::boolean) {
+        println("  sb a%d, %d(sp)", gp++, param->offset);
+      } else {
+        println("  sd a%d, %d(sp)", gp++, param->offset);
+      }
+    } else {
+      println("#stack");
+      int size = context_->size_of(param->type);
+      assert(size != 0);
+      int label = counter_++;
+      println("  li t0, %d", stack);
+      println("  add t0, sp, t0");
+      println("  li t1, %d", param->offset);
+      println("  add t1, sp, t1");
+      println("  li t2, %d", size);
+
+      println(".L.%d:", label);
+      println("  lb t3, 0(t0)");
+      println("  sb t3, 0(t1)");
+      println("  addi t0, t0, 1");
+      println("  addi t1, t1, 1");
+      println("  addi t2, t2, -1");
+      println("  bne t2, zero, .L.%d", label);
+      stack += 8;
+    }
   }
   if (function->va_area) {
     int i = function->params.size();

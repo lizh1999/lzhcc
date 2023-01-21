@@ -127,9 +127,14 @@ auto Generator::load(Type *type) -> void {
 
 auto Generator::zero_expr(ZeroExpr *expr) -> void {
   addr_proxy(expr->expr);
-  println("  li a1, 0");
-  println("  li a2, %ld", expr->size);
-  println("  call memset");
+  assert(expr->size != 0);
+  println("  li a1, %ld", expr->size);
+  int label = counter_++;
+  println(".L.%d:", label);
+  println("  sb zero, 0(a0)");
+  println("  addi a1, a1, -1");
+  println("  addi a0, a0, 1");
+  println("  bne zero, a1, .L.%d", label);
 }
 
 auto Generator::value_expr(ValueExpr *expr) -> void {
@@ -844,12 +849,14 @@ auto Generator::call_expr(CallExpr *expr) -> void {
   auto &args = expr->args;
   int gp = 0, fp = 0, stack = 0;
   enum { FP_MAX = 8, GP_MAX = 8 };
+  std::vector<bool> by_stack(expr->arg_num);
   for (int i = 0; i < expr->arg_num; i++) {
     if (args[i]->type->kind == TypeKind::floating && fp < FP_MAX) {
       fp++;
     } else if (gp < GP_MAX) {
       gp++;
     } else {
+      by_stack[i] = true;
       stack++;
     }
   }
@@ -859,15 +866,27 @@ auto Generator::call_expr(CallExpr *expr) -> void {
     stack++;
     println("  addi sp, sp, -8");
   }
-
   for (int i = args.size(); i--;) {
-    expr_proxy(args[i]);
-    if (args[i]->type->kind == TypeKind::floating) {
-      pushf("fa0");
-    } else {
-      push("a0");
+    if (by_stack[i]) {
+      expr_proxy(args[i]);
+      if (args[i]->type->kind == TypeKind::floating) {
+        pushf("fa0");
+      } else {
+        push("a0");
+      }
     }
   }
+  for (int i = args.size(); i--;) {
+    if (!by_stack[i]) {
+      expr_proxy(args[i]);
+      if (args[i]->type->kind == TypeKind::floating) {
+        pushf("fa0");
+      } else {
+        push("a0");
+      }
+    }
+  }
+
   expr_proxy(expr->func);
   println("  mv t0, a0");
 
@@ -880,7 +899,6 @@ auto Generator::call_expr(CallExpr *expr) -> void {
     }
   }
   for (int i = expr->arg_num; i < args.size(); i++) {
-    char reg[] = "a0";
     if (gp < GP_MAX) {
       pop(gp++);
     }

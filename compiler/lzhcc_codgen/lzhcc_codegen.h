@@ -28,16 +28,17 @@ auto dump(Context *, Type *, Type *&, Type *&, int *) -> bool;
 
 class Calling {
 public:
+  enum { fp_max = 8, gp_max = 8 };
   Calling(Context *ctx) : ctx_(ctx) {}
+  auto stack_aligned_bytes() -> int { return align_to(sp_, 2) * 8; }
   auto stack_bytes() -> int { return sp_ * 8; }
-  auto ref_bytes() -> int { return ref_; }
+  auto ref_aligned_bytes() -> int { return align_to(ref_, 16); }
   auto reg_bytes() -> int { return (gp_ + fp_) * 8; }
   auto gp() -> int { return gp_; }
   auto operator()(CallExpr *expr) -> std::vector<Pass>;
   auto operator()(Function *func) -> std::vector<Pass>;
 
 private:
-  enum { fp_max = 8, gp_max = 8 };
   auto fpfp() -> bool;
   auto gpgp() -> bool;
   auto fpgp() -> bool;

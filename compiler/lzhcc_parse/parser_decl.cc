@@ -711,7 +711,7 @@ auto Parser::function(Token *name, Type *type, ParamNames param_names,
 
   LValue *va_area = nullptr;
   if (function_type->is_variadic) {
-    auto type = context_->array_of(context_->int8(), 64);
+    auto type = context_->pointer_to(context_->void_type());
     va_area = create_local("__va_area__", type);
   }
 

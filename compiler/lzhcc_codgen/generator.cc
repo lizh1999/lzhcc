@@ -66,18 +66,38 @@ auto Generator::codegen(Function *function) -> void {
   }
 
   println("%.*s:", (int)name.size(), name.data());
+  Calling calling(context_);
+  auto pass = calling(function);
+  auto &params = function->params;
   println("  mv t4, sp");
+  if (function->va_area) {
+    int num = Calling::gp_max - calling.gp();
+    if (num != 0) {
+      println("  addi sp, sp, -%d", 8 * num);
+      for (int i = 0, j = calling.gp(); i < num; i++) {
+        println("  sd a%d, %d(sp)", j++, i * 8);
+      }
+      println("  mv t5, sp");
+      if (num % 2 == 1) {
+        println("  addi sp, sp, -8");
+      }
+    } else {
+      println("  li t5, %d", calling.stack_bytes());
+      println("  add t5, sp, t5");
+    }
+  }
+
   println("  sd fp, -8(sp)");
   println("  sd ra, -16(sp)");
   println("  addi sp, sp, -16");
 
-  Calling calling(context_);
-  auto pass = calling(function);
-  auto &params = function->params;
-
   println("  li t0, -%d", align_to(function->stack_size, 16));
   println("  add sp, sp, t0");
   println("  mv fp, sp");
+
+  if (function->va_area) {
+    println("  sd t5, %d(sp)", function->va_area->offset);
+  }
 
   auto func_type = cast<FunctionType>(function->type);
   bool huge_object = 16 < context_->size_of(func_type->ret);
@@ -216,13 +236,6 @@ auto Generator::codegen(Function *function) -> void {
     }
   }
 
-  if (function->va_area) {
-    int i = calling.gp();
-    for (int j = 0; i < 8; i++, j += 8) {
-      println("  sd a%d, %d(sp)", i, function->va_area->offset + j);
-    }
-  }
-
   stmt_proxy(function->stmt);
   println(".L.return.%d:", return_label_);
 
@@ -337,6 +350,12 @@ auto Generator::codegen(Function *function) -> void {
   println("  addi sp, sp, 16");
   println("  ld fp, -8(sp)");
   println("  ld ra, -16(sp)");
+  if (function->va_area) {
+    int num = align_to(Calling::gp_max - calling.gp(), 2);
+    if (num != 0) {
+      println("  addi sp, sp, %d", num * 8);
+    }
+  }
   println("  ret");
 }
 

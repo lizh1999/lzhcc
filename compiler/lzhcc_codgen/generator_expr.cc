@@ -929,8 +929,6 @@ auto Calling::operator()(CallExpr *expr) -> std::vector<Pass> {
   for (int i = expr->arg_num; i < args.size(); i++) {
     pass[i] = integer(args[i]->type);
   }
-  ref_ = align_to(ref_, 16);
-  sp_ = align_to(sp_, 2);
   return pass;
 }
 
@@ -944,8 +942,6 @@ auto Calling::operator()(Function *func) -> std::vector<Pass> {
   for (int i = 0; i < param.size(); i++) {
     pass[i] = floating(param[i]->type);
   }
-  ref_ = align_to(ref_, 16);
-  sp_ = align_to(sp_, 2);
   return pass;
 }
 
@@ -1010,16 +1006,16 @@ auto Generator::call_expr(CallExpr *expr) -> void {
   Calling calling(context_);
   auto pass = calling(expr);
 
-  int ref = -align_to(-depth_, 2) * 8 - calling.ref_bytes();
-  int stk = ref - calling.stack_bytes();
+  int ref = -align_to(-depth_, 2) * 8 - calling.ref_aligned_bytes();
+  int stk = ref - calling.stack_aligned_bytes();
   int reg = stk - calling.reg_bytes();
   int old_depth = depth_;
   depth_ = reg / 8;
   expr_proxy(expr->func);
 
   println("# old_dep: %d new_dep: %d ref: %d stk: %d reg: %d", old_depth * 8,
-          depth_ * 8, calling.ref_bytes(), calling.stack_bytes(),
-          calling.reg_bytes());
+          depth_ * 8, calling.ref_aligned_bytes(),
+          calling.stack_aligned_bytes(), calling.reg_bytes());
   push("a0");
 
   auto memcpy = [&](int dest, int bytes) {

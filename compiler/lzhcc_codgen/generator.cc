@@ -121,20 +121,20 @@ auto Generator::codegen(Function *function) -> void {
 
   auto memcpy = [&](int dest, int bytes) {
     println("  li t0, %d", dest);
-    println("  li t1, %d", bytes);
-    println("  addi t1, t0, t1");
-    println("  addi t0, sp, t0");
+    println("  li t1, %d", dest + bytes);
+    println("  add t1, sp, t1");
+    println("  add t0, sp, t0");
     int label = counter_++;
     println(".L.%d:", label);
     println("  lb t2, 0(t3)");
     println("  sb t2, 0(t0)");
-    println("  addi a0, t3, 1");
+    println("  addi t3, t3, 1");
     println("  addi t0, t0, 1");
     println("  bne t0, t1, .L.%d", label);
   };
 
   for (int i = 0; i < params.size(); i++) {
-    auto [kind, inner0, inner1, inner2, inner3, _] = pass[i];
+    auto [kind, inner0, inner1, inner2, inner3, inner4] = pass[i];
     int size = context_->size_of(params[i]->type);
     int offset = params[i]->offset;
     switch (kind) {
@@ -164,18 +164,18 @@ auto Generator::codegen(Function *function) -> void {
     }
     case PassKind::fpfp:
       store_fp(inner2, inner0, offset);
-      store_fp(inner3, inner1, offset + size - inner3);
+      store_fp(inner3, inner1, offset + inner4);
       break;
     case PassKind::fpgp:
       store_fp(inner2, inner0, offset);
-      store_gp(inner3, inner1, offset + size - inner3);
+      store_gp(inner3, inner1, offset + inner4);
       break;
     case PassKind::gpfp:
       store_gp(inner2, inner0, offset);
-      store_fp(inner3, inner1, offset + size - inner3);
+      store_fp(inner3, inner1, offset + inner4);
       break;
     case PassKind::refgp:
-      println("  mv t3, a%d", inner0);
+      println("  mv t3, a%d", inner1);
       memcpy(offset, size);
       break;
     case PassKind::refsp:

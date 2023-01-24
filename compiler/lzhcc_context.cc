@@ -587,8 +587,8 @@ auto Context::shift_right(Type *type, Expr *lhs, Expr *rhs) -> Expr * {
 }
 
 auto Context::call(Type *type, Expr *func, std::vector<Expr *> args,
-                   int arg_num) -> Expr * {
-  return create<CallExpr>(type, func, std::move(args), arg_num);
+                   int arg_num, LValue *ret_buffer) -> Expr * {
+  return create<CallExpr>(type, func, std::move(args), arg_num, ret_buffer);
 }
 
 auto Context::member(Type *type, Expr *record, int offset) -> Expr * {

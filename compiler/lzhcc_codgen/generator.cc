@@ -78,33 +78,56 @@ auto Generator::codegen(Function *function) -> void {
   auto &params = function->params;
 
   auto store_gp = [&](int bytes, int src, int dest) {
+    println("  mv t0, a%d", src);
     switch (bytes) {
-    case 1:
-      return println("  sb a%d, %d(sp)", src, dest);
-    case 2:
-      return println("  sh a%d, %d(sp)", src, dest);
-    case 4:
-      return println("  sw a%d, %d(sp)", src, dest);
     case 8:
-      return println("  sd a%d, %d(sp)", src, dest);
-    default:
-      assert(false);
+      return println("  sd t0, %d(sp)", dest);
+    case 7:
+      println("  slli t1, t0, 48");
+      println("  sb t1, %d(sp)", dest + 6);
+    case 6:
+      println("  slli t1, a0, 32");
+      println("  sh t1, %d(sp)", dest + 4);
+      return println("  sw t0, %d(sp)", dest);
+    case 5:
+      println("  slli t1, a0, 32");
+      println("  sb t1, %d(sp)", dest + 4);
+    case 4:
+      return println("  sw t0, %d(sp)", dest);
+    case 3:
+      println("  slliw t1, t0, 16");
+      println("  sb t1, %d(sp)", dest + 1);
+    case 2:
+      return println("  sh t0, %d(sp)", dest);
+    case 1:
+      return println("  sb t0, %d(sp)", dest);
     }
   };
 
   auto store_sp = [&](int bytes, int src, int dest) {
     println("  ld t0, %d(t4)", src * 8);
     switch (bytes) {
-    case 1:
-      return println("  sb t0, %d(sp)", dest);
-    case 2:
-      return println("  sh t0, %d(sp)", dest);
-    case 4:
-      return println("  sw t0, %d(sp)", dest);
     case 8:
       return println("  sd t0, %d(sp)", dest);
-    default:
-      assert(false);
+    case 7:
+      println("  slli t1, t0, 48");
+      println("  sb t1, %d(sp)", dest + 6);
+    case 6:
+      println("  slli t1, a0, 32");
+      println("  sh t1, %d(sp)", dest + 4);
+      return println("  sw t0, %d(sp)", dest);
+    case 5:
+      println("  slli t1, a0, 32");
+      println("  sb t1, %d(sp)", dest + 4);
+    case 4:
+      return println("  sw t0, %d(sp)", dest);
+    case 3:
+      println("  slliw t1, t0, 16");
+      println("  sb t1, %d(sp)", dest + 1);
+    case 2:
+      return println("  sh t0, %d(sp)", dest);
+    case 1:
+      return println("  sb t0, %d(sp)", dest);
     }
   };
 
@@ -207,6 +230,10 @@ auto Generator::println(const char *fmt, ...) -> void {
   vfprintf(out_, fmt, ap);
   va_end(ap);
   fputc('\n', out_);
+}
+
+auto Generator::expect_lvalue() -> void {
+  assert(false);
 }
 
 } // namespace lzhcc

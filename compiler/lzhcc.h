@@ -301,7 +301,8 @@ struct Member {
 };
 
 struct RecordType : Type {
-  RecordType(std::vector<Member> members, int size_bytes, int align_bytes, bool is_union)
+  RecordType(std::vector<Member> members, int size_bytes, int align_bytes,
+             bool is_union)
       : Type(TypeKind::record), members(std::move(members)), is_union(is_union),
         size_bytes(size_bytes), align_bytes(align_bytes) {}
   static auto dummy() -> RecordType { return RecordType({}, -1, -1, false); }
@@ -473,12 +474,14 @@ struct BinaryExpr : Expr {
 };
 
 struct CallExpr : Expr {
-  CallExpr(Type *type, Expr *func, std::vector<Expr *> args, int arg_num)
+  CallExpr(Type *type, Expr *func, std::vector<Expr *> args, int arg_num,
+           LValue *ret_buffer)
       : Expr(ExperKind::call, type), func(func), args(std::move(args)),
-        arg_num(arg_num) {}
+        arg_num(arg_num), ret_buffer(ret_buffer) {}
   Expr *func;
   std::vector<Expr *> args;
   int arg_num;
+  LValue *ret_buffer;
 };
 
 struct MemberExpr : Expr {
@@ -757,8 +760,8 @@ public:
   auto comma(Type *type, Expr *lhs, Expr *rhs) -> Expr *;
   auto condition(Type *type, Expr *cond, Expr *then, Expr *else_) -> Expr *;
 
-  auto call(Type *type, Expr *func, std::vector<Expr *> args, int arg_num)
-      -> Expr *;
+  auto call(Type *type, Expr *func, std::vector<Expr *> args, int arg_num,
+            LValue *ret_buffer) -> Expr *;
 
   auto member(Type *type, Expr *record, int offset) -> Expr *;
 

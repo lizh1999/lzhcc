@@ -66,6 +66,8 @@ auto Generator::addr_proxy(Expr *expr) -> void {
     return binary_addr(cast<BinaryExpr>(expr));
   case ExperKind::member:
     return member_addr(cast<MemberExpr>(expr));
+  case ExperKind::call:
+    return call_expr(cast<CallExpr>(expr));
   default:
     expect_lvalue();
   }
@@ -857,7 +859,7 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
   }
 }
 
-auto Calling::push(Type *&first, Type *&second, Type *in) -> bool {
+auto push(Type *&first, Type *&second, Type *in) -> bool {
   if (first && second) {
     return false;
   } else if (first) {
@@ -868,13 +870,15 @@ auto Calling::push(Type *&first, Type *&second, Type *in) -> bool {
   return true;
 }
 
-auto Calling::dump(RecordType *record, Type *&first, Type *&second, int *offset)
-    -> bool {
+static auto dump(Context *, Type *, Type *&, Type *&, int *) -> bool;
+
+auto dump(Context *ctx, RecordType *record, Type *&first, Type *&second,
+          int *offset) -> bool {
   if (record->is_union) {
     return false;
   }
   for (auto member : record->members) {
-    if (!dump(member.type, first, second, offset)) {
+    if (!dump(ctx, member.type, first, second, offset)) {
       return false;
     } else if (second) {
       *offset += member.offset;
@@ -883,7 +887,7 @@ auto Calling::dump(RecordType *record, Type *&first, Type *&second, int *offset)
   return true;
 }
 
-auto Calling::dump(Type *type, Type *&first, Type *&second, int *offset)
+auto dump(Context *ctx, Type *type, Type *&first, Type *&second, int *offset)
     -> bool {
   switch (type->kind) {
   default:
@@ -894,14 +898,14 @@ auto Calling::dump(Type *type, Type *&first, Type *&second, int *offset)
   case TypeKind::pointer:
     return push(first, second, type);
   case TypeKind::record:
-    return dump(cast<RecordType>(type), first, second, offset);
+    return dump(ctx, cast<RecordType>(type), first, second, offset);
   case TypeKind::array: {
     auto array = cast<ArrayType>(type);
     for (int i = 0; i < array->length; i++) {
-      if (!dump(array->base, first, second, offset)) {
+      if (!dump(ctx, array->base, first, second, offset)) {
         return false;
       } else if (second) {
-        *offset += i * ctx_->size_of(array->base);
+        *offset += i * ctx->size_of(array->base);
       }
     }
     return true;
@@ -912,6 +916,9 @@ auto Calling::dump(Type *type, Type *&first, Type *&second, int *offset)
 auto Calling::operator()(CallExpr *expr) -> std::vector<Pass> {
   std::vector<Pass> pass(expr->args.size());
   auto &args = expr->args;
+  if (16 < ctx_->size_of(expr->type)) {
+    gp_++;
+  }
   for (int i = 0; i < expr->arg_num; i++) {
     pass[i] = floating(args[i]->type);
   }
@@ -933,7 +940,7 @@ auto Calling::operator()(std::span<LValue *> param) -> std::vector<Pass> {
   return pass;
 }
 
-auto Calling::is_float(Type *type) -> bool {
+static auto is_float(Type *type) -> bool {
   return type->kind == TypeKind::floating;
 }
 
@@ -948,7 +955,7 @@ auto Calling::floating(Type *type) -> Pass {
     Type *first = 0, *second = 0;
     int offset = 0;
     auto record = cast<RecordType>(type);
-    if (!dump(record, first, second, &offset)) {
+    if (!dump(ctx_, record, first, second, &offset)) {
       return integer(type);
     } else if (second == 0) {
       return floating(first);
@@ -1161,6 +1168,10 @@ auto Generator::call_expr(CallExpr *expr) -> void {
       break;
     }
   }
+  if (16 < context_->size_of(expr->type)) {
+    println("  li a0, %d", expr->ret_buffer->offset);
+    println("  add a0, fp, a0");
+  }
   pop("t1");
   assert(depth_ == reg / 8);
   println("  li t0, %d", stk);
@@ -1169,6 +1180,105 @@ auto Generator::call_expr(CallExpr *expr) -> void {
   println("  li t0, %d", -stk);
   println("  add sp, sp, t0");
   depth_ = old_depth;
+
+  if (!expr->ret_buffer) {
+    return;
+  }
+  auto stroe_fp2 = [&](FloatingType *type, int src, int dest) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  fsw fa%d, %d(t2)", src, dest);
+    case FloatingKind::float64:
+      return println("  fsd fa%d, %d(t2)", src, dest);
+    default:
+      assert(false);
+    }
+  };
+  auto store_gp2 = [&](IntegerType *type, int src, int dest) {
+    switch (type->kind) {
+    case IntegerKind::byte:
+      return println("  sb a%d, %d(t2)", src, dest);
+    case IntegerKind::half:
+      return println("  sh a%d, %d(t2)", src, dest);
+    case IntegerKind::word:
+      return println("  sw a%d, %d(t2)", src, dest);
+    case IntegerKind::dword:
+      return println("  sd a%d, %d(t2)", src, dest);
+    }
+  };
+  auto store = [&](Type *type, int src, int dest) {
+    switch (type->kind) {
+    case TypeKind::boolean:
+      return println("  sb a%d, %d(t2)", src, dest);
+    case TypeKind::integer:
+      return store_gp2(cast<IntegerType>(type), src, dest);
+    case TypeKind::floating:
+      return stroe_fp2(cast<FloatingType>(type), src, dest);
+    case TypeKind::pointer:
+      return println("  sd a%d, %d(t2)", src, dest);
+    case TypeKind::function:
+    case TypeKind::array:
+    case TypeKind::record:
+    case TypeKind::kw_void:
+      assert(false);
+    }
+  };
+  auto store_size = [&](int bytes, int src, int dest) {
+    println("  mv t0, a%d", src);
+    switch (bytes) {
+    case 8:
+      return println("  sd t0, %d(t2)", dest);
+    case 7:
+      println("  srli t1, t0, 48");
+      println("  sb t1, %d(t2)", dest + 6);
+    case 6:
+      println("  srli t1, a0, 32");
+      println("  sh t1, %d(sp)", dest + 4);
+      return println("  sw t0, %d(t2)", dest);
+    case 5:
+      println("  srli t1, a0, 32");
+      println("  sb t1, %d(t2)", dest + 4);
+    case 4:
+      return println("  sw t0, %d(t2)", dest);
+    case 3:
+      println("  srli t1, t0, 16");
+      println("  sb t1, %d(t2)", dest + 2);
+    case 2:
+      return println("  sh t0, %d(t2)", dest);
+    case 1:
+      return println("  sb t0, %d(t2)", dest);
+    }
+  };
+  Type *first = 0, *second = 0;
+  int offset = 0, size = context_->size_of(expr->type);
+  println("# save result");
+  println("  li t0, %d", expr->ret_buffer->offset);
+  println("  add t2, fp, t0");
+  if (dump(context_, expr->type, first, second, &offset)) {
+    if (!second) {
+      store(first, 0, 0);
+      return println("  mv a0, t2");
+    } else if (is_float(first) && is_float(second)) {
+      store(first, 0, 0);
+      store(second, 1, offset);
+      return println("  mv a0, t2");
+    } else if (is_float(first) && !is_float(second)) {
+      store(first, 0, 0);
+      store(second, 0, offset);
+      return println("  mv a0, t2");
+    } else if (!is_float(first) && is_float(second)) {
+      store(first, 0, 0);
+      store(second, 0, offset);
+      return println("  mv a0, t2");
+    }
+  }
+  if (size <= 8) {
+    store_size(size, 0, 0);
+  } else if (size <= 16) {
+    store_size(8, 0, 0);
+    store_size(size - 8, 1, 8);
+  }
+  return println("  mv a0, t2");
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {

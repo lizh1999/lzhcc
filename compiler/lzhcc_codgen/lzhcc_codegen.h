@@ -24,14 +24,11 @@ struct Pass {
   int inner4;
 };
 
+static auto dump(Context *, RecordType *, Type *&, Type *&, int *) -> bool;
+
 class Calling {
 public:
   Calling(Context *ctx) : ctx_(ctx) {}
-  static auto push(Type *&first, Type *&second, Type *in) -> bool;
-  auto dump(RecordType *record, Type *&first, Type *&second, int *offset)
-      -> bool;
-  auto dump(Type *type, Type *&first, Type *&second, int *offset) -> bool;
-
   auto stack_bytes() -> int { return sp_ * 8; }
   auto ref_bytes() -> int { return ref_; }
   auto reg_bytes() -> int { return (gp_ + fp_) * 8; }
@@ -41,7 +38,6 @@ public:
 
 private:
   enum { fp_max = 8, gp_max = 8 };
-  static auto is_float(Type *type) -> bool;
   auto fpfp() -> bool;
   auto gpgp() -> bool;
   auto fpgp() -> bool;
@@ -133,7 +129,7 @@ private:
 
   [[gnu::format(printf, 2, 3)]] auto println(const char *, ...) -> void;
 
-  [[noreturn]] auto expect_lvalue() -> void { std::abort(); }
+  [[noreturn]] auto expect_lvalue() -> void;
 
   int depth_;
   int counter_;

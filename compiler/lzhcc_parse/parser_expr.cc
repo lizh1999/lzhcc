@@ -333,7 +333,12 @@ auto Parser::call(Expr *func, FunctionType *type) -> Expr * {
       args[i] = context_->cast(context_->float64(), args[i]);
     }
   }
-  return context_->call(type->ret, func, std::move(args), params.size());
+  LValue *ret_buffer = nullptr;
+  if (type->ret->kind == TypeKind::record) {
+    ret_buffer = create_anon_local(type->ret);
+  }
+  return context_->call(type->ret, func, std::move(args), params.size(),
+                        ret_buffer);
 }
 
 auto Parser::primary() -> Expr * {

@@ -2,6 +2,60 @@
 
 namespace lzhcc {
 
+enum class PassKind {
+  gp,
+  fp,
+  sp,
+  spsp,
+  gpgp,
+  gpsp,
+  fpfp,
+  fpgp,
+  gpfp,
+  refgp,
+  refsp
+};
+struct Pass {
+  PassKind kind;
+  int inner0;
+  int inner1;
+  int inner2;
+  int inner3;
+  int inner4;
+};
+
+class Calling {
+public:
+  Calling(Context *ctx) : ctx_(ctx) {}
+  static auto push(Type *&first, Type *&second, Type *in) -> bool;
+  auto dump(RecordType *record, Type *&first, Type *&second, int *offset)
+      -> bool;
+  auto dump(Type *type, Type *&first, Type *&second, int *offset) -> bool;
+
+  auto stack_bytes() -> int { return sp_ * 8; }
+  auto ref_bytes() -> int { return ref_; }
+  auto reg_bytes() -> int { return (gp_ + fp_) * 8; }
+  auto gp() -> int { return gp_; }
+  auto operator()(CallExpr *expr) -> std::vector<Pass>;
+  auto operator()(std::span<LValue *> param) -> std::vector<Pass>;
+
+private:
+  enum { fp_max = 8, gp_max = 8 };
+  static auto is_float(Type *type) -> bool;
+  auto fpfp() -> bool;
+  auto gpgp() -> bool;
+  auto fpgp() -> bool;
+
+  auto floating(Type *type) -> Pass;
+  auto integer(Type *type) -> Pass;
+
+  int gp_ = 0;
+  int fp_ = 0;
+  int sp_ = 0;
+  int ref_ = 0;
+  Context *ctx_;
+};
+
 class Generator {
 public:
   Generator(Context *context);
@@ -10,8 +64,6 @@ public:
   auto codegen(GValue *gvalue) -> void;
 
 private:
-  auto store(Type *type, int& gp, int &fp, int offset) -> void;
-
   auto store(Type *type) -> void;
   auto store_integer(IntegerType *type) -> void;
   auto store_floating(FloatingType *type) -> void;
@@ -20,13 +72,12 @@ private:
   auto load_integer(IntegerType *type) -> void;
   auto load_floating(FloatingType *type) -> void;
 
-
   auto zero_expr(ZeroExpr *expr) -> void;
   auto value_expr(ValueExpr *expr) -> void;
   auto integer_expr(IntegerExpr *expr) -> void;
   auto floating_expr(FloatingExpr *expr) -> void;
 
-  auto cast(Type* src, Type* dest) -> void;
+  auto cast(Type *src, Type *dest) -> void;
   auto unary_expr(UnaryExpr *expr) -> void;
 
   auto add(BinaryExpr *expr) -> void;

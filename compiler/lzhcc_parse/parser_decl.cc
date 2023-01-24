@@ -152,6 +152,7 @@ auto Parser::union_decl(RecordType *type) -> void {
   type->members = std::move(members);
   type->size_bytes = align_to(size_bytes, align_bytes);
   type->align_bytes = align_bytes;
+  type->is_union = true;
 }
 
 enum {

@@ -52,48 +52,6 @@ auto Generator::codegen(GValue *gvalue) -> void {
   }
 }
 
-auto Generator::store(Type *type, int &gp, int &fp, int offset) -> void {
-  auto integer = [&](IntegerType *type) -> void {
-    switch (type->kind) {
-    case IntegerKind::byte:
-      return println("  sb a%d, %d(sp)", gp++, offset);
-    case IntegerKind::half:
-      return println("  sh a%d, %d(sp)", gp++, offset);
-    case IntegerKind::word:
-      return println("  sw a%d, %d(sp)", gp++, offset);
-    case IntegerKind::dword:
-      return println("  sd a%d, %d(sp)", gp++, offset);
-    }
-  };
-  auto floating = [&](FloatingType *type) -> void {
-    IntegerType int32(IntegerKind::word, Sign::sign);
-    IntegerType int64(IntegerKind::dword, Sign::sign);
-    switch (type->kind) {
-    case FloatingKind::float32:
-      return fp == 8 ? integer(&int32)
-                     : println("  fsw fa%d, %d(sp)", fp++, offset);
-    case FloatingKind::float64:
-      return fp == 8 ? integer(&int64)
-                     : println("  fsd fa%d, %d(sp)", fp++, offset);
-    }
-  };
-  switch (type->kind) {
-  case TypeKind::integer:
-    return integer(cast<IntegerType>(type));
-  case TypeKind::boolean:
-    return println("  sb a%d, %d(sp)", gp++, offset);
-  case TypeKind::pointer:
-    return println("  sd a%d, %d(sp)", gp++, offset);
-  case TypeKind::floating:
-    return floating(cast<FloatingType>(type));
-  case TypeKind::function:
-  case TypeKind::array:
-  case TypeKind::record:
-  case TypeKind::kw_void:
-    std::abort();
-  }
-}
-
 auto Generator::codegen(Function *function) -> void {
   auto name = function->name;
   return_label_ = counter_++;
@@ -108,77 +66,127 @@ auto Generator::codegen(Function *function) -> void {
   }
 
   println("%.*s:", (int)name.size(), name.data());
+  println("  mv t4, sp");
   push("fp");
   push("ra");
-  println("  li t0, -%d", function->stack_size);
+  println("  li t0, -%d", align_to(function->stack_size, 16) + 16);
   println("  add sp, sp, t0");
   println("  mv fp, sp");
-  // 226641842
-  int gp = 0, fp = 0, stack = function->stack_size + 16;
-  enum { GP_MAX = 8, FP_MAX = 8 };
-  for (auto param : function->params) {
-    if (param->type->kind == TypeKind::floating && fp < FP_MAX) {
-      switch (cast<FloatingType>(param->type)->kind) {
-      case FloatingKind::float32:
-        println("  fsw fa%d, %d(sp)", fp++, param->offset);
-        break;
-      case FloatingKind::float64:
-        println("  fsd fa%d, %d(sp)", fp++, param->offset);
-        break;
-      }
-    } else if (gp < GP_MAX) {
-      if (param->type->kind == TypeKind::floating) {
-        switch (cast<FloatingType>(param->type)->kind) {
-        case FloatingKind::float32:
-          println("  sw a%d, %d(sp)", gp++, param->offset);
-          break;
-        case FloatingKind::float64:
-          println("  sd a%d, %d(sp)", gp++, param->offset);
-          break;
-        }
-      } else if (param->type->kind == TypeKind::integer) {
-        switch (cast<IntegerType>(param->type)->kind) {
-        case IntegerKind::byte:
-          println("  sb a%d, %d(sp)", gp++, param->offset);
-          break;
-        case IntegerKind::half:
-          println("  sh a%d, %d(sp)", gp++, param->offset);
-          break;
-        case IntegerKind::word:
-          println("  sw a%d, %d(sp)", gp++, param->offset);
-          break;
-        case IntegerKind::dword:
-          println("  sd a%d, %d(sp)", gp++, param->offset);
-          break;
-        }
-      } else if (param->type->kind == TypeKind::boolean) {
-        println("  sb a%d, %d(sp)", gp++, param->offset);
-      } else {
-        println("  sd a%d, %d(sp)", gp++, param->offset);
-      }
-    } else {
-      println("#stack");
-      int size = context_->size_of(param->type);
-      assert(size != 0);
-      int label = counter_++;
-      println("  li t0, %d", stack);
-      println("  add t0, sp, t0");
-      println("  li t1, %d", param->offset);
-      println("  add t1, sp, t1");
-      println("  li t2, %d", size);
 
-      println(".L.%d:", label);
-      println("  lb t3, 0(t0)");
-      println("  sb t3, 0(t1)");
-      println("  addi t0, t0, 1");
-      println("  addi t1, t1, 1");
-      println("  addi t2, t2, -1");
-      println("  bne t2, zero, .L.%d", label);
-      stack += 8;
+  Calling calling(context_);
+  auto pass = calling(function->params);
+  auto &params = function->params;
+
+  auto store_gp = [&](int bytes, int src, int dest) {
+    switch (bytes) {
+    case 1:
+      return println("  sb a%d, %d(sp)", src, dest);
+    case 2:
+      return println("  sh a%d, %d(sp)", src, dest);
+    case 4:
+      return println("  sw a%d, %d(sp)", src, dest);
+    case 8:
+      return println("  sd a%d, %d(sp)", src, dest);
+    default:
+      assert(false);
+    }
+  };
+
+  auto store_sp = [&](int bytes, int src, int dest) {
+    println("  ld t0, %d(t4)", src * 8);
+    switch (bytes) {
+    case 1:
+      return println("  sb t0, %d(sp)", dest);
+    case 2:
+      return println("  sh t0, %d(sp)", dest);
+    case 4:
+      return println("  sw t0, %d(sp)", dest);
+    case 8:
+      return println("  sd t0, %d(sp)", dest);
+    default:
+      assert(false);
+    }
+  };
+
+  auto store_fp = [&](int bytes, int src, int dest) {
+    switch (bytes) {
+    case 4:
+      return println("  fsw fa%d, %d(sp)", src, dest);
+    case 8:
+      return println("  fsd fa%d, %d(sp)", src, dest);
+    default:
+      assert(false);
+    }
+  };
+
+  auto memcpy = [&](int dest, int bytes) {
+    println("  li t0, %d", dest);
+    println("  li t1, %d", bytes);
+    println("  addi t1, t0, t1");
+    println("  addi t0, sp, t0");
+    int label = counter_++;
+    println(".L.%d:", label);
+    println("  lb t2, 0(t3)");
+    println("  sb t2, 0(t0)");
+    println("  addi a0, t3, 1");
+    println("  addi t0, t0, 1");
+    println("  bne t0, t1, .L.%d", label);
+  };
+
+  for (int i = 0; i < params.size(); i++) {
+    auto [kind, inner0, inner1, inner2, inner3, _] = pass[i];
+    int size = context_->size_of(params[i]->type);
+    int offset = params[i]->offset;
+    switch (kind) {
+    case PassKind::gp:
+      store_gp(size, inner0, offset);
+      break;
+    case PassKind::fp:
+      store_fp(size, inner0, offset);
+      break;
+    case PassKind::sp:
+      store_sp(size, inner0, offset);
+      break;
+    case PassKind::spsp:
+      println("  ld t0, %d(t4)", inner0 * 8);
+      println("  sd t0, %d(sp)", offset);
+      store_sp(size - 8, inner1, offset + 8);
+      break;
+    case PassKind::gpgp: {
+      println("  sd a%d, %d(sp)", inner0, offset);
+      store_gp(size - 8, inner1, offset + 8);
+      break;
+    }
+    case PassKind::gpsp: {
+      println("  sd a%d, %d(sp)", inner0, offset);
+      store_sp(size - 8, inner1, offset + 8);
+      break;
+    }
+    case PassKind::fpfp:
+      store_fp(inner2, inner0, offset);
+      store_fp(inner3, inner1, offset + size - inner3);
+      break;
+    case PassKind::fpgp:
+      store_fp(inner2, inner0, offset);
+      store_gp(inner3, inner1, offset + size - inner3);
+      break;
+    case PassKind::gpfp:
+      store_gp(inner2, inner0, offset);
+      store_fp(inner3, inner1, offset + size - inner3);
+      break;
+    case PassKind::refgp:
+      println("  mv t3, a%d", inner0);
+      memcpy(offset, size);
+      break;
+    case PassKind::refsp:
+      println("  ld t3, (%d)t4", inner1);
+      memcpy(offset, size);
+      break;
     }
   }
+
   if (function->va_area) {
-    int i = function->params.size();
+    int i = calling.gp();
     for (int j = 0; i < 8; i++, j += 8) {
       println("  sd a%d, %d(sp)", i, function->va_area->offset + j);
     }
@@ -186,7 +194,7 @@ auto Generator::codegen(Function *function) -> void {
 
   stmt_proxy(function->stmt);
   println(".L.return.%d:", return_label_);
-  println("  li t0, %d", function->stack_size);
+  println("  li t0, %d", align_to(function->stack_size, 16) + 16);
   println("  add sp, sp, t0");
   pop("ra");
   pop("fp");

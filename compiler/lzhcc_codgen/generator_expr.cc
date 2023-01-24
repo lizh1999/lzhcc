@@ -324,6 +324,9 @@ auto Generator::cast(Type *src, Type *dest) -> void {
   if (src->kind == TypeKind::boolean) {
     return;
   }
+  if (src == dest) {
+    return;
+  }
   if (dest->kind == TypeKind::boolean) {
     cmp_zero(src);
     return println("  snez a0, a0");
@@ -813,12 +816,21 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
     rvalue();
     return shift_right(expr->type);
   case BinaryKind::assign:
-    expr_proxy(expr->rhs);
-    push("a0");
-    addr_proxy(expr->lhs);
-    pop("a1");
-    store(expr->type);
-    return println("  mv a0, a1");
+    if (expr->type->kind == TypeKind::floating) {
+      expr_proxy(expr->rhs);
+      pushf("fa0");
+      addr_proxy(expr->lhs);
+      popf("fa0");
+      store(expr->type);
+    } else {
+      expr_proxy(expr->rhs);
+      push("a0");
+      addr_proxy(expr->lhs);
+      pop("a1");
+      store(expr->type);
+      println("  mv a0, a1");
+    }
+    break;
   case BinaryKind::comma:
     expr_proxy(expr->lhs);
     return expr_proxy(expr->rhs);
@@ -845,66 +857,318 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
   }
 }
 
-auto Generator::call_expr(CallExpr *expr) -> void {
+auto Calling::push(Type *&first, Type *&second, Type *in) -> bool {
+  if (first && second) {
+    return false;
+  } else if (first) {
+    second = in;
+  } else {
+    first = in;
+  }
+  return true;
+}
+
+auto Calling::dump(RecordType *record, Type *&first, Type *&second, int *offset)
+    -> bool {
+  if (record->is_union) {
+    return false;
+  }
+  for (auto member : record->members) {
+    if (!dump(member.type, first, second, offset)) {
+      return false;
+    } else if (second) {
+      *offset += member.offset;
+    }
+  }
+  return true;
+}
+
+auto Calling::dump(Type *type, Type *&first, Type *&second, int *offset)
+    -> bool {
+  switch (type->kind) {
+  default:
+    assert(false);
+  case TypeKind::boolean:
+  case TypeKind::integer:
+  case TypeKind::floating:
+  case TypeKind::pointer:
+    return push(first, second, type);
+  case TypeKind::record:
+    return dump(cast<RecordType>(type), first, second, offset);
+  case TypeKind::array: {
+    auto array = cast<ArrayType>(type);
+    for (int i = 0; i < array->length; i++) {
+      if (!dump(array->base, first, second, offset)) {
+        return false;
+      } else if (second) {
+        *offset += i * ctx_->size_of(array->base);
+      }
+    }
+    return true;
+  }
+  }
+}
+
+auto Calling::operator()(CallExpr *expr) -> std::vector<Pass> {
+  std::vector<Pass> pass(expr->args.size());
   auto &args = expr->args;
-  int gp = 0, fp = 0, stack = 0;
-  enum { FP_MAX = 8, GP_MAX = 8 };
-  std::vector<bool> by_stack(expr->arg_num);
   for (int i = 0; i < expr->arg_num; i++) {
-    if (args[i]->type->kind == TypeKind::floating && fp < FP_MAX) {
-      fp++;
-    } else if (gp < GP_MAX) {
-      gp++;
-    } else {
-      by_stack[i] = true;
-      stack++;
-    }
-  }
-  int av_arg_num = expr->args.size() - expr->arg_num;
-  stack += std::max(0, av_arg_num + gp - GP_MAX);
-  if (depth_ % 2 != stack % 2) {
-    stack++;
-    println("  addi sp, sp, -8");
-  }
-  for (int i = args.size(); i--;) {
-    if (by_stack[i]) {
-      expr_proxy(args[i]);
-      if (args[i]->type->kind == TypeKind::floating) {
-        pushf("fa0");
-      } else {
-        push("a0");
-      }
-    }
-  }
-  for (int i = args.size(); i--;) {
-    if (!by_stack[i]) {
-      expr_proxy(args[i]);
-      if (args[i]->type->kind == TypeKind::floating) {
-        pushf("fa0");
-      } else {
-        push("a0");
-      }
-    }
-  }
-
-  expr_proxy(expr->func);
-  println("  mv t0, a0");
-
-  gp = fp = 0;
-  for (int i = 0; i < expr->arg_num; i++) {
-    if (args[i]->type->kind == TypeKind::floating && fp < FP_MAX) {
-      popf(fp++);
-    } else if (gp < GP_MAX) {
-      pop(gp++);
-    }
+    pass[i] = floating(args[i]->type);
   }
   for (int i = expr->arg_num; i < args.size(); i++) {
-    if (gp < GP_MAX) {
-      pop(gp++);
+    pass[i] = integer(args[i]->type);
+  }
+  ref_ = align_to(ref_, 16);
+  sp_ = align_to(sp_, 2);
+  return pass;
+}
+
+auto Calling::operator()(std::span<LValue *> param) -> std::vector<Pass> {
+  std::vector<Pass> pass(param.size());
+  for (int i = 0; i < param.size(); i++) {
+    pass[i] = floating(param[i]->type);
+  }
+  ref_ = align_to(ref_, 16);
+  sp_ = align_to(sp_, 2);
+  return pass;
+}
+
+auto Calling::is_float(Type *type) -> bool {
+  return type->kind == TypeKind::floating;
+}
+
+auto Calling::fpfp() -> bool { return fp_ + 1 < fp_max; }
+auto Calling::gpgp() -> bool { return gp_ + 1 < gp_max; }
+auto Calling::fpgp() -> bool { return fp_ < fp_max && gp_ < gp_max; }
+
+auto Calling::floating(Type *type) -> Pass {
+  if (is_float(type)) {
+    return fp_ < fp_max ? Pass{PassKind::fp, fp_++} : integer(type);
+  } else if (type->kind == TypeKind::record) {
+    Type *first = 0, *second = 0;
+    int offset = 0;
+    auto record = cast<RecordType>(type);
+    if (!dump(record, first, second, &offset)) {
+      return integer(type);
+    } else if (second == 0) {
+      return floating(first);
+    } else if (is_float(first) && is_float(second) && fpfp()) {
+      return Pass{PassKind::fpfp,        fp_++, fp_++, ctx_->size_of(first),
+                  ctx_->size_of(second), offset};
+    } else if (is_float(first) && !is_float(second) && fpgp()) {
+      return Pass{PassKind::fpgp,        fp_++, gp_++, ctx_->size_of(first),
+                  ctx_->size_of(second), offset};
+    } else if (!is_float(first) && is_float(second) && fpgp()) {
+      return Pass{PassKind::gpfp,        gp_++, fp_++, ctx_->size_of(first),
+                  ctx_->size_of(second), offset};
     }
   }
-  println("  jalr t0");
-  println("  addi sp, sp, %d", stack * 8);
+  return integer(type);
+}
+
+auto Calling::integer(Type *type) -> Pass {
+  int size = ctx_->size_of(type);
+  if (size <= 8 && gp_ < gp_max) {
+    return Pass{PassKind::gp, gp_++};
+  } else if (size <= 8 /* && gp_ == gp_max */) {
+    return Pass{PassKind::sp, sp_++};
+  } else if (size <= 16 && gpgp()) {
+    return Pass{PassKind::gpgp, gp_++, gp_++};
+  } else if (size <= 16 && gp_ < gp_max) {
+    return Pass{PassKind::gpsp, gp_++, sp_++};
+  } else if (size <= 16 /* && gp_ == gp_max */) {
+    auto pass = Pass{PassKind::spsp, sp_++, sp_++};
+    return pass;
+  } else {
+    int align = ctx_->align_of(type);
+    ref_ = align_to(ref_, std::min(align, 16));
+    auto pass = gp_ < gp_max ? Pass{PassKind::refgp, ref_, gp_++}
+                             : Pass{PassKind::refsp, ref_, sp_++};
+    ref_ += size;
+    return pass;
+  }
+}
+
+auto Generator::call_expr(CallExpr *expr) -> void {
+  auto &args = expr->args;
+  Calling calling(context_);
+  auto pass = calling(expr);
+
+  int ref = -align_to(-depth_, 2) * 8 - calling.ref_bytes();
+  int stk = ref - calling.stack_bytes();
+  int reg = stk - calling.reg_bytes();
+  int old_depth = depth_;
+  depth_ = reg / 8;
+  expr_proxy(expr->func);
+
+  println("# old_dep: %d new_dep: %d ref: %d stk: %d reg: %d", old_depth * 8,
+          depth_ * 8, calling.ref_bytes(), calling.stack_bytes(),
+          calling.reg_bytes());
+  push("a0");
+
+  auto memcpy = [&](int dest, int bytes) {
+    println("  li t0, %d", dest);
+    println("  li t1, %d", bytes + dest);
+    println("  add t1, sp, t1");
+    println("  add t0, sp, t0");
+    int label = counter_++;
+    println(".L.%d:", label);
+    println("  lb t2, 0(a0)");
+    println("  sb t2, 0(t0)");
+    println("  addi a0, a0, 1");
+    println("  addi t0, t0, 1");
+    println("  bne t0, t1, .L.%d", label);
+  };
+
+  auto store_dword = [&](Type *type, int dest) {
+    if (type->kind == TypeKind::record) {
+      println("  ld a0, 0(a0)");
+      println("  sd a0, %d(sp)", dest);
+    } else if (type->kind == TypeKind::floating) {
+      println("  fsd fa0, %d(sp)", dest);
+    } else {
+      println("  sd a0, %d(sp)", dest);
+    }
+  };
+
+  auto store_gp = [&](int size, int src, int dest) {
+    switch (size) {
+    case 1:
+      println("  lb t0, %d(a0)", src);
+      break;
+    case 2:
+      println("  lh t0, %d(a0)", src);
+      break;
+    case 4:
+      println("  lw t0, %d(a0)", src);
+      break;
+    case 8:
+      println("  ld t0, %d(a0)", src);
+      break;
+    default:
+      assert(false);
+    }
+    println("  sd t0, %d(sp)", dest);
+  };
+
+  auto store_fp = [&](int size, int src, int dest) {
+    switch (size) {
+    case 4:
+      println("  flw fa0, %d(a0)", src);
+      break;
+    case 8:
+      println("  fld fa0, %d(a0)", src);
+      break;
+    default:
+      fprintf(stderr, "error: %d\n", size);
+      assert(false);
+    }
+    println("  fsd fa0, %d(sp)", dest);
+  };
+
+  int cnt = 0;
+  for (int i = args.size(); i--;) {
+    println("# generate %dth argument", i);
+    expr_proxy(expr->args[i]);
+    println("# push %dth argument", i);
+    auto type = expr->args[i]->type;
+    int size = context_->size_of(type);
+    auto [kind, inner0, inner1, inner2, inner3, inner4] = pass[i];
+    switch (kind) {
+    case PassKind::gp:
+    case PassKind::fp:
+      store_dword(type, reg + cnt++ * 8);
+      break;
+    case PassKind::sp:
+      println("# sp");
+      store_dword(type, stk + inner0 * 8);
+      break;
+    case PassKind::spsp:
+      println("  ld t0, 0(a0)");
+      println("  ld t1, 8(a0)");
+      println("  sd t0, %d(sp)", stk + inner0 * 8);
+      println("  sd t1, %d(sp)", stk + inner1 * 8);
+      break;
+    case PassKind::gpsp:
+      println("# gpsp");
+      println("  ld t0, 0(a0)");
+      println("  ld t1, 8(a0)");
+      println("  sd t0, %d(sp)", reg + cnt++ * 8);
+      println("  sd t1, %d(sp)", stk + inner1 * 8);
+      break;
+    case PassKind::gpgp:
+      println("  ld t0, 0(a0)");
+      println("  ld t1, 8(a0)");
+      println("  sd t0, %d(sp)", reg + cnt++ * 8);
+      println("  sd t1, %d(sp)", reg + cnt++ * 8);
+      break;
+    case PassKind::fpfp:
+      store_fp(inner2, 0, reg + cnt++ * 8);
+      store_fp(inner3, inner4, reg + cnt++ * 8);
+      break;
+    case PassKind::fpgp:
+      store_fp(inner2, 0, reg + cnt++ * 8);
+      store_gp(inner3, inner4, reg + cnt++ * 8);
+      break;
+    case PassKind::gpfp:
+      store_gp(inner2, 0, reg + cnt++ * 8);
+      store_fp(inner3, inner4, reg + cnt++ * 8);
+      break;
+    case PassKind::refgp:
+      memcpy(ref + inner0, size);
+      break;
+    case PassKind::refsp:
+      memcpy(ref + inner0, size);
+      println("  li t0, %d", ref + inner0);
+      println("  addi t0, t0, sp");
+      println("  sd t0, %d(sp)", stk + inner1 * 8);
+      break;
+    }
+  }
+  for (int i = 0; i < args.size(); i++) {
+    println("# pop %dth argument", i);
+    switch (pass[i].kind) {
+    case PassKind::gp:
+    case PassKind::gpsp:
+      println("  ld a%d, %d(sp)", pass[i].inner0, reg + --cnt * 8);
+      break;
+    case PassKind::fp:
+      println("  fld fa%d, %d(sp)", pass[i].inner0, reg + --cnt * 8);
+      break;
+    case PassKind::gpgp:
+      println("  ld a%d, %d(sp)", pass[i].inner1, reg + --cnt * 8);
+      println("  ld a%d, %d(sp)", pass[i].inner0, reg + --cnt * 8);
+      break;
+    case PassKind::fpfp:
+      println("  fld fa%d, %d(sp)", pass[i].inner1, reg + --cnt * 8);
+      println("  fld fa%d, %d(sp)", pass[i].inner0, reg + --cnt * 8);
+      break;
+    case PassKind::fpgp:
+      println("  ld a%d, %d(sp)", pass[i].inner1, reg + --cnt * 8);
+      println("  fld fa%d, %d(sp)", pass[i].inner0, reg + --cnt * 8);
+      break;
+    case PassKind::gpfp:
+      println("  fld fa%d, %d(sp)", pass[i].inner1, reg + --cnt * 8);
+      println("  ld a%d, %d(sp)", pass[i].inner0, reg + --cnt * 8);
+      break;
+    case PassKind::refgp:
+      println("  li a%d, %d", pass[i].inner1, ref + pass[i].inner0);
+      println("  add a%d, sp, a%d", pass[i].inner1, pass[i].inner1);
+      break;
+    case PassKind::sp:
+    case PassKind::refsp:
+    case PassKind::spsp:
+      break;
+    }
+  }
+  pop("t1");
+  assert(depth_ == reg / 8);
+  println("  li t0, %d", stk);
+  println("  add sp, sp, t0");
+  println("  jalr t1");
+  println("  li t0, %d", -stk);
+  println("  add sp, sp, t0");
+  depth_ = old_depth;
 }
 
 auto Generator::stmt_expr(StmtExpr *expr) -> void {
@@ -929,33 +1193,27 @@ auto Generator::condition_expr(ConditionExpr *expr) -> void {
 }
 
 auto Generator::push(const char *reg) -> void {
-  println("  addi sp, sp, -8");
-  println("  sd %s, 0(sp)", reg);
+  println("  sd %s, %d(sp)", reg, --depth_ * 8);
 }
 
 auto Generator::pop(const char *reg) -> void {
-  println("  ld %s, 0(sp)", reg);
-  println("  addi sp, sp, 8");
+  println("  ld %s, %d(sp)", reg, depth_++ * 8);
 }
 
 auto Generator::pushf(const char *reg) -> void {
-  println("  addi sp, sp, -8");
-  println("  fsd %s, 0(sp)", reg);
+  println("  fsd %s, %d(sp)", reg, --depth_ * 8);
 }
 
 auto Generator::popf(const char *reg) -> void {
-  println("  fld %s, 0(sp)", reg);
-  println("  addi sp, sp, 8");
+  println("  fld %s, %d(sp)", reg, depth_++ * 8);
 }
 
 auto Generator::pop(int reg) -> void {
-  println("  ld a%d, 0(sp)", reg);
-  println("  addi sp, sp, 8");
+  println("  ld a%d, %d(sp)", reg, depth_++ * 8);
 }
 
 auto Generator::popf(int reg) -> void {
-  println("  fld fa%d, 0(sp)", reg);
-  println("  addi sp, sp, 8");
+  println("  fld fa%d, %d(sp)", reg, depth_++ * 8);
 }
 
 auto Generator::expr_proxy(Expr *expr) -> void {

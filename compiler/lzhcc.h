@@ -301,10 +301,10 @@ struct Member {
 };
 
 struct RecordType : Type {
-  RecordType(std::vector<Member> members, int size_bytes, int align_bytes)
-      : Type(TypeKind::record), members(std::move(members)),
+  RecordType(std::vector<Member> members, int size_bytes, int align_bytes, bool is_union)
+      : Type(TypeKind::record), members(std::move(members)), is_union(is_union),
         size_bytes(size_bytes), align_bytes(align_bytes) {}
-  static auto dummy() -> RecordType { return RecordType({}, -1, -1); }
+  static auto dummy() -> RecordType { return RecordType({}, -1, -1, false); }
   auto is_dummy() -> bool {
     return members.empty() && size_bytes == -1 && align_bytes == -1;
   }
@@ -312,6 +312,7 @@ struct RecordType : Type {
   std::vector<Member> members;
   int size_bytes;
   int align_bytes;
+  bool is_union;
 };
 
 enum class ValueKind {

@@ -67,15 +67,23 @@ auto Generator::codegen(Function *function) -> void {
 
   println("%.*s:", (int)name.size(), name.data());
   println("  mv t4, sp");
-  push("fp");
-  push("ra");
-  println("  li t0, -%d", align_to(function->stack_size, 16) + 16);
+  println("  sd fp, -8(sp)");
+  println("  sd ra, -16(sp)");
+  println("  addi sp, sp, -16");
+
+  Calling calling(context_);
+  auto pass = calling(function);
+  auto &params = function->params;
+
+  println("  li t0, -%d", align_to(function->stack_size, 16));
   println("  add sp, sp, t0");
   println("  mv fp, sp");
 
-  Calling calling(context_);
-  auto pass = calling(function->params);
-  auto &params = function->params;
+  auto func_type = cast<FunctionType>(function->type);
+  bool huge_object = 16 < context_->size_of(func_type->ret);
+  if (huge_object) {
+    push("a0");
+  }
 
   auto store_gp = [&](int bytes, int src, int dest) {
     println("  mv t0, a%d", src);
@@ -217,10 +225,118 @@ auto Generator::codegen(Function *function) -> void {
 
   stmt_proxy(function->stmt);
   println(".L.return.%d:", return_label_);
-  println("  li t0, %d", align_to(function->stack_size, 16) + 16);
+
+  auto load_gp = [&](IntegerType *type, int src, int dest) {
+    switch (type->kind) {
+    case IntegerKind::byte:
+      return println("  lb a%d, %d(t0)", dest, src);
+    case IntegerKind::half:
+      return println("  lh a%d, %d(t0)", dest, src);
+    case IntegerKind::word:
+      return println("  lw a%d, %d(t0)", dest, src);
+    case IntegerKind::dword:
+      return println("  ld a%d, %d(t0)", dest, src);
+    }
+  };
+  auto load_fp = [&](FloatingType *type, int src, int dest) {
+    switch (type->kind) {
+    case FloatingKind::float32:
+      return println("  flw fa%d, %d(t0)", dest, src);
+    case FloatingKind::float64:
+      return println("  fld fa%d, %d(t0)", dest, src);
+    }
+  };
+  auto load = [&](Type *type, int src, int dest) {
+    assert(dest < 8);
+    switch (type->kind) {
+    case TypeKind::boolean:
+      return println("  lb a%d, %d(t0)", dest, src);
+    case TypeKind::integer:
+      return load_gp(cast<IntegerType>(type), src, dest);
+    case TypeKind::floating:
+      return load_fp(cast<FloatingType>(type), src, dest);
+    case TypeKind::pointer:
+      return println("  ld a%d, %d(t0)", dest, src);
+    case TypeKind::function:
+    case TypeKind::array:
+    case TypeKind::record:
+    case TypeKind::kw_void:
+      assert(false);
+    }
+  };
+
+  auto load_size = [&](int size, int src, int dest) {
+    assert(dest < 8);
+    switch (size) {
+    case 5 ... 8:
+      return println("  ld a%d, %d(t0)", dest, src);
+    case 3 ... 4:
+      return println("  lw a%d, %d(t0)", dest, src);
+    case 2:
+      return println("  lh a%d, %d(t0)", dest, src);
+    case 1:
+      return println("  lb a%d, %d(t0)", dest, src);
+    }
+  };
+
+  auto is_float = [](Type *type) { return type->kind == TypeKind::floating; };
+
+  do {
+    if (func_type->ret->kind != TypeKind::record) {
+      break;
+    }
+    if (huge_object) {
+      println("# pop huge page");
+      pop("t1");
+    }
+    println("  mv t0, a0");
+    Type *first = 0, *second = 0;
+    int offset = 0, size = context_->size_of(func_type->ret);
+    if (dump(context_, func_type->ret, first, second, &offset)) {
+      if (!second) {
+        load(first, 0, 0);
+        break;
+      } else if (is_float(first) && is_float(second)) {
+        load(first, 0, 0);
+        load(second, offset, 1);
+        break;
+      } else if (!is_float(first) && is_float(second)) {
+        load(first, 0, 0);
+        load(second, offset, 0);
+        break;
+      } else if (is_float(first) && !is_float(second)) {
+        load(first, 0, 0);
+        load(second, offset, 0);
+        break;
+      }
+    }
+    if (size <= 8) {
+      load_size(size, 0, 0);
+    } else if (size <= 16) {
+      load_size(8, 0, 0);
+      load_size(size - 8, 8, 1);
+    } else {
+      println("  li t2, %d", size);
+      println("  add t2, t2, t0");
+      int label = counter_++;
+      println(".L.%d:", label);
+      println("  lb t3, 0(t0)");
+      println("  sb t3, 0(t1)");
+      println("  addi t0, t0, 1");
+      println("  addi t1, t1, 1");
+      println("  bne t0, t2, .L.%d", label);
+    }
+  } while (false);
+
+  assert(depth_ == 0);
+  // sp: 0x40007ffe40
+  // sp[-8]: 0x007ffe90
+
+  println("  li t0, %d", align_to(function->stack_size, 16));
   println("  add sp, sp, t0");
-  pop("ra");
-  pop("fp");
+  println("  addi sp, sp, 16");
+  println("  ld fp, -8(sp)");
+  println("  ld ra, -16(sp)");
   println("  ret");
 }
 
@@ -232,8 +348,6 @@ auto Generator::println(const char *fmt, ...) -> void {
   fputc('\n', out_);
 }
 
-auto Generator::expect_lvalue() -> void {
-  assert(false);
-}
+auto Generator::expect_lvalue() -> void { assert(false); }
 
 } // namespace lzhcc

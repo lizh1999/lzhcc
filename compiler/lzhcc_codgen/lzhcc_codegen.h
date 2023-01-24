@@ -24,7 +24,7 @@ struct Pass {
   int inner4;
 };
 
-static auto dump(Context *, RecordType *, Type *&, Type *&, int *) -> bool;
+auto dump(Context *, Type *, Type *&, Type *&, int *) -> bool;
 
 class Calling {
 public:
@@ -34,7 +34,7 @@ public:
   auto reg_bytes() -> int { return (gp_ + fp_) * 8; }
   auto gp() -> int { return gp_; }
   auto operator()(CallExpr *expr) -> std::vector<Pass>;
-  auto operator()(std::span<LValue *> param) -> std::vector<Pass>;
+  auto operator()(Function *func) -> std::vector<Pass>;
 
 private:
   enum { fp_max = 8, gp_max = 8 };

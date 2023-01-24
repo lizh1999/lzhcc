@@ -82,6 +82,7 @@ auto Generator::load_integer(IntegerType *type) -> void {
   case Scalar::int32:
     return println("  lw a0, 0(a0)");
   case Scalar::int64:
+  case Scalar::uint64:
     return println("  ld a0, 0(a0)");
   case Scalar::uint8:
     return println("  lbu a0, 0(a0)");
@@ -89,8 +90,6 @@ auto Generator::load_integer(IntegerType *type) -> void {
     return println("  lhu a0, 0(a0)");
   case Scalar::uint32:
     return println("  lwu a0, 0(a0)");
-  case Scalar::uint64:
-    return println("  ldu a0, 0(a0)");
   }
 }
 
@@ -423,10 +422,17 @@ auto Generator::store_floating(FloatingType *type) -> void {
 
 auto Generator::store_record(RecordType *type) -> void {
   int size = context_->size_of(type);
-  for (int i = 0; i < size; i++) {
-    println("  lb  t0, %d(a1)", i);
-    println("  sb  t0, %d(a0)", i);
-  }
+  println("  mv t0, a0");
+  println("  mv t1, a1");
+  println("  li t2, %d", size);
+  println("  add t2, t2, t0");
+  int label = counter_++;
+  println(".L.%d:", label);
+  println("  lb t3, 0(t1)");
+  println("  sb t3, 0(t0)");
+  println("  addi t1, t1, 1");
+  println("  addi t0, t0, 1");
+  println("  bne t0, t2, .L.%d", label);
 }
 
 auto Generator::store(Type *type) -> void {
@@ -859,7 +865,7 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
   }
 }
 
-auto push(Type *&first, Type *&second, Type *in) -> bool {
+static auto push(Type *&first, Type *&second, Type *in) -> bool {
   if (first && second) {
     return false;
   } else if (first) {
@@ -870,10 +876,8 @@ auto push(Type *&first, Type *&second, Type *in) -> bool {
   return true;
 }
 
-static auto dump(Context *, Type *, Type *&, Type *&, int *) -> bool;
-
-auto dump(Context *ctx, RecordType *record, Type *&first, Type *&second,
-          int *offset) -> bool {
+static auto dump(Context *ctx, RecordType *record, Type *&first, Type *&second,
+                 int *offset) -> bool {
   if (record->is_union) {
     return false;
   }
@@ -930,7 +934,12 @@ auto Calling::operator()(CallExpr *expr) -> std::vector<Pass> {
   return pass;
 }
 
-auto Calling::operator()(std::span<LValue *> param) -> std::vector<Pass> {
+auto Calling::operator()(Function *func) -> std::vector<Pass> {
+  auto &param = func->params;
+  auto func_type = cast<FunctionType>(func->type);
+  if (16 < ctx_->size_of(func_type->ret)) {
+    gp_++;
+  }
   std::vector<Pass> pass(param.size());
   for (int i = 0; i < param.size(); i++) {
     pass[i] = floating(param[i]->type);
@@ -1303,11 +1312,15 @@ auto Generator::condition_expr(ConditionExpr *expr) -> void {
 }
 
 auto Generator::push(const char *reg) -> void {
+  println("# push");
   println("  sd %s, %d(sp)", reg, --depth_ * 8);
+  println("# push depth %d", depth_);
 }
 
 auto Generator::pop(const char *reg) -> void {
+  println("# pop depth %d", depth_);
   println("  ld %s, %d(sp)", reg, depth_++ * 8);
+  println("# pop");
 }
 
 auto Generator::pushf(const char *reg) -> void {

@@ -424,7 +424,11 @@ auto Parser::unary() -> Expr * {
   case TokenKind::star: {
     auto token = consume();
     auto operand = cast();
-    return low_deref_op(context_, operand, token->location);
+    if (operand->type->kind == TypeKind::function) {
+      return operand;
+    } else {
+      return low_deref_op(context_, operand, token->location);
+    }
   }
   case TokenKind::exclaim: {
     auto token = consume();

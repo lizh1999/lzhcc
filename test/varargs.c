@@ -91,6 +91,18 @@ int sum2(int x, ...) {
   }
 }
 
+void fmt(char *buf, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  va_list ap2;
+  va_copy(ap2, ap);
+  vsprintf(buf, fmt, ap2);
+  va_end(ap2);
+
+  va_end(ap);
+}
+
 int main() {
   ASSERT(6, sum1(1, 2, 3, 0));
   ASSERT(21, sum2(1, 2.0, 3, 4.0, 5, 6.0, 0));
@@ -112,6 +124,8 @@ int main() {
                      12, 13, 14, 15, 16, 17, 18, 19, 20, 0));
   ASSERT(302, sum2_6(11.0, 12, 13, 14.0, 15, 16.0, 17, 18.0, 19, 1, 1, 10, 11,
                      12, 13, 14, 15, 16, 17, 18, 19, 20, 0));
+
+   ASSERT(0, ({ char buf[100]; fmt(buf, "%d %d", 2, 3); strcmp(buf, "2 3"); }));
 
   printf("OK\n");
   return 0;

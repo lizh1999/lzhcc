@@ -116,7 +116,7 @@ auto const_member_int(MemberExpr *expr, int64_t *offset, LabelRef label)
   if (!label || expr->type->kind != TypeKind::array) {
     return false;
   } else if (const_addr(expr->record, offset, label)) {
-    offset += expr->offset;
+    offset += expr->member->offset;
     return true;
   } else {
     return false;
@@ -351,7 +351,7 @@ auto const_addr(Expr *expr, int64_t *offset, LabelRef label) -> bool {
   if (expr->kind == ExperKind::member) {
     auto member = cast<MemberExpr>(expr);
     if (const_addr(member->record, offset, label)) {
-      *offset += member->offset;
+      *offset += member->member->offset;
       return true;
     } else {
       return false;

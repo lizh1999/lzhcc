@@ -53,7 +53,7 @@ auto Generator::binary_addr(BinaryExpr *expr) -> void {
 
 auto Generator::member_addr(MemberExpr *expr) -> void {
   addr_proxy(expr->record);
-  println("  addi a0, a0, %d", expr->offset);
+  println("  addi a0, a0, %d", expr->member->offset);
 }
 
 auto Generator::addr_proxy(Expr *expr) -> void {
@@ -780,6 +780,14 @@ auto Generator::visitf(BinaryExpr *expr) -> void {
   popf("fa1");
 }
 
+static auto get_member(Expr *expr) -> Member * {
+  if (expr->kind != ExperKind::member) {
+    return nullptr;
+  } else {
+    return cast<MemberExpr>(expr)->member;
+  }
+}
+
 auto Generator::binary_expr(BinaryExpr *expr) -> void {
 #define rvalue()                                                               \
   expr_proxy(expr->rhs);                                                       \
@@ -835,6 +843,19 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
       push("a0");
       addr_proxy(expr->lhs);
       pop("a1");
+      auto mem = get_member(expr->lhs);
+      if (mem && mem->is_bitfield) {
+        println("  li t0, %ld", (1l << mem->bit_width) - 1);
+        println("  and a1, a1, t0");
+        println("  slli a1, a1, %d", mem->bit_offset);
+        println("  mv t1, a0");
+        load(mem->type);
+        long mask =((1l << mem->bit_width) - 1) << mem->bit_offset;
+        println("  li t0, %ld", ~mask);
+        println("  and a0, a0, t0");
+        println("  or a1, a0, a1");
+        println("  mv  a0, t1");
+      }
       store(expr->type);
       println("  mv a0, a1");
     }
@@ -1293,6 +1314,16 @@ auto Generator::stmt_expr(StmtExpr *expr) -> void {
 auto Generator::member_expr(MemberExpr *expr) -> void {
   addr_proxy(expr);
   load(expr->type);
+  auto mem = expr->member;
+  if (mem->is_bitfield) {
+    println("  slli a0, a0, %d", 64 - mem->bit_width - mem->bit_offset);
+    if (mem->type->kind != TypeKind::integer ||
+        cast<IntegerType>(mem->type)->sign != Sign::sign) {
+      println("  srli a0, a0, %d", 64 - mem->bit_width);
+    } else {
+      println("  srai a0, a0, %d", 64 - mem->bit_width);
+    }
+  }
 }
 
 auto Generator::condition_expr(ConditionExpr *expr) -> void {

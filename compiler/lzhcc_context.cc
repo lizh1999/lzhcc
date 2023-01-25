@@ -596,8 +596,8 @@ auto Context::call(Type *type, Expr *func, std::vector<Expr *> args,
   return create<CallExpr>(type, func, std::move(args), arg_num, ret_buffer);
 }
 
-auto Context::member(Type *type, Expr *record, int offset) -> Expr * {
-  return create<MemberExpr>(type, record, offset);
+auto Context::member(Type *type, Expr *record, Member *member) -> Expr * {
+  return create<MemberExpr>(type, record, member);
 }
 
 auto Context::stmt_expr(Type *type, BlockStmt *stmt) -> Expr * {

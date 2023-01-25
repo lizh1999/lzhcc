@@ -13,6 +13,7 @@
 namespace lzhcc {
 
 inline auto align_to(int x, int y) -> int { return (x + y - 1) / y * y; }
+inline auto align_down(int x, int y) -> int { return x / y * y; }
 
 //
 // lzhcc_diagnostic.cc
@@ -298,6 +299,9 @@ struct Member {
   Type *type;
   int name;
   int offset;
+  bool is_bitfield;
+  int bit_offset;
+  int bit_width;
 };
 
 struct RecordType : Type {
@@ -485,10 +489,10 @@ struct CallExpr : Expr {
 };
 
 struct MemberExpr : Expr {
-  MemberExpr(Type *type, Expr *record, int offset)
-      : Expr(ExperKind::member, type), record(record), offset(offset) {}
+  MemberExpr(Type *type, Expr *record, Member *member)
+      : Expr(ExperKind::member, type), record(record), member(member) {}
   Expr *record;
-  int offset;
+  Member *member;
 };
 
 struct ConditionExpr : Expr {
@@ -765,7 +769,7 @@ public:
   auto call(Type *type, Expr *func, std::vector<Expr *> args, int arg_num,
             LValue *ret_buffer) -> Expr *;
 
-  auto member(Type *type, Expr *record, int offset) -> Expr *;
+  auto member(Type *type, Expr *record, Member *member) -> Expr *;
 
   // stmt
   auto empty_stmt() -> Stmt *;

@@ -87,7 +87,7 @@ auto Parser::struct_or_union_decl() -> Type * {
 
 auto Parser::struct_decl(RecordType *type) -> void {
   consume(TokenKind::open_brace);
-  int offset = 0;
+  int bits = 0;
   int align_bytes = 1;
   std::vector<Member> members;
   while (!consume_if(TokenKind::close_brace)) {
@@ -100,6 +100,18 @@ auto Parser::struct_decl(RecordType *type) -> void {
       }
       is_first = false;
       auto [name, type] = declarator(base);
+
+      bool is_bitfield = false;
+      int bit_width = 0;
+      if (auto token = consume_if(TokenKind::colon)) {
+        is_bitfield = true;
+        if (int64_t tmp; const_int(&tmp)) {
+          bit_width = tmp;
+        } else {
+          context_->fatal(token->location, "");
+        }
+      }
+
       bool is_flexible = false;
       if (type->kind == TypeKind::array) {
         auto array = cast<ArrayType>(type);
@@ -109,20 +121,33 @@ auto Parser::struct_decl(RecordType *type) -> void {
       }
       int size = is_flexible ? 0 : context_->size_of(type);
       int align = attr.align_bytes ?: context_->align_of(type);
-      offset = align_to(offset, align);
-      members.push_back(Member{type, name->inner, offset});
-      offset += size;
       align_bytes = std::max(align_bytes, align);
-      if (is_flexible) {
-        consume(TokenKind::semi);
-        if (!next_is(TokenKind::close_brace)) {
-          context_->fatal(position_->location, "");
+      if (is_bitfield) {
+        int type_bits = size * 8;
+        if (bits / type_bits != (bits + bit_width - 1) / type_bits) {
+          bits = align_to(bits, type_bits);
         }
-        break;
+        int offset = align_down(bits / 8, size);
+        int bit_offset = bits % type_bits;
+        bits += bit_width;
+        members.push_back(
+            Member{type, name->inner, offset, true, bit_offset, bit_width});
+      } else {
+        bits = align_to(bits, align * 8);
+        members.push_back(Member{type, name->inner, bits / 8});
+        bits += size * 8;
+
+        if (is_flexible) {
+          consume(TokenKind::semi);
+          if (!next_is(TokenKind::close_brace)) {
+            context_->fatal(position_->location, "");
+          }
+          break;
+        }
       }
     }
   }
-  int size_bytes = align_to(offset, align_bytes);
+  int size_bytes = align_to(bits, align_bytes * 8) / 8;
   type->members = std::move(members);
   type->size_bytes = size_bytes;
   type->align_bytes = align_bytes;

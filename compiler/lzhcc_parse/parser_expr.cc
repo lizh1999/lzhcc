@@ -80,10 +80,7 @@ auto Parser::record_init(RecordType *record) -> Init * {
     RecordInit::Children children;
     consume(TokenKind::open_brace);
     auto &members = record->members;
-    int member_size = 0;
-    if (!members.empty()) {
-      member_size = members.back().offset ? members.size() : 1;
-    }
+    int member_size = record->is_union ? 1 : members.size();
     for (int i = 0; !consume_if(TokenKind::close_brace); i++) {
       if (i == member_size) {
         context_->fatal(position_->location, "");
@@ -204,7 +201,7 @@ auto Parser::init_local_record(Expr *expr, RecordInit *init, int loc)
   Expr *result = nullptr;
   auto &children = init->children;
   for (auto [member, init] : init->children) {
-    auto base = context_->member(member->type, expr, member->offset);
+    auto base = context_->member(member->type, expr, member);
     auto rhs = this->init_local(base, init, loc);
     if (!result) {
       result = rhs;
@@ -1176,7 +1173,7 @@ auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {
     context->fatal(loc, "");
   }
   auto &member = record->members[i];
-  return context->member(member.type, lhs, member.offset);
+  return context->member(member.type, lhs, &member);
 }
 
 } // namespace lzhcc

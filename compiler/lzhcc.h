@@ -497,8 +497,7 @@ struct MemberExpr : Expr {
 
 struct ConditionExpr : Expr {
   ConditionExpr(Type *type, Expr *cond, Expr *then, Expr *else_)
-      : Expr(ExprKind::condition, type), cond(cond), then(then), else_(else_) {
-  }
+      : Expr(ExprKind::condition, type), cond(cond), then(then), else_(else_) {}
   Expr *cond;
   Expr *then;
   Expr *else_;

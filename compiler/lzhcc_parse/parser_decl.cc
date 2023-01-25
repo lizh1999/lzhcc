@@ -93,6 +93,15 @@ auto Parser::struct_decl(RecordType *type) -> void {
   while (!consume_if(TokenKind::close_brace)) {
     VarAttr attr{};
     auto base = declspec(&attr);
+    if (base->kind == TypeKind::record && consume_if(TokenKind::semi)) {
+      int size = context_->size_of(base);
+      int align = attr.align_bytes ?: context_->align_of(base);
+      align_bytes = std::max(align_bytes, align);
+      bits = align_to(bits, align * 8);
+      members.push_back(Member{base, -1, bits / 8});
+      bits += size * 8;
+      continue;
+    }
     bool is_first = true;
     while (!consume_if(TokenKind::semi)) {
       if (!is_first) {
@@ -163,7 +172,15 @@ auto Parser::union_decl(RecordType *type) -> void {
   int align_bytes = 1;
   std::vector<Member> members;
   while (!consume_if(TokenKind::close_brace)) {
-    auto base = declspec();
+     VarAttr attr{};
+    auto base = declspec(&attr);
+    if (base->kind == TypeKind::record && consume_if(TokenKind::semi)) {
+      int size = context_->size_of(base);
+      int align = attr.align_bytes ?: context_->align_of(base);
+      align_bytes = std::max(align_bytes, align);
+      members.push_back(Member{base, -1, 0});
+      continue;
+    }
     bool is_first = true;
     while (!consume_if(TokenKind::semi)) {
       if (!is_first) {

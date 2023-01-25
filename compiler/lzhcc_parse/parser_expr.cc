@@ -1226,18 +1226,28 @@ auto low_member_op(Context *context, Expr *lhs, int rhs, int loc) -> Expr * {
   if (lhs->type->kind != TypeKind::record) {
     context->fatal(loc, "");
   }
-  auto record = cast<RecordType>(lhs->type);
-  size_t i = 0;
-  for (; i < record->members.size(); i++) {
-    if (record->members[i].name == rhs) {
-      break;
+
+  std::vector<Member *> stack;
+  std::function<bool(RecordType *)> dfs = [&](RecordType *record) -> bool {
+    for (auto &mem : record->members) {
+      stack.push_back(&mem);
+      auto child = cast<RecordType>(mem.type);
+      if (mem.name == rhs || (mem.name < 0 && dfs(child))) {
+        return true;
+      } else {
+        stack.pop_back();
+      }
     }
-  }
-  if (i == record->members.size()) {
+    return false;
+  };
+  if (!dfs(cast<RecordType>(lhs->type))) {
     context->fatal(loc, "");
   }
-  auto &member = record->members[i];
-  return context->member(member.type, lhs, &member);
+  Expr *result = lhs;
+  for (auto &mem : stack) {
+    result = context->member(mem->type, result, mem);
+  }
+  return result;
 }
 
 } // namespace lzhcc

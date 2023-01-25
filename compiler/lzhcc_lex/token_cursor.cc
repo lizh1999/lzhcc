@@ -18,7 +18,7 @@ TokenCursor::TokenCursor(CharCursor cursor, Context *context)
       sb_elif(context->push_identifier("elif")),
       sb_endif(context->push_identifier("endif")),
       sb_error(context->push_identifier("error")), top_cursor_(cursor, context),
-      context_(context) {
+      context_(context), counter_(0) {
   top_token_ = top_cursor_();
   fs::path path = context_->filename(top_token_.location);
   file_.push(path);
@@ -42,6 +42,16 @@ TokenCursor::TokenCursor(CharCursor cursor, Context *context)
         .expand_disable = true,
         .location = in.location,
         .inner = context_->push_literal("\"" + file_.top() + "\""),
+    };
+  });
+  context_->builtin_macro("__COUNTER__", [&](Token in) -> Token {
+    return Token{
+        .kind = TokenKind::numeric,
+        .leading_space = in.leading_space,
+        .start_of_line = in.start_of_line,
+        .expand_disable = false,
+        .location = in.location,
+        .inner = context_->push_literal(std::to_string(counter_++)),
     };
   });
 }

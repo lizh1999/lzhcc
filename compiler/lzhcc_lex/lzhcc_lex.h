@@ -79,6 +79,7 @@ private:
   std::stack<int> cond_stack_;
   std::stack<std::string> file_;
   std::stack<int> line_;
+  int counter_;
   Context *context_;
 };
 

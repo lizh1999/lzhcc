@@ -58,15 +58,15 @@ auto Generator::member_addr(MemberExpr *expr) -> void {
 
 auto Generator::addr_proxy(Expr *expr) -> void {
   switch (expr->kind) {
-  case ExperKind::value:
+  case ExprKind::value:
     return value_addr(cast<ValueExpr>(expr));
-  case ExperKind::unary:
+  case ExprKind::unary:
     return unary_addr(cast<UnaryExpr>(expr));
-  case ExperKind::binary:
+  case ExprKind::binary:
     return binary_addr(cast<BinaryExpr>(expr));
-  case ExperKind::member:
+  case ExprKind::member:
     return member_addr(cast<MemberExpr>(expr));
-  case ExperKind::call:
+  case ExprKind::call:
     return call_expr(cast<CallExpr>(expr));
   default:
     expect_lvalue();
@@ -781,7 +781,7 @@ auto Generator::visitf(BinaryExpr *expr) -> void {
 }
 
 static auto get_member(Expr *expr) -> Member * {
-  if (expr->kind != ExperKind::member) {
+  if (expr->kind != ExprKind::member) {
     return nullptr;
   } else {
     return cast<MemberExpr>(expr)->member;
@@ -845,6 +845,7 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
       pop("a1");
       auto mem = get_member(expr->lhs);
       if (mem && mem->is_bitfield) {
+        println("  mv t2, a1");
         println("  li t0, %ld", (1l << mem->bit_width) - 1);
         println("  and a1, a1, t0");
         println("  slli a1, a1, %d", mem->bit_offset);
@@ -854,10 +855,13 @@ auto Generator::binary_expr(BinaryExpr *expr) -> void {
         println("  li t0, %ld", ~mask);
         println("  and a0, a0, t0");
         println("  or a1, a0, a1");
-        println("  mv  a0, t1");
+        println("  mv a0, t1");
+        store(expr->type);
+        println("  mv a0, t2");
+      } else {
+        store(expr->type);
+        println("  mv a0, a1");
       }
-      store(expr->type);
-      println("  mv a0, a1");
     }
     break;
   case BinaryKind::comma:
@@ -1368,25 +1372,25 @@ auto Generator::popf(int reg) -> void {
 
 auto Generator::expr_proxy(Expr *expr) -> void {
   switch (expr->kind) {
-  case ExperKind::zero:
+  case ExprKind::zero:
     return zero_expr(cast<ZeroExpr>(expr));
-  case ExperKind::value:
+  case ExprKind::value:
     return value_expr(cast<ValueExpr>(expr));
-  case ExperKind::integer:
+  case ExprKind::integer:
     return integer_expr(cast<IntegerExpr>(expr));
-  case ExperKind::floating:
+  case ExprKind::floating:
     return floating_expr(cast<FloatingExpr>(expr));
-  case ExperKind::unary:
+  case ExprKind::unary:
     return unary_expr(cast<UnaryExpr>(expr));
-  case ExperKind::binary:
+  case ExprKind::binary:
     return binary_expr(cast<BinaryExpr>(expr));
-  case ExperKind::call:
+  case ExprKind::call:
     return call_expr(cast<CallExpr>(expr));
-  case ExperKind::stmt:
+  case ExprKind::stmt:
     return stmt_expr(cast<StmtExpr>(expr));
-  case ExperKind::member:
+  case ExprKind::member:
     return member_expr(cast<MemberExpr>(expr));
-  case ExperKind::condition:
+  case ExprKind::condition:
     return condition_expr(cast<ConditionExpr>(expr));
   }
 }

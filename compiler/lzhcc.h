@@ -383,7 +383,7 @@ struct Declaration : Value {
   std::string_view name;
 };
 
-enum class ExperKind {
+enum class ExprKind {
   zero,
   value,
   integer,
@@ -397,38 +397,38 @@ enum class ExperKind {
 };
 
 struct Expr {
-  Expr(ExperKind kind, Type *type) : kind(kind), type(type) {}
-  const ExperKind kind;
+  Expr(ExprKind kind, Type *type) : kind(kind), type(type) {}
+  const ExprKind kind;
   Type *type;
 };
 
 struct ZeroExpr : Expr {
   ZeroExpr(Type *type, Expr *expr, int64_t size)
-      : Expr(ExperKind::zero, type), expr(expr), size(size) {}
+      : Expr(ExprKind::zero, type), expr(expr), size(size) {}
   Expr *expr;
   int64_t size;
 };
 
 struct ValueExpr : Expr {
-  ValueExpr(Value *value) : Expr(ExperKind::value, value->type), value(value) {}
+  ValueExpr(Value *value) : Expr(ExprKind::value, value->type), value(value) {}
   Value *value;
 };
 
 struct IntegerExpr : Expr {
   IntegerExpr(Type *type, int64_t value)
-      : Expr(ExperKind::integer, type), value(value) {}
+      : Expr(ExprKind::integer, type), value(value) {}
   int64_t value;
 };
 
 struct FloatingExpr : Expr {
   FloatingExpr(Type *type, double value)
-      : Expr(ExperKind::floating, type), value(value) {}
+      : Expr(ExprKind::floating, type), value(value) {}
   double value;
 };
 
 struct StmtExpr : Expr {
   StmtExpr(Type *type, struct BlockStmt *stmt)
-      : Expr(ExperKind::stmt, type), stmt(stmt) {}
+      : Expr(ExprKind::stmt, type), stmt(stmt) {}
   struct BlockStmt *stmt;
 };
 
@@ -443,7 +443,7 @@ enum class UnaryKind {
 
 struct UnaryExpr : Expr {
   UnaryExpr(UnaryKind kind, Type *type, Expr *operand)
-      : Expr(ExperKind::unary, type), kind(kind), operand(operand) {}
+      : Expr(ExprKind::unary, type), kind(kind), operand(operand) {}
   UnaryKind kind;
   Expr *operand;
 };
@@ -471,7 +471,7 @@ enum class BinaryKind {
 
 struct BinaryExpr : Expr {
   BinaryExpr(BinaryKind kind, Type *type, Expr *lhs, Expr *rhs)
-      : Expr(ExperKind::binary, type), kind(kind), lhs(lhs), rhs(rhs) {}
+      : Expr(ExprKind::binary, type), kind(kind), lhs(lhs), rhs(rhs) {}
   BinaryKind kind;
   Expr *lhs;
   Expr *rhs;
@@ -480,7 +480,7 @@ struct BinaryExpr : Expr {
 struct CallExpr : Expr {
   CallExpr(Type *type, Expr *func, std::vector<Expr *> args, int arg_num,
            LValue *ret_buffer)
-      : Expr(ExperKind::call, type), func(func), args(std::move(args)),
+      : Expr(ExprKind::call, type), func(func), args(std::move(args)),
         arg_num(arg_num), ret_buffer(ret_buffer) {}
   Expr *func;
   std::vector<Expr *> args;
@@ -490,14 +490,14 @@ struct CallExpr : Expr {
 
 struct MemberExpr : Expr {
   MemberExpr(Type *type, Expr *record, Member *member)
-      : Expr(ExperKind::member, type), record(record), member(member) {}
+      : Expr(ExprKind::member, type), record(record), member(member) {}
   Expr *record;
   Member *member;
 };
 
 struct ConditionExpr : Expr {
   ConditionExpr(Type *type, Expr *cond, Expr *then, Expr *else_)
-      : Expr(ExperKind::condition, type), cond(cond), then(then), else_(else_) {
+      : Expr(ExprKind::condition, type), cond(cond), then(then), else_(else_) {
   }
   Expr *cond;
   Expr *then;

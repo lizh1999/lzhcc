@@ -810,6 +810,21 @@ auto Parser::condition() -> Expr * {
 }
 
 auto Parser::assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr * {
+  // Convert `A.x op= C to tmp = &A, (*tmp).x = (*tmp).x op C`
+  if (lhs->kind == ExprKind::member) {
+    auto mem = cast<MemberExpr>(lhs);
+    auto tmp = create_anon_local(context_->pointer_to(mem->record->type));
+    auto ref = context_->value(tmp);
+    auto expr1 = context_->assign(tmp->type, ref,
+                                  context_->refrence(tmp->type, mem->record));
+    auto expr2 = context_->member(
+        lhs->type, context_->deref(mem->record->type, expr1), mem->member);
+    auto expr3 =
+        context_->assign(lhs->type, expr2, lower(context_, expr2, rhs, loc));
+    return context_->comma(expr3->type,
+                           context_->comma(expr2->type, expr1, expr2), expr3);
+  }
+
   // decltype(lhs) * tmp;
   auto tmp = create_anon_local(context_->pointer_to(lhs->type));
   auto ref = context_->value(tmp);

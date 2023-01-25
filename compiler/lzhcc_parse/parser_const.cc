@@ -42,23 +42,23 @@ auto const_int(Expr *expr, int64_t *value, LabelRef label) -> bool {
     return true;
   }
   switch (expr->kind) {
-  case ExperKind::integer:
+  case ExprKind::integer:
     *value = cast<IntegerExpr>(expr)->value;
     return true;
-  case ExperKind::unary:
+  case ExprKind::unary:
     return const_unary_int(cast<UnaryExpr>(expr), value, label);
-  case ExperKind::binary:
+  case ExprKind::binary:
     return const_binary_int(cast<BinaryExpr>(expr), value, label);
-  case ExperKind::condition:
+  case ExprKind::condition:
     return const_condition_int(cast<ConditionExpr>(expr), value, label);
-  case ExperKind::value:
+  case ExprKind::value:
     return const_value_int(cast<ValueExpr>(expr), value, label);
-  case ExperKind::member:
+  case ExprKind::member:
     return const_member_int(cast<MemberExpr>(expr), value, label);
-  case ExperKind::zero:
-  case ExperKind::call:
-  case ExperKind::stmt:
-  case ExperKind::floating:
+  case ExprKind::zero:
+  case ExprKind::call:
+  case ExprKind::stmt:
+  case ExprKind::floating:
     return false;
   }
 }
@@ -77,21 +77,21 @@ auto const_float(Expr *expr, double *value) -> bool {
     return true;
   }
   switch (expr->kind) {
-  case ExperKind::floating:
+  case ExprKind::floating:
     *value = cast<FloatingExpr>(expr)->value;
     return true;
-  case ExperKind::unary:
+  case ExprKind::unary:
     return const_unary_float(cast<UnaryExpr>(expr), value);
-  case ExperKind::binary:
+  case ExprKind::binary:
     return const_binary_float(cast<BinaryExpr>(expr), value);
-  case ExperKind::condition:
+  case ExprKind::condition:
     return const_condition_float(cast<ConditionExpr>(expr), value);
-  case ExperKind::zero:
-  case ExperKind::value:
-  case ExperKind::integer:
-  case ExperKind::call:
-  case ExperKind::stmt:
-  case ExperKind::member:
+  case ExprKind::zero:
+  case ExprKind::value:
+  case ExprKind::integer:
+  case ExprKind::call:
+  case ExprKind::stmt:
+  case ExprKind::member:
     return false;
   }
 }
@@ -330,7 +330,7 @@ auto const_condition_float(ConditionExpr *expr, double *value) -> bool {
 }
 
 auto const_addr(Expr *expr, int64_t *offset, LabelRef label) -> bool {
-  if (expr->kind == ExperKind::value) {
+  if (expr->kind == ExprKind::value) {
     auto value = cast<ValueExpr>(expr)->value;
     if (value->kind != ValueKind::global) {
       return false;
@@ -339,7 +339,7 @@ auto const_addr(Expr *expr, int64_t *offset, LabelRef label) -> bool {
     *offset = 0;
     return true;
   }
-  if (expr->kind == ExperKind::unary) {
+  if (expr->kind == ExprKind::unary) {
     auto unary = cast<UnaryExpr>(expr);
     if (unary->kind == UnaryKind::deref) {
       return const_int(unary->operand, offset, label);
@@ -348,7 +348,7 @@ auto const_addr(Expr *expr, int64_t *offset, LabelRef label) -> bool {
     }
   }
 
-  if (expr->kind == ExperKind::member) {
+  if (expr->kind == ExprKind::member) {
     auto member = cast<MemberExpr>(expr);
     if (const_addr(member->record, offset, label)) {
       *offset += member->member->offset;

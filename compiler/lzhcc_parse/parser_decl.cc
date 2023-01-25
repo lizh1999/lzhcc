@@ -124,6 +124,10 @@ auto Parser::struct_decl(RecordType *type) -> void {
       align_bytes = std::max(align_bytes, align);
       if (is_bitfield) {
         int type_bits = size * 8;
+        if (bit_width == 0) {
+          bits = align_to(bits, type_bits);
+          continue;
+        }
         if (bits / type_bits != (bits + bit_width - 1) / type_bits) {
           bits = align_to(bits, type_bits);
         }

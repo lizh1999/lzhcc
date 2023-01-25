@@ -278,8 +278,51 @@ auto Parser::init_global_record(RecordInit *init, std::span<uint8_t> out,
   auto &children = init->children;
   for (auto [member, init] : init->children) {
     int start = member->offset;
-    int count = context_->size_of(member->type);
-    init_global(init, out.subspan(start, count), relocations, loc);
+    if (member->is_bitfield) {
+      assert(init->kind == InitKind::scalar);
+      auto expr = cast<ScalarInit>(init)->expr;
+      int64_t value;
+      if (!const_int(expr, &value, 0)) {
+        context_->fatal(loc, "");
+      }
+      uint64_t old;
+      uint8_t *buf = out.data() + start;
+
+      int bytes = context_->size_of(member->type);
+      switch (bytes) {
+      case 1:
+        old = *buf;
+        break;
+      case 2:
+        old = *(uint16_t *)buf;
+        break;
+      case 4:
+        old = *(uint32_t *)buf;
+        break;
+      case 8:
+        old = *(uint64_t *)buf;
+        break;
+      }
+      uint64_t mask = (1l << member->bit_width) - 1;
+      old |= (value & mask) << member->bit_offset;
+      switch (bytes) {
+      case 1:
+        *buf = old;
+        break;
+      case 2:
+        *(uint16_t *)buf = old;
+        break;
+      case 4:
+        *(uint32_t *)buf = old;
+        break;
+      case 8:
+        *(uint64_t *)buf = old;
+        break;
+      }
+    } else {
+      int count = context_->size_of(member->type);
+      init_global(init, out.subspan(start, count), relocations, loc);
+    }
   }
 }
 

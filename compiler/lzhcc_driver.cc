@@ -86,6 +86,7 @@ static auto parse_args(std::span<char *> args, Context *context) {
         usage(EXIT_FAILURE);
       }
       result.include_paths.push_back(args[++i]);
+      continue;
     }
 
     if (arg == "-D") {
@@ -93,6 +94,14 @@ static auto parse_args(std::span<char *> args, Context *context) {
         usage(EXIT_FAILURE);
       }
       context->define_macro(args[++i]);
+      continue;
+    }
+
+    if (arg == "-U") {
+      if (i + 1 == args.size()) {
+        usage(EXIT_FAILURE);
+      }
+      context->remove_macro(args[++i]);
       continue;
     }
 
@@ -108,6 +117,11 @@ static auto parse_args(std::span<char *> args, Context *context) {
 
     if (arg.starts_with("-D")) {
       context->define_macro(args[i] + 2);
+      continue;
+    }
+
+    if (arg.starts_with("-U")) {
+      context->remove_macro(args[i] + 2);
       continue;
     }
 

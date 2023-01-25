@@ -680,6 +680,7 @@ public:
   auto to_string(Token &token) -> std::string_view;
 
   auto remove_macro(int name) -> void;
+  auto remove_macro(const char *name) -> void;
   auto find_macro(int name) -> Macro *;
   auto object_macro(int name, std::vector<Token> replace) -> void;
   auto define_macro(const char *text) -> void;

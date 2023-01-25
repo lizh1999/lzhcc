@@ -100,4 +100,8 @@ check -D
 echo foo | $LZHCC -Dfoo=bar -E - | grep -q bar
 check -D
 
+# -U
+echo foo | $LZHCC -Dfoo=bar -Ufoo -E - | grep -q foo
+check -U
+
 echo OK

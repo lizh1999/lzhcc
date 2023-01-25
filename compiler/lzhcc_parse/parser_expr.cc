@@ -457,8 +457,14 @@ auto Parser::unary() -> Expr * {
     return context_->negative(type, operand);
   }
   case TokenKind::amp: {
-    consume();
+    auto token = consume();
     auto operand = cast();
+    if (operand->kind == ExprKind::member) {
+      auto mem = cast<MemberExpr>(operand);
+      if (mem->member->is_bitfield) {
+        context_->fatal(token->location, "cannot take address of bitfield");
+      }
+    }
     return low_refernce_op(context_, operand);
   }
   case TokenKind::star: {

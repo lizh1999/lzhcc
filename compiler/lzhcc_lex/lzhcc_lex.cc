@@ -1,6 +1,24 @@
 #include "lzhcc_lex.h"
+#include <time.h>
 
 namespace lzhcc {
+
+static auto format_date(struct tm *tm) -> const char * {
+  static char mon[][4] = {
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  };
+  static char buffer[32];
+  sprintf(buffer, "\"%s %2d %d\"", mon[tm->tm_mon], tm->tm_mday,
+          tm->tm_year + 1900);
+  return buffer;
+}
+
+static auto format_time(struct tm *tm) -> const char * {
+  static char buffer[32];
+  sprintf(buffer, "\"%02d:%02d:%02d\"", tm->tm_hour, tm->tm_min, tm->tm_sec);
+  return buffer;
+}
 
 auto lex(CharCursor chars, Context &context) -> std::vector<Token> {
   context.define_macro("_LP64", "1");
@@ -49,6 +67,11 @@ auto lex(CharCursor chars, Context &context) -> std::vector<Token> {
   context.define_macro("__riscv_div", "1");
   context.define_macro("__riscv_float_abi_double", "1");
   context.define_macro("__riscv_flen", "64");
+
+  time_t now = time(nullptr);
+  struct tm *tm = localtime(&now);
+  context.define_macro("__DATE__", format_date(tm));
+  context.define_macro("__TIME__", format_time(tm));
 
   std::vector<Token> tokens;
   TokenCursor base(std::move(chars), &context);

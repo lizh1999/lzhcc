@@ -18,6 +18,14 @@ Generator::Generator(Context *context)
       fprintf(stderr, "cannot open output file: %s: %s", path, strerror(errno));
     }
   }
+  output_buf_ = open_memstream(&buf_, &buf_len_);
+}
+
+Generator::~Generator() {
+  fclose(output_buf_);
+  fwrite(buf_, buf_len_, 1, out_);
+  fclose(out_);
+  free(buf_);
 }
 
 auto Generator::codegen(GValue *gvalue) -> void {
@@ -362,9 +370,9 @@ auto Generator::codegen(Function *function) -> void {
 auto Generator::println(const char *fmt, ...) -> void {
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(out_, fmt, ap);
+  vfprintf(output_buf_, fmt, ap);
   va_end(ap);
-  fputc('\n', out_);
+  fputc('\n', output_buf_);
 }
 
 auto Generator::expect_lvalue() -> void { assert(false); }

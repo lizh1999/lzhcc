@@ -56,6 +56,7 @@ private:
 class Generator {
 public:
   Generator(Context *context);
+  ~Generator();
 
   auto codegen(Function *function) -> void;
   auto codegen(GValue *gvalue) -> void;
@@ -137,6 +138,9 @@ private:
   int return_label_;
 
   FILE *out_;
+  char *buf_;
+  size_t buf_len_;
+  FILE *output_buf_;
   Context *context_;
 };
 

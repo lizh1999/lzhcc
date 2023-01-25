@@ -245,6 +245,9 @@ auto Generator::codegen(Function *function) -> void {
   }
 
   stmt_proxy(function->stmt);
+  if (function->name == "main") {
+    println("  li a0, 0");
+  }
   println(".L.return.%d:", return_label_);
 
   auto load_gp = [&](IntegerType *type, int src, int dest) {
@@ -350,8 +353,6 @@ auto Generator::codegen(Function *function) -> void {
   } while (false);
 
   assert(depth_ == 0);
-  // sp: 0x40007ffe40
-  // sp[-8]: 0x007ffe90
 
   println("  li t0, %d", align_to(function->stack_size, 16));
   println("  add sp, sp, t0");

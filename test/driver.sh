@@ -92,4 +92,12 @@ echo foo > $tmp/dir/i-option-test
 echo "#include \"i-option-test\"" | $LZHCC -I$tmp/dir -E - | grep -q foo
 check -I
 
+# -D
+echo foo | $LZHCC -Dfoo -E - | grep -q 1
+check -D
+
+# -D
+echo foo | $LZHCC -Dfoo=bar -E - | grep -q bar
+check -D
+
 echo OK

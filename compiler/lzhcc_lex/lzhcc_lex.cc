@@ -82,6 +82,19 @@ auto lex(CharCursor chars, Context &context) -> std::vector<Token> {
   return tokens;
 }
 
+auto Context::define_macro(const char *text) -> void {
+  int equal = 0;
+  while (text[equal] && text[equal] != '=') {
+    equal++;
+  }
+  if (text[equal]) {
+    std::string name(text, text + equal);
+    define_macro(name.c_str(), text + equal + 1);
+  } else {
+    define_macro(text, "1");
+  }
+}
+
 auto Context::define_macro(const char *name, const char *text) -> void {
   auto chars = append_text(text, "");
   SourceCursor cursor(chars, this);

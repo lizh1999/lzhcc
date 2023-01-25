@@ -135,6 +135,15 @@ static auto parse_args(std::span<char *> args, Context *context) {
       continue;
     }
 
+    if (arg.starts_with("-O") || arg.starts_with("-W") ||
+        arg.starts_with("-g") || arg.starts_with("-std=") ||
+        arg == "-ffreestanding" || arg == "-fno-builtin" ||
+        arg == "-fno-omit-frame-pointer" || arg == "-fno-stack-protector" ||
+        arg == "-fno-strict-aliasing" || arg == "-m64" ||
+        arg == "-mno-red-zone" || arg == "-w") {
+      continue;
+    }
+
     if (arg[0] == '-' && arg.size() > 1) {
       fprintf(stderr, "unknow argument: %s\n", args[i]);
       exit(EXIT_FAILURE);

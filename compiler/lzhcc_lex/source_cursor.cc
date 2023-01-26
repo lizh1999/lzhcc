@@ -131,9 +131,9 @@ auto SourceCursor::string() -> Token {
   return token(TokenKind::string, location, literal);
 }
 
-auto SourceCursor::character() -> Token {
-  std::string text = "\'";
+auto SourceCursor::character(std::string text) -> Token {
   int location = location_;
+  text.push_back(current_);
   advance_current();
   eat_while([&, last = '\0'](char ch) mutable {
     if (last != '\\' && ch == '\'') {
@@ -179,7 +179,7 @@ auto SourceCursor::identifier() -> Token {
   if (text == "L" && current_ == '"') {
     return string();
   } else if (text == "L" && current_ == '\'') {
-    return character();
+    return character("L");
   } else {
     int literal = context_->push_identifier(std::move(text));
     return token(TokenKind::identifier, location, literal);

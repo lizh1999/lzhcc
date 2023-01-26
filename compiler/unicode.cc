@@ -22,4 +22,27 @@ auto encode_utf8(uint32_t c) -> std::string {
   return buf;
 }
 
+auto decode_utf8(const char *&ptr) -> uint32_t {
+  if (0 <= *ptr) [[likely]] {
+    return *ptr++;
+  }
+  int length = 0;
+  uint32_t result = 0;
+  if (uint8_t c = *ptr; 0b11110000 <= c) {
+    length = 4;
+    result = c & 0b1111;
+  } else if (0b11100000 <= c) {
+    length = 3;
+    result = c & 0b11111;
+  } else {
+    length = 2;
+    result = c & 0b11111;
+  }
+  for (int i = 1; i < length; i++) {
+    result = result << 6 | (ptr[i] & 0b111111);
+  }
+  ptr += length;
+  return result;
+}
+
 } // namespace lzhcc

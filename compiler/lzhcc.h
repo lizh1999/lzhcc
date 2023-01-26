@@ -16,6 +16,7 @@ inline auto align_to(int x, int y) -> int { return (x + y - 1) / y * y; }
 inline auto align_down(int x, int y) -> int { return x / y * y; }
 
 auto encode_utf8(uint32_t c) -> std::string;
+auto decode_utf8(const char *& ptr) -> uint32_t;
 
 //
 // lzhcc_diagnostic.cc

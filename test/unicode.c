@@ -9,6 +9,11 @@ int main() {
   ASSERT(0, strcmp("中文", "\U00004E2D\U00006587"));
   ASSERT(0, strcmp("🌮", "\U0001F32E"));
 
+  ASSERT(-1, L'\xffffffff'>>31);
+  ASSERT(946, L'β');
+  ASSERT(21834, L'啊');
+  ASSERT(127843, L'🍣');
+
   printf("OK\n");
   return 0;
 }

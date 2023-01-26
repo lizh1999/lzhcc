@@ -16,7 +16,7 @@ static auto from_hex(char c) -> int {
 
 static auto isodigit(char ch) -> bool { return '0' <= ch && ch <= '7'; }
 
-static auto from_escape(const char *&ptr) -> char {
+static auto from_escape(const char *&ptr) -> int {
 #define case_return(value, target)                                             \
   case value:                                                                  \
     ptr++;                                                                     \
@@ -91,15 +91,25 @@ auto Parser::string() -> Expr * {
 auto Parser::character() -> Expr * {
   auto token = consume(TokenKind::character);
   auto raw = context_->storage(token->inner);
+
+  bool is_width = false;
+  if (raw[0] == 'L') {
+    is_width = true;
+    raw.remove_prefix(1);
+  }
   assert(raw.front() == '\'' && raw.back() == '\'');
   const char *ptr = raw.data() + 1;
-  char value;
+  int value;
   if (*ptr == '\\') {
     value = from_escape(ptr);
   } else {
-    value = *ptr++;
+    value = decode_utf8(ptr);
   }
-  return context_->integer(value);
+  if (is_width) {
+    return context_->integer(value);
+  } else {
+    return context_->integer((int8_t)value);
+  }
 }
 
 } // namespace lzhcc

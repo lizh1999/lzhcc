@@ -93,8 +93,12 @@ auto Parser::character() -> Expr * {
   auto raw = context_->storage(token->inner);
 
   bool is_width = false;
+  bool is_utf16 = false;
   if (raw[0] == 'L') {
     is_width = true;
+    raw.remove_prefix(1);
+  } else if (raw[0] == 'u') {
+    is_utf16 = true;
     raw.remove_prefix(1);
   }
   assert(raw.front() == '\'' && raw.back() == '\'');
@@ -107,6 +111,8 @@ auto Parser::character() -> Expr * {
   }
   if (is_width) {
     return context_->integer(value);
+  } else if (is_utf16) {
+    return context_->integer((uint16_t)value);
   } else {
     return context_->integer((int8_t)value);
   }

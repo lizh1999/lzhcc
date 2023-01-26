@@ -736,6 +736,7 @@ public:
   auto zero(Expr *expr, int64_t size) -> Expr *;
   auto value(Value *value) -> Expr *;
   auto integer(int8_t value) -> Expr *;
+  auto integer(uint16_t value) -> Expr *;
   auto integer(int32_t value) -> Expr *;
   auto integer(int64_t value) -> Expr *;
   auto floating(Type *type, double value) -> Expr *;

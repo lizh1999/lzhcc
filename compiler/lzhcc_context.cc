@@ -474,6 +474,10 @@ auto Context::integer(int8_t value) -> Expr * {
   return create<IntegerExpr>(int8(), value);
 }
 
+auto Context::integer(uint16_t value) -> Expr * {
+  return create<IntegerExpr>(uint16(), value);
+}
+
 auto Context::integer(int32_t value) -> Expr * {
   return create<IntegerExpr>(int32(), value);
 }

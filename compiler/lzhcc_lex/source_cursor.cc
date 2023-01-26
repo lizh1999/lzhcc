@@ -180,6 +180,8 @@ auto SourceCursor::identifier() -> Token {
     return string();
   } else if (text == "L" && current_ == '\'') {
     return character("L");
+  } else if(text == "u" && current_ == '\'') {
+    return character("u");
   } else {
     int literal = context_->push_identifier(std::move(text));
     return token(TokenKind::identifier, location, literal);

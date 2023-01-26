@@ -1174,11 +1174,35 @@ auto low_sub_op(Context *context, Expr *lhs, Expr *rhs, int loc) -> Expr * {
 
 auto low_shift_left_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
+  if (lhs->type->kind != TypeKind::integer ||
+      rhs->type->kind != TypeKind::integer) {
+    context->fatal(loc, "");
+  }
+  auto lhs_type = cast<IntegerType>(lhs->type);
+  if (lhs_type->kind < IntegerKind::word) {
+    if (lhs_type->sign == Sign::sign) {
+      lhs = context->cast(context->int32(), lhs);
+    } else {
+      lhs = context->cast(context->uint32(), lhs);
+    }
+  }
   return context->shift_left(lhs->type, lhs, rhs);
 }
 
 auto low_shift_right_op(Context *context, Expr *lhs, Expr *rhs, int loc)
     -> Expr * {
+  if (lhs->type->kind != TypeKind::integer ||
+      rhs->type->kind != TypeKind::integer) {
+    context->fatal(loc, "");
+  }
+  auto lhs_type = cast<IntegerType>(lhs->type);
+  if (lhs_type->kind < IntegerKind::word) {
+    if (lhs_type->sign == Sign::sign) {
+      lhs = context->cast(context->int32(), lhs);
+    } else {
+      lhs = context->cast(context->uint32(), lhs);
+    }
+  }
   return context->shift_right(lhs->type, lhs, rhs);
 }
 

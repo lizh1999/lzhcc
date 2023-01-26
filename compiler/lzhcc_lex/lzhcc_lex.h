@@ -19,7 +19,7 @@ private:
   auto numeric(std::string text = "") -> Token;
   auto punctuator() -> Token;
   auto identifier() -> Token;
-  auto string() -> Token;
+  auto string(std::string text = "") -> Token;
   auto character(std::string text = "") -> Token;
 
   auto token(TokenKind kind, int location, int inner = -1) -> Token;

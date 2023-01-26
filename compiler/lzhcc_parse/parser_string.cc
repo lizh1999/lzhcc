@@ -54,6 +54,9 @@ static auto from_escape(const char *&ptr) -> int {
 auto Parser::cook_string() -> std::string {
   auto token = consume(TokenKind::string);
   auto raw = context_->storage(token->inner);
+  if (raw.starts_with("u8")) {
+    raw.remove_prefix(2);
+  }
   assert(raw.front() == '"' && raw.back() == '"');
   std::string init;
   const char *ptr = raw.data() + 1;

@@ -111,9 +111,9 @@ static auto is_exp(char e, char s) -> bool {
   return is_e_or_p && is_sign;
 }
 
-auto SourceCursor::string() -> Token {
-  std::string text = "\"";
+auto SourceCursor::string(std::string text) -> Token {
   int location = location_;
+  text.push_back(current_);
   advance_current();
   eat_while([&, last = '\0'](char ch) mutable {
     if (last != '\\' && ch == '"') {
@@ -184,6 +184,8 @@ auto SourceCursor::identifier() -> Token {
     return character("u");
   } else if (text == "U" && current_ == '\'') {
     return character("U");
+  } else if (text == "u8" && current_ == '"') {
+    return string("u8");
   } else {
     int literal = context_->push_identifier(std::move(text));
     return token(TokenKind::identifier, location, literal);

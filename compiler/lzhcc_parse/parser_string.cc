@@ -79,7 +79,7 @@ template <class T> static auto cook_string(const char *ptr) -> std::vector<T> {
         data.insert(data.end(), str.begin(), str.end());
       }
 
-      if constexpr (std::is_same_v<T, uint32_t>) {
+      if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, int32_t>) {
         data.push_back(c);
       }
     }
@@ -100,6 +100,9 @@ auto Parser::cook_string(IntegerType *&type) -> std::string {
   } else if (raw[0] == 'U') {
     raw.remove_prefix(1);
     type = type ?: (IntegerType *)context_->uint32();
+  } else if (raw[0] == 'L') {
+    raw.remove_prefix(1);
+    type = type ?: (IntegerType *)context_->int32();
   } else {
     type = type ?: (IntegerType *)context_->int8();
   }
@@ -110,8 +113,12 @@ auto Parser::cook_string(IntegerType *&type) -> std::string {
     auto data = lzhcc::cook_string<uint16_t>(raw.data() + 1);
     auto ptr = reinterpret_cast<char *>(data.data());
     init.append(ptr, data.size() * 2);
-  } else {
+  } else if (type->sign == Sign::unsign) {
     auto data = lzhcc::cook_string<uint32_t>(raw.data() + 1);
+    auto ptr = reinterpret_cast<char *>(data.data());
+    init.append(ptr, data.size() * 4);
+  } else {
+    auto data = lzhcc::cook_string<int32_t>(raw.data() + 1);
     auto ptr = reinterpret_cast<char *>(data.data());
     init.append(ptr, data.size() * 4);
   }

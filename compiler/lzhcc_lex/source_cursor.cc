@@ -176,9 +176,7 @@ auto SourceCursor::identifier() -> Token {
       return false;
     }
   });
-  if (text == "L" && current_ == '"') {
-    return string();
-  } else if (text == "L" && current_ == '\'') {
+  if (text == "L" && current_ == '\'') {
     return character("L");
   } else if(text == "u" && current_ == '\'') {
     return character("u");
@@ -188,6 +186,8 @@ auto SourceCursor::identifier() -> Token {
     return string("u");
   } else if (text == "U" && current_ == '"') {
     return string("U");
+  } else if (text == "L" && current_ == '"') {
+    return string("L");
   } else if (text == "u8" && current_ == '"') {
     return string("u8");
   } else {

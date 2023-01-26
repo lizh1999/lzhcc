@@ -39,22 +39,54 @@ auto Parser::array_init(ArrayType *array) -> Init * {
   switch (next_kind()) {
   case TokenKind::string: {
     auto base = array->base;
-    if (base->kind != TypeKind::integer ||
-        cast<IntegerType>(base)->kind != IntegerKind::byte) {
+    if (base->kind != TypeKind::integer) {
       context_->fatal(position_->location, "");
     }
     IntegerType *type = 0;
     auto str = cook_string(type);
-    str.push_back(0);
-    int n = str.size();
-    if (array->length != -1 && array->length < n) {
-      n = array->length;
+    while (next_is(TokenKind::string)) {
+      str.append(cook_string(type));
     }
-    for (int i = 0; i < n; i++) {
-      auto expr = context_->integer(str[i]);
-      auto init = context_->scalar_init(expr);
-      children.push_back(init);
+    int size;
+    if (type->kind == IntegerKind::byte) {
+      str.push_back(0);
+      size = str.size();
+    } else if (type->kind == IntegerKind::half) {
+      str.push_back(0);
+      str.push_back(0);
+      size = str.size() / 2;
+    } else {
+      str.push_back(0);
+      str.push_back(0);
+      str.push_back(0);
+      str.push_back(0);
+      size = str.size() / 4;
     }
+    if (array->length != -1 && array->length < size) {
+      size = array->length;
+    }
+    switch (type->kind) {
+    case IntegerKind::byte:
+      for (int i = 0; i < size; i++) {
+        auto expr = context_->integer(str[i]);
+        auto init = context_->scalar_init(expr);
+        children.push_back(init);
+      }
+      break;
+    case IntegerKind::half: {
+      auto s = (uint16_t *)str.data();
+      for (int i = 0; i < size; i++) {
+        auto expr = context_->integer(s[i]);
+        auto init = context_->scalar_init(expr);
+        children.push_back(init);
+      }
+      break;
+    }
+    case IntegerKind::word:
+    case IntegerKind::dword:
+      assert(false);
+    }
+
     return context_->array_init(std::move(children), base);
   }
   case TokenKind::open_brace: {

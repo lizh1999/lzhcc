@@ -482,6 +482,10 @@ auto Context::integer(int32_t value) -> Expr * {
   return create<IntegerExpr>(int32(), value);
 }
 
+auto Context::integer(uint32_t value) -> Expr * {
+  return create<IntegerExpr>(uint32(), value);
+}
+
 auto Context::integer(int64_t value) -> Expr * {
   return create<IntegerExpr>(int64(), value);
 }

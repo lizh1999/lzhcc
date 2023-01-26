@@ -738,6 +738,7 @@ public:
   auto integer(int8_t value) -> Expr *;
   auto integer(uint16_t value) -> Expr *;
   auto integer(int32_t value) -> Expr *;
+  auto integer(uint32_t value) -> Expr *;
   auto integer(int64_t value) -> Expr *;
   auto floating(Type *type, double value) -> Expr *;
   auto integer(Type *type, int64_t value) -> Expr *;

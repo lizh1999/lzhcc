@@ -94,11 +94,15 @@ auto Parser::character() -> Expr * {
 
   bool is_width = false;
   bool is_utf16 = false;
+  bool is_uft32 = false;
   if (raw[0] == 'L') {
     is_width = true;
     raw.remove_prefix(1);
   } else if (raw[0] == 'u') {
     is_utf16 = true;
+    raw.remove_prefix(1);
+  } else if (raw[0] == 'U') {
+    is_uft32 = true;
     raw.remove_prefix(1);
   }
   assert(raw.front() == '\'' && raw.back() == '\'');
@@ -113,7 +117,9 @@ auto Parser::character() -> Expr * {
     return context_->integer(value);
   } else if (is_utf16) {
     return context_->integer((uint16_t)value);
-  } else {
+  } else if (is_uft32) {
+    return context_->integer((uint32_t) value);
+  }  else {
     return context_->integer((int8_t)value);
   }
 }

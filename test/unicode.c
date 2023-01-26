@@ -1,6 +1,9 @@
 #include "test.h"
 
 #define char16_t unsigned short
+#define char32_t unsigned int
+#define wchar_t int
+
 #define STR(x) #x
 
 int main() {
@@ -79,6 +82,14 @@ int main() {
   ASSERT(u'α', ({ char16_t x[] = u"αβ"; x[0]; }));
   ASSERT(u'β', ({ char16_t x[] = u"αβ"; x[1]; }));
   ASSERT(6, ({ char16_t x[] = u"αβ"; sizeof(x); }));
+
+  ASSERT(U'🤔', ({ char32_t x[] = U"🤔x"; x[0]; }));
+  ASSERT(U'x', ({ char32_t x[] = U"🤔x"; x[1]; }));
+  ASSERT(12, ({ char32_t x[] = U"🤔x"; sizeof(x); }));
+
+  ASSERT(L'🤔', ({ wchar_t x[] = L"🤔x"; x[0]; }));
+  ASSERT(L'x', ({ wchar_t x[] = L"🤔x"; x[1]; }));
+  ASSERT(12, ({ wchar_t x[] = L"🤔x"; sizeof(x); }));
 
   printf("OK\n");
   return 0;

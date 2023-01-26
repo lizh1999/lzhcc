@@ -82,7 +82,15 @@ auto Parser::array_init(ArrayType *array) -> Init * {
       }
       break;
     }
-    case IntegerKind::word:
+    case IntegerKind::word: {
+      auto s = (uint32_t *)str.data();
+      for (int i = 0; i < size; i++) {
+        auto expr = context_->integer(s[i]);
+        auto init = context_->scalar_init(expr);
+        children.push_back(init);
+      }
+      break;
+    }
     case IntegerKind::dword:
       assert(false);
     }

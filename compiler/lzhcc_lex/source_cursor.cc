@@ -186,6 +186,8 @@ auto SourceCursor::identifier() -> Token {
     return character("U");
   } else if (text == "u" && current_ == '"') {
     return string("u");
+  } else if (text == "U" && current_ == '"') {
+    return string("U");
   } else if (text == "u8" && current_ == '"') {
     return string("u8");
   } else {

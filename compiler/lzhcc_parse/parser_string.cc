@@ -78,6 +78,10 @@ template <class T> static auto cook_string(const char *ptr) -> std::vector<T> {
         auto str = encode_utf8(c);
         data.insert(data.end(), str.begin(), str.end());
       }
+
+      if constexpr (std::is_same_v<T, uint32_t>) {
+        data.push_back(c);
+      }
     }
   }
   return data;
@@ -93,6 +97,9 @@ auto Parser::cook_string(IntegerType *&type) -> std::string {
   } else if (raw[0] == 'u') {
     raw.remove_prefix(1);
     type = type ?: (IntegerType *)context_->uint16();
+  } else if (raw[0] == 'U') {
+    raw.remove_prefix(1);
+    type = type ?: (IntegerType *)context_->uint32();
   } else {
     type = type ?: (IntegerType *)context_->int8();
   }
@@ -104,7 +111,9 @@ auto Parser::cook_string(IntegerType *&type) -> std::string {
     auto ptr = reinterpret_cast<char *>(data.data());
     init.append(ptr, data.size() * 2);
   } else {
-    assert(false);
+    auto data = lzhcc::cook_string<uint32_t>(raw.data() + 1);
+    auto ptr = reinterpret_cast<char *>(data.data());
+    init.append(ptr, data.size() * 4);
   }
   return init;
 }
@@ -124,7 +133,11 @@ auto Parser::string() -> Expr * {
     init.push_back(0);
     size = init.size() / 2;
   } else {
-    assert(false);
+    init.push_back(0);
+    init.push_back(0);
+    init.push_back(0);
+    init.push_back(0);
+    size = init.size() / 4;
   }
   auto type = context_->array_of(base, size);
   int index = context_->push_literal(std::move(init));

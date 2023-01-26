@@ -3,7 +3,7 @@ int printf(const char *, ...);
 int sprintf(char *, const char *, ...);
 int vsprintf(char *buf, const char *fmt, void *ap);
 int strcmp(const char *, const char *);
-int memcmp(const char *, const char *, long);
+int memcmp(const void *, const void *, long);
 void exit(int n);
 long strlen (const char *);
 

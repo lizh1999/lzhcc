@@ -43,7 +43,9 @@ auto Parser::array_init(ArrayType *array) -> Init * {
         cast<IntegerType>(base)->kind != IntegerKind::byte) {
       context_->fatal(position_->location, "");
     }
-    auto str = cook_string();
+    IntegerType *type = 0;
+    auto str = cook_string(type);
+    str.push_back(0);
     int n = str.size();
     if (array->length != -1 && array->length < n) {
       n = array->length;

@@ -1,6 +1,6 @@
 #include "lzhcc_parse.h"
-
 #include <cassert>
+#include <type_traits>
 
 namespace lzhcc {
 
@@ -51,40 +51,82 @@ static auto from_escape(const char *&ptr) -> int {
 #undef case_return
 }
 
-auto Parser::cook_string() -> std::string {
-  auto token = consume(TokenKind::string);
-  auto raw = context_->storage(token->inner);
-  if (raw.starts_with("u8")) {
-    raw.remove_prefix(2);
-  }
-  assert(raw.front() == '"' && raw.back() == '"');
-  std::string init;
-  const char *ptr = raw.data() + 1;
+template <class T> static auto cook_string(const char *ptr) -> std::vector<T> {
+  std::vector<T> data;
   while (*ptr != '"') {
     if (*ptr == '\\' && ptr[1] != 'u' && ptr[1] != 'U') {
-      init.push_back(from_escape(ptr));
-    } else if (*ptr == '\\') {
-      ptr += 2;
+      data.push_back(from_escape(ptr));
+    } else {
       uint32_t c = 0;
-      while (std::isxdigit(*ptr)) {
-        c = c * 16 + from_hex(*ptr++);
+      if (*ptr != '\\') {
+        c = decode_utf8(ptr);
+      } else {
+        for (ptr += 2; std::isxdigit(*ptr);) {
+          c = c * 16 + from_hex(*ptr++);
+        }
       }
-      init.append(encode_utf8(c));
-    } else [[likely]] {
-      init.push_back(*ptr++);
+      if constexpr (std::is_same_v<T, uint16_t>) {
+        if (c < 0x10000) {
+          data.push_back(c);
+        } else {
+          c -= 0x10000;
+          data.push_back(0xd800 + ((c >> 10) & 0x3ff));
+          data.push_back(0xdc00 + (c & 0x3ff));
+        }
+      }
+      if constexpr (std::is_same_v<T, char>) {
+        auto str = encode_utf8(c);
+        data.insert(data.end(), str.begin(), str.end());
+      }
     }
   }
-  init.push_back('\0');
+  return data;
+}
+
+auto Parser::cook_string(IntegerType *&type) -> std::string {
+  auto token = consume(TokenKind::string);
+  auto raw = context_->storage(token->inner);
+  std::string init;
+  if (raw[0] == 'u' && raw[1] == '8') {
+    raw.remove_prefix(2);
+    type = type ?: (IntegerType *)context_->int8();
+  } else if (raw[0] == 'u') {
+    raw.remove_prefix(1);
+    type = type ?: (IntegerType *)context_->uint16();
+  } else {
+    type = type ?: (IntegerType *)context_->int8();
+  }
+  if (type->kind == IntegerKind::byte) {
+    auto data = lzhcc::cook_string<char>(raw.data() + 1);
+    init.append(data.data(), data.size());
+  } else if (type->kind == IntegerKind::half) {
+    auto data = lzhcc::cook_string<uint16_t>(raw.data() + 1);
+    auto ptr = reinterpret_cast<char *>(data.data());
+    init.append(ptr, data.size() * 2);
+  } else {
+    assert(false);
+  }
   return init;
 }
 
 auto Parser::string() -> Expr * {
-  auto init = cook_string();
+  IntegerType *base = 0;
+  auto init = cook_string(base);
   while (next_is(TokenKind::string)) {
-    init.pop_back();
-    init.append(cook_string());
+    init.append(cook_string(base));
   }
-  auto type = context_->array_of(context_->int8(), init.size());
+  int size;
+  if (base->kind == IntegerKind::byte) {
+    init.push_back(0);
+    size = init.size();
+  } else if (base->kind == IntegerKind::half) {
+    init.push_back(0);
+    init.push_back(0);
+    size = init.size() / 2;
+  } else {
+    assert(false);
+  }
+  auto type = context_->array_of(base, size);
   int index = context_->push_literal(std::move(init));
   auto init_view = context_->storage(index);
   auto var = create_anon_global(type, (uint8_t *)init_view.data(), {});
@@ -121,8 +163,8 @@ auto Parser::character() -> Expr * {
   } else if (is_utf16) {
     return context_->integer((uint16_t)value);
   } else if (is_uft32) {
-    return context_->integer((uint32_t) value);
-  }  else {
+    return context_->integer((uint32_t)value);
+  } else {
     return context_->integer((int8_t)value);
   }
 }

@@ -77,7 +77,7 @@ private:
   auto numeric() -> Expr *;
   auto integer(Token *token) -> Expr *;
   auto floating(Token *token) -> Expr *;
-  auto cook_string() -> std::string;
+  auto cook_string(IntegerType *&type) -> std::string;
   auto string() -> Expr *;
   auto character() -> Expr *;
   auto call(Expr *func, FunctionType *type) -> Expr *;

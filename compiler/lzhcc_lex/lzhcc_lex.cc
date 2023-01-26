@@ -41,6 +41,8 @@ auto lex(CharCursor chars, Context &context) -> std::vector<Token> {
   context.define_macro("__STDC_NO_COMPLEX__", "1");
   context.define_macro("__STDC_NO_THREADS__", "1");
   context.define_macro("__STDC_NO_VLA__", "1");
+  context.define_macro("__STDC_UTF_16__", "1");
+  context.define_macro("__STDC_UTF_32__", "1");
   context.define_macro("__STDC_VERSION__", "201112L");
   context.define_macro("__STDC__", "1");
   context.define_macro("__USER_LABEL_PREFIX__", "");

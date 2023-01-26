@@ -58,8 +58,15 @@ auto Parser::cook_string() -> std::string {
   std::string init;
   const char *ptr = raw.data() + 1;
   while (*ptr != '"') {
-    if (*ptr == '\\') {
+    if (*ptr == '\\' && ptr[1] != 'u' && ptr[1] != 'U') {
       init.push_back(from_escape(ptr));
+    } else if (*ptr == '\\') {
+      ptr += 2;
+      uint32_t c = 0;
+      while (std::isxdigit(*ptr)) {
+        c = c * 16 + from_hex(*ptr++);
+      }
+      init.append(encode_utf8(c));
     } else [[likely]] {
       init.push_back(*ptr++);
     }

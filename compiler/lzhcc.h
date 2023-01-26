@@ -15,6 +15,8 @@ namespace lzhcc {
 inline auto align_to(int x, int y) -> int { return (x + y - 1) / y * y; }
 inline auto align_down(int x, int y) -> int { return x / y * y; }
 
+auto encode_utf8(uint32_t c) -> std::string;
+
 //
 // lzhcc_diagnostic.cc
 //

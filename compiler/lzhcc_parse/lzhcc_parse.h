@@ -129,6 +129,7 @@ private:
     bool is_typedef;
     bool is_static;
     bool is_extern;
+    bool is_inline;
     int align_bytes;
   };
 

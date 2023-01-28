@@ -16,8 +16,13 @@ auto Parser::operator()() -> Module {
     auto [name, type] = declarator(base, &param_names);
     if (type->kind == TypeKind::function) {
       ret_ = cast<FunctionType>(type)->ret;
-      function(name, type, std::move(param_names),
-               attr.is_static ? Linkage::internal : Linkage::external);
+      Linkage linkage;
+      if (attr.is_static || (attr.is_inline && !attr.is_extern)) {
+        linkage = Linkage::internal;
+      } else {
+        linkage = Linkage::external;
+      }
+      function(name, type, std::move(param_names), linkage);
     } else {
       global(name, base, type, &attr);
     }

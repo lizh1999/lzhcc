@@ -48,6 +48,7 @@ Context::Context() {
   push_identifier("for");
   push_identifier("goto");
   push_identifier("if");
+  push_identifier("inline");
   push_identifier("int");
   push_identifier("long");
   push_identifier("_Noreturn");
@@ -87,6 +88,7 @@ Context::Context() {
   keyword_map_.push_back(TokenKind::kw_for);
   keyword_map_.push_back(TokenKind::kw_goto);
   keyword_map_.push_back(TokenKind::kw_if);
+  keyword_map_.push_back(TokenKind::kw_inline);
   keyword_map_.push_back(TokenKind::kw_int);
   keyword_map_.push_back(TokenKind::kw_long);
   keyword_map_.push_back(TokenKind::kw_noreturn);

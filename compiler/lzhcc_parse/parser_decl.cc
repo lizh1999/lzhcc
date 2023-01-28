@@ -294,6 +294,7 @@ auto Parser::is_typename(Token *token) -> bool {
   case TokenKind::kw_volatile:
   case TokenKind::kw_float:
   case TokenKind::kw_double:
+  case TokenKind::kw_inline:
     return true;
   case TokenKind::identifier:
     return find_type(token->inner);
@@ -338,6 +339,7 @@ loop:
     attr_goto(TokenKind::kw_typedef, is_typedef, consume());
     attr_goto(TokenKind::kw_static, is_static, consume());
     attr_goto(TokenKind::kw_extern, is_extern, consume());
+    attr_goto(TokenKind::kw_inline, is_inline, consume());
 
   case TokenKind::kw_auto:
   case TokenKind::kw_const:

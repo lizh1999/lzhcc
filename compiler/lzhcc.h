@@ -110,6 +110,7 @@ enum class TokenKind : uint8_t {
   kw_for,                // "for"
   kw_goto,               // "goto"
   kw_if,                 // "if"
+  kw_inline,             // "inline"
   kw_int,                // "int"
   kw_long,               // "long"
   kw_noreturn,           // "_Noreturn"

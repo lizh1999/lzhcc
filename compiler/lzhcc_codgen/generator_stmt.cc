@@ -4,6 +4,11 @@ namespace lzhcc {
 
 auto Generator::expr_stmt(ExprStmt *stmt) -> void { expr_proxy(stmt->expr); }
 
+auto Generator::asm_stmt(AsmStmt *stmt) -> void {
+  auto code = stmt->code;
+  println("%.*s", (int)code.size(), code.data());
+}
+
 auto Generator::for_stmt(ForStmt *stmt) -> void {
   if (stmt->init) {
     stmt_proxy(stmt->init);
@@ -111,6 +116,8 @@ auto Generator::stmt_proxy(Stmt *stmt) -> void {
   switch (stmt->kind) {
   case StmtKind::empty:
     return;
+  case StmtKind::kw_asm:
+    return asm_stmt(cast<AsmStmt>(stmt));
   case StmtKind::expr:
     return expr_stmt(cast<ExprStmt>(stmt));
   case StmtKind::kw_for:

@@ -109,6 +109,7 @@ private:
   auto cmp_zero(Type *type) -> void;
 
   auto expr_stmt(ExprStmt *stmt) -> void;
+  auto asm_stmt(AsmStmt *stmt) -> void;
   auto for_stmt(ForStmt *stmt) -> void;
   auto if_stmt(IfStmt *stmt) -> void;
   auto return_stmt(ReturnStmt *stmt) -> void;

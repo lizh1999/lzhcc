@@ -15,6 +15,29 @@ auto Parser::block_stmt() -> Stmt * {
   return context_->block_stmt(std::move(stmts));
 }
 
+auto Parser::asm_stmt() -> Stmt * {
+  consume(TokenKind::kw_asm);
+loop:
+  switch (next_kind()) {
+  case TokenKind::kw_inline:
+    consume();
+    goto loop;
+  case TokenKind::kw_volatile:
+    consume();
+    goto loop;
+  default:
+    break;
+  }
+  consume(TokenKind::open_paren);
+  auto token = consume(TokenKind::string);
+  auto code = context_->storage(token->inner);
+  code.remove_prefix(1);
+  code.remove_suffix(1);
+  consume(TokenKind::close_paren);
+  consume(TokenKind::semi);
+  return context_->asm_stmt(code);
+}
+
 auto Parser::expr_stmt() -> Stmt * {
   if (consume_if(TokenKind::semi)) {
     return context_->empty_stmt();
@@ -229,6 +252,8 @@ auto Parser::do_stmt() -> Stmt * {
 
 auto Parser::statement() -> Stmt * {
   switch (next_kind()) {
+  case TokenKind::kw_asm:
+    return asm_stmt();
   case TokenKind::kw_for:
     return for_stmt();
   case TokenKind::kw_if:

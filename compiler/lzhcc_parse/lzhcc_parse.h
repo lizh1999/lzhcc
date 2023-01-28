@@ -107,6 +107,7 @@ private:
   auto assign_to(Expr *lhs, Expr *rhs, LowFn lower, int loc) -> Expr *;
 
   auto block_stmt() -> Stmt *;
+  auto asm_stmt() -> Stmt *;
   auto expr_stmt() -> Stmt *;
   auto for_stmt() -> Stmt *;
   auto if_stmt() -> Stmt *;

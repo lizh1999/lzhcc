@@ -16,7 +16,7 @@ inline auto align_to(int x, int y) -> int { return (x + y - 1) / y * y; }
 inline auto align_down(int x, int y) -> int { return x / y * y; }
 
 auto encode_utf8(uint32_t c) -> std::string;
-auto decode_utf8(const char *& ptr) -> uint32_t;
+auto decode_utf8(const char *&ptr) -> uint32_t;
 
 //
 // lzhcc_diagnostic.cc
@@ -93,6 +93,7 @@ enum class TokenKind : uint8_t {
   eof,                   // eof
   kw_alignas,            // "_Alignas"
   kw_alignof,            // "_Alignof"
+  kw_asm,                // "asm"
   kw_auto,               // "auto"
   kw_bool,               // "_Bool"
   kw_break,              // "break"
@@ -520,6 +521,7 @@ enum class StmtKind {
   kw_case,
   kw_default,
   kw_do,
+  kw_asm,
 };
 
 struct Stmt {
@@ -616,6 +618,11 @@ struct DoStmt : Stmt {
   Expr *cond;
   Label *continue_label;
   Label *break_label;
+};
+
+struct AsmStmt : Stmt {
+  AsmStmt(std::string_view code) : Stmt(StmtKind::kw_asm), code(code) {}
+  std::string_view code;
 };
 
 enum class InitKind {
@@ -778,6 +785,7 @@ public:
 
   // stmt
   auto empty_stmt() -> Stmt *;
+  auto asm_stmt(std::string_view code) -> Stmt *;
   auto expr_stmt(Expr *expr) -> Stmt *;
   auto for_stmt(Stmt *init, Expr *cond, Expr *inc, Stmt *then,
                 Label *continue_label, Label *break_label) -> Stmt *;

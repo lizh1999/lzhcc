@@ -31,6 +31,7 @@ auto CharCursor::operator()() -> std::pair<char, int> {
 Context::Context() {
   push_identifier("_Alignas");
   push_identifier("_Alignof");
+  push_identifier("asm");
   push_identifier("auto");
   push_identifier("_Bool");
   push_identifier("break");
@@ -71,6 +72,7 @@ Context::Context() {
   push_identifier("while");
   keyword_map_.push_back(TokenKind::kw_alignas);
   keyword_map_.push_back(TokenKind::kw_alignof);
+  keyword_map_.push_back(TokenKind::kw_asm);
   keyword_map_.push_back(TokenKind::kw_auto);
   keyword_map_.push_back(TokenKind::kw_bool);
   keyword_map_.push_back(TokenKind::kw_break);
@@ -615,6 +617,10 @@ auto Context::stmt_expr(Type *type, BlockStmt *stmt) -> Expr * {
 }
 
 auto Context::empty_stmt() -> Stmt * { return create<EmptyStmt>(); }
+
+auto Context::asm_stmt(std::string_view code) -> Stmt * {
+  return create<AsmStmt>(code);
+}
 
 auto Context::expr_stmt(Expr *expr) -> Stmt * { return create<ExprStmt>(expr); }
 

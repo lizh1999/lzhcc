@@ -622,7 +622,7 @@ auto Parser::declaration() -> Stmt * {
         auto array_type = cast<ArrayType>(type);
         auto array_init = cast<ArrayInit>(rhs);
         if (array_type->length == -1) {
-          int length = array_init->children.size();
+          int length = array_init->children.rbegin()->first + 1;
           type = context_->array_of(array_type->base, length);
         }
       }
@@ -694,7 +694,7 @@ auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
         new_type->size_bytes = record_type->size_bytes;
         new_type->align_bytes = record_type->align_bytes;
 
-        int length = array_init->children.size();
+        int length = array_init->children.rbegin()->first + 1;
         auto new_last = context_->array_of(array_type->base, length);
 
         new_type->members.back().type = new_last;

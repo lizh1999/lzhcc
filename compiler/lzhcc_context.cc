@@ -666,11 +666,11 @@ auto Context::do_stmt(Stmt *stmt, Expr *cond, Label *continue_label,
   return create<DoStmt>(stmt, cond, continue_label, break_label);
 }
 
-auto Context::array_init(std::vector<Init *> children, Type *base) -> Init * {
+auto Context::array_init(std::map<int, Init *> children, Type *base) -> Init * {
   return create<ArrayInit>(std::move(children), base);
 }
 
-auto Context::record_init(RecordInit::Children children) -> Init * {
+auto Context::record_init(std::map<Member *, Init *> children) -> Init * {
   return create<RecordInit>(std::move(children));
 }
 

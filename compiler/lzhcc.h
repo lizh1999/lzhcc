@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <map>
 #include <memory>
 #include <span>
 #include <stack>
@@ -637,17 +638,16 @@ struct Init {
 };
 
 struct ArrayInit : Init {
-  ArrayInit(std::vector<Init *> children, Type *base)
+  ArrayInit(std::map<int, Init *> children, Type *base)
       : Init(InitKind::array), children(std::move(children)), base(base) {}
-  std::vector<Init *> children;
+  std::map<int, Init *> children;
   Type *base;
 };
 
 struct RecordInit : Init {
-  using Children = std::vector<std::pair<Member *, Init *>>;
-  RecordInit(Children children)
+  RecordInit(std::map<Member *, Init *> children)
       : Init(InitKind::record), children(std::move(children)) {}
-  Children children;
+  std::map<Member *, Init *> children;
 };
 
 struct ScalarInit : Init {
@@ -801,8 +801,8 @@ public:
                Label *break_label) -> Stmt *;
 
   // init
-  auto array_init(std::vector<Init *> children, Type *base) -> Init *;
-  auto record_init(RecordInit::Children children) -> Init *;
+  auto array_init(std::map<int, Init *> children, Type *base) -> Init *;
+  auto record_init(std::map<Member *, Init *> children) -> Init *;
   auto scalar_init(Expr *expr) -> Init *;
 
   auto create_tmpfile() -> std::string;

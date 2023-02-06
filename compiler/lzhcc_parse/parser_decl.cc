@@ -633,7 +633,7 @@ auto Parser::declaration() -> Stmt * {
       auto zero_expr = context_->zero(lhs, size_bytes);
       stmts.push_back(context_->expr_stmt(zero_expr));
 
-      if (auto expr = init_local(lhs, rhs, token->location)) {
+      if (auto expr = low_local(lhs, rhs, token->location)) {
         stmts.push_back(context_->expr_stmt(expr));
       }
     } else {
@@ -708,7 +708,7 @@ auto Parser::global(Token *name, Type *base, Type *type, VarAttr *attr)
       auto data = (uint8_t *)&buffer[0];
 
       std::vector<Relocation> relocations;
-      init_global(init, {data, buffer.size()}, relocations, token->location);
+      low_global(init, {data, buffer.size()}, relocations, token->location);
 
       for (auto &rel : relocations) {
         rel.index = reinterpret_cast<uint8_t *>(rel.index) - data;

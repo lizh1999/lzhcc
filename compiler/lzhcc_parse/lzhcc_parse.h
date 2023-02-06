@@ -41,6 +41,26 @@ struct Scope {
 
 using ParamNames = std::vector<Token *>;
 
+auto low_refernce_op(Context *, Expr *) -> Expr *;
+auto low_deref_op(Context *, Expr *, int) -> Expr *;
+auto low_cast_op(Context *, Type *, Expr *) -> Expr *;
+auto convert(Context *, Expr *, Expr *, int)
+    -> std::tuple<Expr *, Expr *, Type *>;
+auto convert_cmp(Context *, Expr *, Expr *, int) -> std::pair<Expr *, Expr *>;
+auto convert(Context *, Expr *, int) -> std::pair<Expr *, Type *>;
+auto low_mul_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_div_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_mod_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_add_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_sub_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_shift_left_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_shift_right_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_bitwise_and_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_bitwise_xor_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_bitwise_or_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_assign_op(Context *, Expr *, Expr *, int) -> Expr *;
+auto low_member_op(Context *, Expr *, int, int) -> Expr *;
+
 class Parser {
 public:
   Parser(Token *position, Context *context)
@@ -54,25 +74,26 @@ private:
   auto record_init(RecordType *record) -> Init *;
   auto init(Type *type) -> Init *;
 
-  auto array_init2(ArrayType *array) -> Init *;
-  auto record_init2(RecordType *record) -> Init *;
-  auto init2(Type *type) -> Init *;
+  auto array_designator() -> int;
+  auto array_designation(Type* type, Init *&init) -> void;
 
-  auto init_local_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr *;
-  auto init_local_array(Expr *expr, ArrayInit *init, int loc) -> Expr *;
-  auto init_local_record(Expr *expr, RecordInit *init, int loc) -> Expr *;
-  auto init_local(Expr *value, Init *init, int loc) -> Expr *;
+  auto array_init(ArrayType *array, ArrayInit *&init, int i = 0) -> void;
+  auto record_init(RecordType *record, RecordInit *&init) -> void;
+  auto init(Type *type, Init *&init) -> void;
 
-  auto init_global_scalar(ScalarInit *init, std::span<uint8_t> out,
-                          std::vector<Relocation> &relocations, int loc)
-      -> void;
-  auto init_global_array(ArrayInit *init, std::span<uint8_t> out,
+  auto low_local_scalar(Expr *expr, ScalarInit *init, int loc) -> Expr *;
+  auto low_local_array(Expr *expr, ArrayInit *init, int loc) -> Expr *;
+  auto low_local_record(Expr *expr, RecordInit *init, int loc) -> Expr *;
+  auto low_local(Expr *value, Init *init, int loc) -> Expr *;
+
+  auto low_global_scalar(ScalarInit *init, std::span<uint8_t> out,
                          std::vector<Relocation> &relocations, int loc) -> void;
-  auto init_global_record(RecordInit *init, std::span<uint8_t> out,
-                          std::vector<Relocation> &relocations, int loc)
-      -> void;
-  auto init_global(Init *init, std::span<uint8_t> out,
-                   std::vector<Relocation> &relocations, int loc) -> void;
+  auto low_global_array(ArrayInit *init, std::span<uint8_t> out,
+                        std::vector<Relocation> &relocations, int loc) -> void;
+  auto low_global_record(RecordInit *init, std::span<uint8_t> out,
+                         std::vector<Relocation> &relocations, int loc) -> void;
+  auto low_global(Init *init, std::span<uint8_t> out,
+                  std::vector<Relocation> &relocations, int loc) -> void;
 
   auto numeric() -> Expr *;
   auto integer(Token *token) -> Expr *;
